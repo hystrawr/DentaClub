@@ -1,0 +1,787 @@
+/**
+ * The tooth chart's own tokens and motion.
+ *
+ * Scoped under `.odontogram` rather than added to `globals.css`, because these
+ * are the chart's vocabulary and nothing else should paint with them. Six hues,
+ * and the ceiling is deliberate: past about six categories colours start
+ * colliding and the two-letter code is doing the work anyway, so status is
+ * carried by *fill treatment* instead of by more hues.
+ *
+ * Contrast: every fill is tuned to clear 3:1 against the unfilled tooth for
+ * WCAG 1.4.11 (non-text contrast), and no condition is distinguishable by hue
+ * alone — each also carries its PDA code, and most a fill pattern. The chart
+ * survives greyscale printing, which the PDA form is.
+ *
+ * Motion is bounded: nothing here loops, nothing moves more than 3px, and the
+ * global `prefers-reduced-motion` block in `globals.css` flattens all of it.
+ * A clinical chart that fidgets is a chart people stop reading.
+ *
+ * ## Dark mode follows the app, not the operating system
+ *
+ * `globals.css` declares `@custom-variant dark (&:is(.dark *))` and a `.dark`
+ * token block: this app goes dark when it is *told* to, and never from
+ * `prefers-color-scheme`. The dark tokens below therefore hang off `.dark`.
+ *
+ * They were written as an `@media (prefers-color-scheme: dark)` query first,
+ * which is the habit and is wrong here — it painted a dark chart onto a light
+ * page for anyone whose laptop was in dark mode, so the teeth went navy against
+ * white cards and every one of the six condition hues lost its contrast at once.
+ */
+
+.odontogram {
+  /* chrome */
+  --od-bg: var(--color-surface);
+  --od-tooth: #FFFFFF;
+  --od-tooth-edge: #94A3B8;
+  --od-divider: #334155;
+  --od-label: #64748B;
+  --od-label-strong: #0F172A;
+  --od-accent: #2563EB;
+  --od-accent-soft: rgba(37, 99, 235, 0.10);
+  --od-root: #E8EDF4;
+  --od-root-edge: #B8C4D4;
+
+  /* the six condition hues */
+  --od-caries: #B42318;
+  --od-metal: #475467;
+  --od-toothColoured: #B54708;
+  --od-ceramic: #6941C6;
+  --od-endo: #027A48;
+  --od-implant: #175CD3;
+
+  /* semantic */
+  --od-missing: #98A2B3;
+  --od-watch: #DC6803;
+  --od-saved: #12B981;
+
+  --od-cell: 76px;
+  --od-gap: 4px;
+}
+
+.dark .odontogram {
+  --od-bg: #111A2B;
+  --od-tooth: #1B2436;
+  --od-tooth-edge: #475569;
+  --od-divider: #94A3B8;
+  --od-label: #94A3B8;
+  --od-label-strong: #F1F5F9;
+  --od-accent: #60A5FA;
+  --od-accent-soft: rgba(96, 165, 250, 0.16);
+  --od-root: #1E293B;
+  --od-root-edge: #3E4A5F;
+
+  --od-caries: #FDA29B;
+  --od-metal: #CBD5E1;
+  --od-toothColoured: #FEC84B;
+  --od-ceramic: #B692F6;
+  --od-endo: #6CE9A6;
+  --od-implant: #84CAFF;
+  --od-missing: #64748B;
+  --od-watch: #FDB022;
+}
+
+/* ─── The cell ──────────────────────────────────────────────────────────── */
+
+.od-tooth {
+  /*
+   * The entrance stagger is set per tooth from the midline outward, so the
+   * chart assembles from the centre of the mouth rather than sweeping in from
+   * one side. It reads as the arch forming rather than as a list loading.
+   */
+  animation: od-erupt 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--od-delay, 0ms);
+  transition:
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 160ms ease-out;
+}
+
+.od-tooth:not([data-readonly='true']):hover {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 4px 8px rgba(15, 23, 42, 0.14));
+  cursor: pointer;
+}
+
+.od-tooth[data-selected='true'] {
+  transform: translateY(-3px);
+  filter: drop-shadow(0 6px 14px rgba(37, 99, 235, 0.28));
+}
+
+@keyframes od-erupt {
+  from {
+    opacity: 0;
+    /* Upper teeth drop in, lower teeth rise — the arch closing. */
+    transform: translateY(var(--od-erupt-from, -8px)) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* The selection ring draws itself around the tooth rather than appearing. */
+.od-ring {
+  stroke-dasharray: var(--od-ring-length);
+  stroke-dashoffset: var(--od-ring-length);
+  animation: od-draw-ring 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes od-draw-ring {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ─── Surfaces ──────────────────────────────────────────────────────────── */
+
+.od-surface {
+  transition:
+    fill 260ms cubic-bezier(0.4, 0, 0.2, 1),
+    fill-opacity 260ms cubic-bezier(0.4, 0, 0.2, 1),
+    stroke 180ms ease-out;
+}
+
+.od-tooth:not([data-readonly='true']) .od-surface:hover {
+  stroke: var(--od-accent);
+  stroke-width: 1.5;
+}
+
+/*
+ * A finding blooms in when it is charted — 300ms, once, no loop. It is the
+ * only confirmation that a tap landed, and on an iPad over clinic wifi the
+ * write may take a moment to acknowledge.
+ */
+.od-surface[data-just-charted='true'] {
+  animation: od-bloom 320ms cubic-bezier(0.34, 1.4, 0.64, 1);
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+@keyframes od-bloom {
+  0%   { transform: scale(0.7); fill-opacity: 0; }
+  60%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* Saved: one green pulse on the tooth outline, then gone. */
+.od-saved-pulse {
+  animation: od-pulse 900ms ease-out forwards;
+}
+
+@keyframes od-pulse {
+  0%   { stroke: var(--od-saved); stroke-width: 2.5; opacity: 1; }
+  100% { stroke: var(--od-saved); stroke-width: 2.5; opacity: 0; }
+}
+
+/* ─── Whole-tooth marks ─────────────────────────────────────────────────── */
+
+/* The extraction cross draws on, one stroke then the other. */
+.od-strike {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: od-draw-strike 300ms ease-out forwards;
+  animation-delay: var(--od-strike-delay, 0ms);
+}
+
+@keyframes od-draw-strike {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ─── Rows ──────────────────────────────────────────────────────────────── */
+
+.od-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--od-gap);
+  justify-content: center;
+}
+
+.od-row[data-jaw='lower'] { align-items: flex-start; }
+
+/*
+ * The midline and the occlusal plane are the heaviest lines on the chart —
+ * copied from the PDA form, where they are a literal crosshair dividing the
+ * four quadrants and thicker than any other rule on the page.
+ */
+.od-midline {
+  width: 2px;
+  align-self: stretch;
+  background: var(--od-divider);
+  opacity: 0.55;
+  margin: 0 4px;
+  border-radius: 1px;
+}
+
+.od-occlusal-plane {
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--od-divider) 8%,
+    var(--od-divider) 92%,
+    transparent
+  );
+  opacity: 0.4;
+  margin: 10px 0;
+  border-radius: 1px;
+}
+
+/* ─── Surface picker ────────────────────────────────────────────────────── */
+
+/*
+ * A separate control, because the arithmetic leaves no choice: a 44pt surface
+ * target across sixteen teeth needs 2112pt of width and an iPad Pro 13" in
+ * landscape has 1366. Two-step is what every serious product does.
+ */
+.od-cross {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  max-width: 320px;
+}
+
+.od-cross-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 48px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+  cursor: pointer;
+  transition:
+    background 140ms ease-out,
+    border-color 140ms ease-out,
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.od-cross-cell:hover { transform: translateY(-1px); }
+.od-cross-cell:active { transform: translateY(0) scale(0.97); }
+
+.od-cross-cell[data-on='true'] {
+  background: var(--od-accent-soft);
+  border-color: var(--od-accent);
+}
+
+.od-cross-cell[data-on='true'] .od-cross-letter { color: var(--od-accent); }
+
+.od-cross-letter {
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--od-label-strong);
+}
+
+.od-cross-name {
+  font-size: 10px;
+  color: var(--od-label);
+  text-align: center;
+}
+
+/* ─── The inspector dock ────────────────────────────────────────────────── */
+
+/*
+ * The inspector docks under the arch and runs the full width of the chart.
+ *
+ * It used to be a 380px column below the findings summary and the legend, which
+ * put twenty findings, the surface picker, a note field and the commit button
+ * into a tall narrow stack most of which was under the fold. Charting is a
+ * glance-and-tap loop between a tooth and its options, and the loop was a
+ * scroll.
+ *
+ * `container-type: inline-size` is the load-bearing line. The same component
+ * renders inside a chairside tab and on a full-width desk page, so the column
+ * count has to follow the room this panel has rather than the size of the
+ * window — a viewport query hands the chairside tab a three-column layout it
+ * has no width for.
+ */
+.od-dock {
+  container-type: inline-size;
+  overflow: hidden;
+  animation: od-dock-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes od-dock-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header: which tooth, and what the button is about to do ─────────────── */
+
+.od-dock-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, var(--od-accent-soft), transparent);
+}
+
+.od-dock-badge {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  min-width: 46px;
+  height: 46px;
+  padding: 0 8px;
+  border-radius: 13px;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #FFFFFF;
+  background: var(--od-accent);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+}
+
+.dark .od-dock-badge {
+  color: #0B1220;
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.22);
+}
+
+.od-dock-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-foreground);
+}
+
+/*
+ * The readout is the only place the two halves of the form are stated together,
+ * and it is what catches the commonest mis-tap: a finding chosen while a
+ * different tooth is selected. It turns accent-coloured the moment the entry is
+ * complete, which is the same signal the commit button gives.
+ */
+.od-dock-readout {
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 1px;
+  color: var(--color-muted-foreground);
+}
+
+.od-dock-readout[data-ready='true'] {
+  color: var(--od-accent);
+  font-weight: 600;
+}
+
+.od-dock-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  color: var(--color-muted-foreground);
+  transition: background 140ms ease-out, color 140ms ease-out;
+}
+
+.od-dock-close:hover {
+  background: var(--color-surface-subtle);
+  color: var(--color-foreground);
+}
+
+/* ── Body: what is it / where on the tooth / what is already there ───────── */
+
+.od-dock-body {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.od-dock-col {
+  min-width: 0;
+  padding: 14px 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.od-dock-col:first-child { border-top: none; }
+
+/*
+ * Two steps, both on the container. At 760px the finding list and the surface
+ * picker sit side by side with the history beneath them; at 1120px all three
+ * are abreast, which is an iPad Pro in landscape and any desk.
+ */
+@container (min-width: 760px) {
+  .od-dock-body { grid-template-columns: minmax(0, 1fr) 336px; }
+
+  .od-dock-col {
+    border-top: none;
+    border-left: 1px solid var(--color-border);
+  }
+
+  .od-dock-col:first-child { border-left: none; }
+
+  .od-col-history {
+    grid-column: 1 / -1;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+@container (min-width: 1120px) {
+  .od-dock-body { grid-template-columns: minmax(0, 1fr) 336px minmax(272px, 0.8fr); }
+
+  .od-col-history {
+    grid-column: auto;
+    border-top: none;
+    border-left: 1px solid var(--color-border);
+  }
+}
+
+.od-col-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-subtle-foreground);
+  margin-bottom: 10px;
+}
+
+/* ── The finding chips ───────────────────────────────────────────────────── */
+
+.od-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.od-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-subtle-foreground);
+  margin-bottom: 5px;
+}
+
+.od-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.od-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 140ms ease-out,
+    background 140ms ease-out,
+    border-color 140ms ease-out;
+}
+
+.od-chip:hover { transform: translateY(-1px); }
+.od-chip:active { transform: translateY(0) scale(0.97); }
+.od-chip[data-on='true'] { box-shadow: 0 3px 10px rgba(15, 23, 42, 0.20); }
+
+/* The PDA abbreviation, which is what makes the chart readable without colour
+   and is worth carrying onto the control that sets it. */
+.od-chip-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(15, 23, 42, 0.07);
+}
+
+.dark .od-chip-code { background: rgba(255, 255, 255, 0.10); }
+.od-chip[data-on='true'] .od-chip-code { background: rgba(255, 255, 255, 0.24); }
+
+/* ── Surfaces ────────────────────────────────────────────────────────────── */
+
+.od-code-input {
+  width: 84px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-foreground);
+  outline: none;
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+}
+
+.od-code-input:focus {
+  border-color: var(--od-accent);
+  box-shadow: 0 0 0 3px var(--od-accent-soft);
+}
+
+.od-surface-code {
+  margin-top: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--od-accent);
+}
+
+.od-surface-code[data-empty='true'] {
+  font-weight: 500;
+  letter-spacing: normal;
+  font-size: 11px;
+  color: var(--color-subtle-foreground);
+}
+
+.od-whole-note {
+  font-size: 12px;
+  line-height: 1.45;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--color-surface-subtle);
+  color: var(--color-muted-foreground);
+}
+
+/* ── History ─────────────────────────────────────────────────────────────── */
+
+/*
+ * Bounded and scrolled rather than growing the panel. A tooth with fifteen
+ * entries would otherwise push the commit bar off the screen, and the commit
+ * bar is the reason the panel is open.
+ */
+.od-history-list {
+  max-height: 208px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: -4px -6px;
+  padding: 4px 6px;
+}
+
+.od-history-item {
+  padding: 6px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.od-history-item:first-child { border-top: none; padding-top: 0; }
+
+.od-history-empty {
+  font-size: 12px;
+  color: var(--color-subtle-foreground);
+}
+
+/*
+ * The scrollbar stays drawn rather than fading out with the platform default.
+ * The list is bounded, so a tooth with more findings than fit has to *look*
+ * like it has more — a clinical history that silently ends at the third entry
+ * is read as a history with three entries.
+ */
+.od-history-list { scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; }
+.od-history-list::-webkit-scrollbar { width: 6px; }
+.od-history-list::-webkit-scrollbar-track { background: transparent; }
+.od-history-list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+/*
+ * An action, not a status.
+ *
+ * It was red text reading "Entered in error" under a live finding — the same
+ * words a *withdrawn* finding is labelled with two lines above, differing only
+ * in hue. Docking the panel put both in the same column, side by side, where
+ * the collision is obvious: one says what happened to this entry, the other
+ * offers to make it happen. Only the second is a button, so only the second is
+ * shaped like one, and it names the act rather than the state.
+ */
+.od-retract-open {
+  margin-top: 5px;
+  padding: 3px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+  transition:
+    color 140ms ease-out,
+    border-color 140ms ease-out,
+    background 140ms ease-out;
+}
+
+.od-retract-open:hover {
+  color: var(--color-destructive);
+  border-color: var(--color-destructive);
+  background: var(--color-destructive-light);
+}
+
+/* ── Withdrawing an entry ────────────────────────────────────────────────── */
+
+.od-retract {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #FCD34D;
+  background: #FEF3C7;
+  color: #92400E;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dark .od-retract {
+  border-color: #A16207;
+  background: rgba(161, 98, 7, 0.18);
+  color: #FDE68A;
+}
+
+.od-retract-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #FFFFFF;
+  border: 1px solid #FCD34D;
+  color: #0F172A;
+  outline: none;
+}
+
+.dark .od-retract-input {
+  background: #111A2B;
+  border-color: #A16207;
+  color: #F1F5F9;
+}
+
+.od-retract-confirm,
+.od-retract-cancel {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.od-retract-confirm {
+  background: var(--color-destructive);
+  color: #FFFFFF;
+}
+
+.od-retract-confirm:disabled { opacity: 0.4; cursor: default; }
+
+.od-retract-cancel {
+  border: 1px solid #FCD34D;
+  color: inherit;
+}
+
+/* ── The commit bar ──────────────────────────────────────────────────────── */
+
+/*
+ * Across the bottom, full width, in its own tint. It is the only control that
+ * should never move: the note and the button stay where the hand left them
+ * however many chips wrap above.
+ */
+.od-dock-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+}
+
+.od-dock-note {
+  flex: 1 1 220px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-foreground);
+  outline: none;
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+}
+
+.od-dock-note:focus {
+  border-color: var(--od-accent);
+  box-shadow: 0 0 0 3px var(--od-accent-soft);
+}
+
+.od-dock-commit {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 216px;
+  min-height: 44px;
+  padding: 0 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.od-dock-commit:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ── Chairside density ───────────────────────────────────────────────────── */
+
+/*
+ * Every target grows to the 44px floor the chairside rule sets. Nothing else
+ * changes, so the two surfaces cannot disagree about what charting means.
+ */
+.od-dock[data-variant='chair'] .od-chip {
+  min-height: 44px;
+  font-size: 13px;
+  padding: 0 13px;
+}
+
+.od-dock[data-variant='chair'] .od-cross-cell { min-height: 56px; }
+.od-dock[data-variant='chair'] .od-dock-commit { min-height: 52px; }
+.od-dock[data-variant='chair'] .od-dock-note { min-height: 52px; }
+
+/* Findings appear in sequence as the summary fills in. */
+.od-finding {
+  animation: od-fade-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--od-delay, 0ms);
+}
+
+@keyframes od-fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Focus ─────────────────────────────────────────────────────────────── */
+
+.od-tooth:focus { outline: none; }
+
+.od-tooth:focus-visible .od-focus-ring {
+  stroke: var(--od-accent);
+  stroke-width: 2.5;
+  opacity: 1;
+}
+
+.od-focus-ring {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+/* ─── Skeleton ──────────────────────────────────────────────────────────── */
+
+/*
+ * The loading state draws the real grid in outline rather than shimmer blocks.
+ * The chart is a fixed-shape object, so its skeleton is its true geometry —
+ * which means zero layout shift on arrival, and a clinician can orient before
+ * the data lands.
+ */
+.od-skeleton { animation: od-breathe 1.8s ease-in-out infinite; }
+
+@keyframes od-breathe {
+  0%, 100% { opacity: 0.32; }
+  50%      { opacity: 0.55; }
+}

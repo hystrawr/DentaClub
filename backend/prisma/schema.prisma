@@ -1,0 +1,366 @@
+// DentaClub — adapted from the DentalOS schema.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Sex {
+  male
+  female
+  other
+}
+
+/// The appointment status machine, exactly as DentalOS defines it:
+///   scheduled → confirmed → arrived → in_chair → completed
+///   (cancelled / no_show are terminal side exits)
+enum AppointmentStatus {
+  scheduled
+  confirmed
+  arrived
+  in_chair
+  completed
+  cancelled
+  no_show
+}
+
+model Patient {
+  id          String   @id @default(cuid())
+  firstName   String   @map("first_name")
+  lastName    String   @map("last_name")
+  middleName  String?  @map("middle_name")
+  dateOfBirth DateTime @map("date_of_birth") @db.Date
+  sex         Sex
+  mobile      String?  @db.VarChar(20)
+  email       String?
+  address     String?
+  notes       String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  odontogramEvents  OdontogramEvent[]
+  appointments      Appointment[]
+  intakeSubmissions IntakeSubmission[]
+  documents         Document[]
+  guardianOf        GuardianLink[]     @relation("Guardian")
+  wardOf            GuardianLink[]     @relation("Ward")
+
+  /// Lets the alphabetical directory (A–Z by last name) read rows already sorted.
+  @@index([lastName, firstName])
+  @@map("patients")
+}
+
+/// The odontogram (tooth chart), ported from DentalOS. It is **append-only**:
+/// rows are never updated or deleted. A mistake is fixed by writing a new event
+/// that names the one it supersedes, so the history shows what was believed when.
+///
+/// The current chart is computed from these events (see services/odontogram.ts).
+/// DB CHECK constraints in the migration enforce the supersession rules.
+model OdontogramEvent {
+  id            BigInt  @id @default(autoincrement())
+  patientId     String  @map("patient_id")
+  toothNumber   Int     @map("tooth_number") @db.SmallInt
+  surfaces      Json?   @db.JsonB // ['M','O','D','B','L','I']; null = whole tooth
+  /// condition | procedure | treatment
+  eventType     String  @map("event_type")
+  conditionCode String? @map("condition_code")
+  notes         String?
+
+  /// The event this one supersedes (FHIR `replaces`). Points new → old, always.
+  replacesEventId    BigInt? @map("replaces_event_id")
+  /// amendment | correction | entered-in-error (FHIR vocabulary)
+  supersessionType   String? @map("supersession_type") @db.VarChar(20)
+  /// Required for entered-in-error.
+  supersessionReason String? @map("supersession_reason")
+
+  /// Valid time — when the finding was true. Set explicitly for a past visit.
+  observedAt DateTime @default(now()) @map("observed_at") @db.Timestamptz(6)
+  /// Transaction time — when it was recorded. Never back-dated.
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  patient      Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  /// Restrict, not SetNull: nulling the pointer would un-retract the old event.
+  replaces     OdontogramEvent?  @relation("Supersession", fields: [replacesEventId], references: [id], onDelete: Restrict)
+  supersededBy OdontogramEvent[] @relation("Supersession")
+
+  @@index([patientId, toothNumber])
+  @@index([patientId, observedAt])
+  @@map("odontogram_events")
+}
+
+// ── Consent & intake (ported from DentalOS) ──────────────────────────────
+//
+// Template  = one form (e.g. "Treatment Consent"), versioned, never edited.
+// Packet    = an ordered set of templates sent together ("New Patient Packet").
+// Submission = one patient's copy of a packet, opened by a secure link.
+// Document  = the immutable signed PDF produced when the patient signs.
+
+enum GuardianRelationship {
+  parent
+  legal_guardian
+  grandparent
+  sibling
+  other
+}
+
+enum DocumentType {
+  id_scan
+  referral
+  lab_result
+  consent
+  treatment_plan_signature
+  signed_consent
+  other
+}
+
+/// Who may consent on a minor's behalf. `consentAuthorityFlag` is what the
+/// signing flow checks before accepting a signature for a patient under 18.
+model GuardianLink {
+  id                   String               @id @default(cuid())
+  guardianPatientId    String               @map("guardian_patient_id")
+  wardPatientId        String               @map("ward_patient_id")
+  relationship         GuardianRelationship
+  consentAuthorityFlag Boolean              @default(false) @map("consent_authority_flag")
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  guardian Patient @relation("Guardian", fields: [guardianPatientId], references: [id], onDelete: Cascade)
+  ward     Patient @relation("Ward", fields: [wardPatientId], references: [id], onDelete: Cascade)
+
+  @@unique([guardianPatientId, wardPatientId])
+  @@map("guardian_links")
+}
+
+/// A form. Editing one creates a new version and retires the old row — a signed
+/// consent must stay readable exactly as it was worded when it was signed.
+model IntakeTemplate {
+  id               String   @id @default(cuid())
+  name             String
+  version          Int      @default(1) @db.SmallInt
+  parentTemplateId String?  @map("parent_template_id")
+  /// [{ key, type, label, required, options? }]
+  fieldsSchema     Json     @map("fields_schema") @db.JsonB
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  parent      IntakeTemplate?    @relation("TemplateVersion", fields: [parentTemplateId], references: [id], onDelete: SetNull)
+  versions    IntakeTemplate[]   @relation("TemplateVersion")
+  packetItems IntakePacketItem[]
+
+  @@index([isActive])
+  @@map("intake_templates")
+}
+
+model IntakePacket {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  items       IntakePacketItem[]
+  submissions IntakeSubmission[]
+
+  @@map("intake_packets")
+}
+
+model IntakePacketItem {
+  id         String   @id @default(cuid())
+  packetId   String   @map("packet_id")
+  templateId String   @map("template_id")
+  sortOrder  Int      @default(0) @map("sort_order") @db.SmallInt
+  isRequired Boolean  @default(true) @map("is_required")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  packet   IntakePacket   @relation(fields: [packetId], references: [id], onDelete: Cascade)
+  template IntakeTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  @@unique([packetId, templateId])
+  @@map("intake_packet_items")
+}
+
+model IntakeSubmission {
+  id            String    @id @default(cuid())
+  patientId     String    @map("patient_id")
+  packetId      String    @map("packet_id")
+  appointmentId String?   @map("appointment_id")
+  /// SHA-256 of the link token. The plaintext token is never stored.
+  tokenHash     String    @unique @map("token_hash") @db.Char(64)
+  responses     Json?     @db.JsonB
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz(6)
+  documentId    String?   @map("document_id")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  packet      IntakePacket @relation(fields: [packetId], references: [id], onDelete: Restrict)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  document    Document?    @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, completedAt])
+  @@map("intake_submissions")
+}
+
+/// A patient document. A signed consent is written with `immutableFlag`: it is
+/// a legal artifact and must not be editable afterwards.
+///
+/// DentalOS stores the file in Cloudflare R2 via an `attachments` table; here
+/// the PDF bytes live in the row itself.
+model Document {
+  id            String       @id @default(cuid())
+  patientId     String       @map("patient_id")
+  type          DocumentType
+  title         String
+  fileData      Bytes?       @map("file_data")
+  mimeType      String?      @map("mime_type")
+  fileName      String?      @map("file_name")
+  sizeBytes     Int?         @map("size_bytes")
+  immutableFlag Boolean      @default(false) @map("immutable_flag")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient     Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  submissions IntakeSubmission[]
+
+  @@index([patientId])
+  @@map("documents")
+}
+
+// ── Scheduling (ported from DentalOS) ───────────────────────────────────
+
+/// A clinic branch. Never deleted — deactivated, so years of appointments stay readable.
+model Location {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  city      String?
+  phone     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  operatories    Operatory[]
+  availabilities ProviderAvailability[]
+  appointments   Appointment[]
+
+  @@map("locations")
+}
+
+/// A chair / treatment room. The chairside board groups today's patients by it.
+model Operatory {
+  id         String   @id @default(cuid())
+  locationId String   @map("location_id")
+  name       String
+  color      String?  @db.VarChar(7)
+  /// Left-to-right order on the chairside board.
+  sortOrder  Int      @default(0) @map("sort_order") @db.SmallInt
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  location     Location      @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@index([locationId])
+  @@map("operatories")
+}
+
+/// A dentist. DentalOS links this to a staff login (`user_id`) and reads the
+/// name from there; with no logins here, the name lives on the profile.
+model ProviderProfile {
+  id              String   @id @default(cuid())
+  name            String
+  prcNumber       String?  @map("prc_number")
+  specializations Json?    @db.JsonB
+  colorHex        String   @default("#3B82F6") @map("color_hex") @db.VarChar(7)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  availabilities ProviderAvailability[]
+  appointments   Appointment[]
+
+  @@map("provider_profiles")
+}
+
+/// One weekly working window for a dentist at a location (Manila wall-clock).
+model ProviderAvailability {
+  id                String   @id @default(cuid())
+  providerProfileId String   @map("provider_profile_id")
+  locationId        String   @map("location_id")
+  dayOfWeek         Int      @map("day_of_week") @db.SmallInt // 0=Sunday … 6=Saturday
+  startTime         DateTime @map("start_time") @db.Time(0)
+  endTime           DateTime @map("end_time") @db.Time(0)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  provider ProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  location Location        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([providerProfileId, dayOfWeek])
+  @@map("provider_availabilities")
+}
+
+model AppointmentType {
+  id                   String   @id @default(cuid())
+  name                 String
+  durationMinutes      Int      @default(30) @map("duration_minutes") @db.SmallInt
+  colorHex             String   @default("#6B7280") @map("color_hex") @db.VarChar(7)
+  /// Lunch, meetings — time blocked out with no patient.
+  isBlockTime          Boolean  @default(false) @map("is_block_time")
+  recallIntervalMonths Int?     @map("recall_interval_months") @db.SmallInt
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  appointments Appointment[]
+
+  @@map("appointment_types")
+}
+
+model Appointment {
+  id                String            @id @default(cuid())
+  /// Nullable: a block-time slot (lunch) has no patient.
+  patientId         String?           @map("patient_id")
+  providerProfileId String            @map("provider_profile_id")
+  appointmentTypeId String?           @map("appointment_type_id")
+  operatoryId       String?           @map("operatory_id")
+  locationId        String?           @map("location_id")
+  status            AppointmentStatus @default(scheduled)
+
+  scheduledStart DateTime  @map("scheduled_start") @db.Timestamptz(6)
+  scheduledEnd   DateTime  @map("scheduled_end") @db.Timestamptz(6)
+  /// Set on → in_chair.
+  actualStart    DateTime? @map("actual_start") @db.Timestamptz(6)
+  /// Set on → completed.
+  actualEnd      DateTime? @map("actual_end") @db.Timestamptz(6)
+
+  cancellationReason String? @map("cancellation_reason")
+  notes              String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient           Patient?           @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  provider          ProviderProfile    @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  appointmentType   AppointmentType?   @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
+  operatory         Operatory?         @relation(fields: [operatoryId], references: [id], onDelete: SetNull)
+  location          Location?          @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  intakeSubmissions IntakeSubmission[]
+
+  // Drives the day/week calendar and the chairside board.
+  @@index([scheduledStart])
+  @@index([operatoryId, scheduledStart])
+  @@index([providerProfileId, scheduledStart])
+  @@index([patientId])
+  @@map("appointments")
+}

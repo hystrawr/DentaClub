@@ -1,0 +1,249 @@
+@import "tailwindcss";
+
+/* =========================================================
+   DentaClub — design tokens, ported from DentalOS.
+   Premium healthcare palette. Light surfaces only.
+
+   (DentalOS also layers shadcn/ui's variables on top of
+   these; that alias block is left out here, so each token
+   below is the one value that reaches the components.)
+   ========================================================= */
+
+@theme {
+  /* --- Font --- */
+  --font-sans: var(--font-inter), "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  /* --- Canvas & Surfaces --- */
+  --color-canvas:         #F0F3F7; /* page background — cool blue-gray tint */
+  --color-surface:        #FFFFFF; /* card / panel background */
+  --color-surface-raised: #FAFBFC; /* slightly lifted surface */
+  --color-surface-subtle: #F5F7FA; /* sidebar, inline sections */
+
+  /* --- Brand (Medical Blue) --- */
+  --color-primary:            #2563EB; /* CTA buttons, active states, links */
+  --color-primary-light:      #DBEAFE; /* soft tint for chips, backgrounds */
+  --color-primary-hover:      #1D4ED8;
+  --color-primary-foreground: #FFFFFF;
+
+  /* --- Accents --- */
+  --color-success:           #059669; /* completed, paid, confirmed */
+  --color-success-light:     #D1FAE5;
+  --color-warning:           #D97706; /* pending, waitlist */
+  --color-warning-light:     #FEF3C7;
+  --color-destructive:       #DC2626; /* cancelled, void, critical */
+  --color-destructive-light: #FEE2E2;
+  --color-mint:              #0D9488; /* fresh teal for secondary data */
+  --color-mint-light:        #CCFBF1;
+  --color-purple:            #7C3AED; /* specialty / minor status */
+  --color-purple-light:      #EDE9FE;
+  --color-amber:             #F59E0B; /* highlight / overdue */
+  --color-amber-light:       #FEF3C7;
+
+  /* --- Text --- */
+  --color-foreground:        #0F172A; /* primary text — dark slate, not pure black */
+  --color-muted-foreground:  #64748B; /* secondary text */
+  --color-subtle-foreground: #94A3B8; /* tertiary / metadata */
+  --color-placeholder:       #CBD5E1;
+
+  /* --- Borders --- */
+  --color-border:        #E2E8F0;
+  --color-border-strong: #CBD5E1;
+
+  /* --- Radius --- */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   20px;
+  --radius-2xl:  24px;
+  --radius-full: 9999px;
+
+  /* --- Shadow (soft, low-elevation) --- */
+  --shadow-card:       0 1px 3px 0 rgb(0 0 0 / 0.04), 0 4px 16px -2px rgb(0 0 0 / 0.06);
+  --shadow-card-hover: 0 4px 12px 0 rgb(0 0 0 / 0.06), 0 8px 32px -4px rgb(0 0 0 / 0.10);
+  --shadow-dropdown:   0 4px 16px -2px rgb(0 0 0 / 0.10), 0 1px 4px 0 rgb(0 0 0 / 0.06);
+
+  /* --- Layout --- */
+  --sidebar-width: 256px;
+  --header-height: 64px;
+}
+
+/* =========================================================
+   Base
+   ========================================================= */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: var(--font-sans);
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-foreground);
+  margin: 0;
+}
+
+/* =========================================================
+   Utility classes used across components (from DentalOS)
+   ========================================================= */
+
+.card-premium {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.card-premium:hover { box-shadow: var(--shadow-card-hover); }
+
+/* Status chips */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.chip-scheduled   { background: var(--color-primary-light);     color: var(--color-primary); }
+.chip-confirmed   { background: var(--color-success-light);     color: var(--color-success); }
+.chip-in-progress { background: var(--color-warning-light);     color: var(--color-warning); }
+.chip-completed   { background: #F1F5F9;                        color: #475569; }
+.chip-cancelled   { background: var(--color-destructive-light); color: var(--color-destructive); }
+.chip-pending     { background: var(--color-amber-light);       color: var(--color-amber); }
+
+/* Gradient CTA button */
+.btn-gradient {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 2px 8px rgb(37 99 235 / 0.25);
+}
+.btn-gradient:hover { opacity: 0.92; box-shadow: 0 4px 16px rgb(37 99 235 / 0.35); }
+.btn-gradient:disabled { opacity: 0.6; pointer-events: none; }
+
+/* ─── Buttons: one vocabulary, four weights ─────────────────
+   primary = the one action a screen is for, secondary = everything
+   else, ghost = incidental, danger = destroys something. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+}
+.btn:disabled { opacity: 0.45; pointer-events: none; }
+
+:where(.btn-primary, .btn-secondary, .btn-ghost, .btn-danger) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+}
+:where(.btn-primary, .btn-secondary, .btn-ghost, .btn-danger):disabled { opacity: 0.45; pointer-events: none; }
+
+.btn-sm { height: 30px; padding: 0 10px; font-size: 0.75rem; gap: 5px; }
+.btn-lg { height: 44px; padding: 0 18px; font-size: 0.875rem; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgb(37 99 235 / 0.25);
+}
+.btn-primary:hover { opacity: 0.92; box-shadow: 0 4px 16px rgb(37 99 235 / 0.35); }
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-foreground);
+  border-color: var(--color-border);
+}
+.btn-secondary:hover { background: var(--color-surface-subtle); border-color: var(--color-border-strong); }
+
+.btn-ghost { background: transparent; color: var(--color-muted-foreground); }
+.btn-ghost:hover { background: var(--color-surface-subtle); color: var(--color-foreground); }
+
+.btn-danger { background: var(--color-destructive-light); color: var(--color-destructive); }
+.btn-danger:hover { background: var(--color-destructive); color: #fff; }
+
+/* Form controls */
+.field-focus:focus {
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15);
+  border-color: var(--color-primary) !important;
+}
+
+/* Sidebar nav pill — active state */
+.nav-pill-active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+}
+
+/* In the base layer so Tailwind's `outline-none` on an input can switch it off. */
+@layer base {
+  /* Tailwind v4 defaults borders (and `divide-*`) to currentColor — black.
+     DentalOS reset this through shadcn's base styles; here it is explicit. */
+  *, ::before, ::after { border-color: var(--color-border); }
+
+  :focus-visible {
+    outline: 2px solid var(--color-border-strong);
+    outline-offset: 2px;
+  }
+}
+
+/* Scrollbar — thin, minimal */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted-foreground); }
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.table-row-hover:hover { background: var(--color-surface-raised); }
+
+/* Search inputs draw their own clear (×) button; hide the browser's, or there are two. */
+input[type="search"]::-webkit-search-cancel-button { appearance: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

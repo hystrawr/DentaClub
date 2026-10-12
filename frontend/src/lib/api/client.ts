@@ -50,9 +50,20 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       method,
       headers: body === undefined ? undefined : { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
+      // Send the sign-in cookie (set by the API on this same host).
+      credentials: "include",
     });
   } catch {
     throw new ApiError(0, "Cannot reach the server. Is the backend running on port 4000?");
+  }
+
+  // Signed out, or the sign-in expired: go to the sign-in page, then come back.
+  // A full page load on purpose — it also drops every patient record this tab
+  // was holding in memory.
+  if (res.status === 401 && !path.startsWith("/api/auth/") && typeof window !== "undefined") {
+    const here = window.location.pathname + window.location.search;
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- see above
+    window.location.assign(`/login?next=${encodeURIComponent(here)}`);
   }
 
   if (res.status === 204) return undefined as T;
@@ -82,6 +93,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 export const get = <T>(path: string) => request<T>("GET", path);
 export const post = <T>(path: string, body?: unknown) => request<T>("POST", path, body ?? {});
 export const patch = <T>(path: string, body?: unknown) => request<T>("PATCH", path, body ?? {});
+export const put = <T>(path: string, body?: unknown) => request<T>("PUT", path, body ?? {});
 export const del = <T>(path: string, body?: unknown) => request<T>("DELETE", path, body);
 
 /** Every message in an error, for showing under a form. */

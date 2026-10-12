@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Ban, Check, CheckCircle, Copy, ExternalLink, Play, UserCheck, UserX } from "lucide-react";
+import { Ban, Check, CheckCircle, Play, UserCheck, UserX } from "lucide-react";
 import { ApiError } from "@/lib/api/client";
 import { useUpdateAppointmentStatus } from "@/lib/api/appointments";
 import { CAN_CANCEL, CAN_NO_SHOW, NEXT_ACTION } from "@/lib/utils/appointment-status";
 import { timeOf } from "@/lib/utils/manila";
-import type { Appointment, ConfirmIntake } from "@/types/api";
+import type { Appointment } from "@/types/api";
 
 /**
  * The buttons that move an appointment along, shared by the schedule's detail
@@ -21,8 +21,6 @@ export function AppointmentActions({ appointment, size = "md" }: { appointment: 
   const transition = useUpdateAppointmentStatus(appointment.id);
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
-  const [intake, setIntake] = useState<ConfirmIntake | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const next = NEXT_ACTION[appointment.status];
   const canCancel = CAN_CANCEL.includes(appointment.status);
@@ -33,8 +31,7 @@ export function AppointmentActions({ appointment, size = "md" }: { appointment: 
     transition.mutate(
       { status, cancellation_reason },
       {
-        onSuccess: (result) => {
-          if (result.intake) setIntake(result.intake);
+        onSuccess: () => {
           setCancelling(false);
           setReason("");
         },
@@ -118,31 +115,6 @@ export function AppointmentActions({ appointment, size = "md" }: { appointment: 
           {transition.error instanceof Error ? transition.error.message : "That action could not be completed."}
           {conflict && ` It overlaps the appointment at ${timeOf(conflict.scheduled_start)}–${timeOf(conflict.scheduled_end)}.`}
         </p>
-      )}
-
-      {/* Confirming mints the patient's consent link. DentalOS texts it; here it
-          is shown, because there is no SMS — the one chance to copy it. */}
-      {intake?.generated && intake.url && (
-        <div className="rounded-xl p-3 space-y-2" style={{ background: "var(--color-success-light)" }}>
-          <p className="text-xs font-semibold" style={{ color: "var(--color-success)" }}>
-            Confirmed — consent forms link created for the patient.
-          </p>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => {
-                void navigator.clipboard.writeText(intake.url!);
-                setCopied(true);
-              }}
-            >
-              <Copy size={13} /> {copied ? "Copied" : "Copy link"}
-            </button>
-            <a className="btn btn-secondary btn-sm" href={intake.url} target="_blank" rel="noreferrer">
-              <ExternalLink size={13} /> Open forms
-            </a>
-          </div>
-        </div>
       )}
     </div>
   );

@@ -285,8 +285,7 @@ export async function confirm(id: string) {
 
 /**
  * Move an appointment through the status machine. `confirmed` is routed to
- * `confirm()` by the caller (see services/scheduling/confirm.ts), so the
- * double-booking check and the intake link always happen together.
+ * `confirm()` by the caller, so the double-booking check always runs.
  */
 export async function transition(id: string, newStatus: AppointmentStatus, cancellationReason?: string | null) {
   const appointment = await rowOrFail(id);

@@ -190,11 +190,7 @@ export function PatientDirectory({ onAddPatient }: { onAddPatient: () => void })
                           Minor
                         </span>
                       )}
-
-                      <span className="text-xs w-32 text-right shrink-0" style={{ color: "var(--color-muted-foreground)" }}>
-                        {p.mobile ?? "—"}
-                      </span>
-
+          
                       <span className="text-xs font-semibold shrink-0" style={{ color: "var(--color-primary)" }}>
                         View →
                       </span>

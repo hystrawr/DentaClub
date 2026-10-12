@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useRef } from "react";
 import { errorMessages } from "@/lib/api/client";
 
 // Form primitives, ported from DentalOS components/frontdesk/settings/primitives.tsx.
@@ -34,16 +34,20 @@ export function FormDialog({
   children: ReactNode;
 }) {
   const firstField = useRef<HTMLDivElement>(null);
+  // Always the latest onClose, without making the effect below re-run. Callers
+  // usually pass a new function every render — with `onClose` as a dependency,
+  // each keystroke re-ran the effect and yanked focus back to the first field.
+  const close = useEffectEvent(onClose);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") close();
     };
     document.addEventListener("keydown", onKey);
     firstField.current?.querySelector<HTMLElement>("input, select, textarea")?.focus();
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

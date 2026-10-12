@@ -10,6 +10,7 @@ import { ageFrom, dateString, isoOffset } from "../lib/dates.js";
 export const patientsRouter = Router();
 
 const SEX = ["male", "female", "other"] as const;
+const CIVIL_STATUS = ["single", "married", "widowed", "separated"] as const;
 
 /** DentalOS: "Juan Santos Dela Cruz" — middle name included when present. */
 const fullName = (p: { firstName: string; middleName: string | null; lastName: string }): string =>
@@ -38,6 +39,9 @@ function patientDetail(p: Patient) {
     ...patientSummary(p),
     middle_name: p.middleName,
     address: p.address,
+    occupation: p.occupation,
+    civil_status: p.civilStatus,
+    referred_by: p.referredBy,
     notes: p.notes,
     created_at: isoOffset(p.createdAt),
     updated_at: isoOffset(p.updatedAt),
@@ -68,6 +72,9 @@ const createPatient = z.object({
     .union([z.literal("").transform(() => null), z.email("The email field must be a valid email address.").max(150)])
     .nullish(),
   address: optionalText(255),
+  occupation: optionalText(100),
+  civil_status: z.enum(CIVIL_STATUS, "The selected civil status is invalid.").nullish(),
+  referred_by: optionalText(150),
   notes: optionalText(5000),
 });
 
@@ -87,6 +94,9 @@ function toData(dto: PatientInput) {
     ...(dto.mobile !== undefined ? { mobile: dto.mobile } : {}),
     ...(dto.email !== undefined ? { email: dto.email } : {}),
     ...(dto.address !== undefined ? { address: dto.address } : {}),
+    ...(dto.occupation !== undefined ? { occupation: dto.occupation } : {}),
+    ...(dto.civil_status !== undefined ? { civilStatus: dto.civil_status } : {}),
+    ...(dto.referred_by !== undefined ? { referredBy: dto.referred_by } : {}),
     ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
   };
 }
@@ -133,6 +143,9 @@ patientsRouter.post("/", async (req, res) => {
       mobile: dto.mobile ?? null,
       email: dto.email ?? null,
       address: dto.address ?? null,
+      occupation: dto.occupation ?? null,
+      civilStatus: dto.civil_status ?? null,
+      referredBy: dto.referred_by ?? null,
       notes: dto.notes ?? null,
     },
   });

@@ -5,7 +5,6 @@ import type {
   AppointmentStatus,
   AppointmentType,
   ChairsideBoard,
-  ConfirmIntake,
   CreateAppointmentPayload,
   Operatory,
   Provider,
@@ -47,8 +46,6 @@ function useInvalidateSchedule() {
     void qc.invalidateQueries({ queryKey: ["appointments"] });
     void qc.invalidateQueries({ queryKey: OPERATORY_BOARD_KEY });
     void qc.invalidateQueries({ queryKey: ["slots"] });
-    // Confirming mints a consent link, which appears on the patient's Consent tab.
-    void qc.invalidateQueries({ queryKey: ["intake", "submissions"] });
   };
 }
 
@@ -64,14 +61,13 @@ export function useCreateAppointment() {
 /**
  * Move an appointment through the status machine. The API refuses an illegal
  * hop (422) and a double-booking (409, naming the appointment in the way), so
- * this does not re-implement the rules. Confirming also returns the consent
- * link it minted for the patient.
+ * this does not re-implement the rules.
  */
 export function useUpdateAppointmentStatus(id: string) {
   const invalidate = useInvalidateSchedule();
   return useMutation({
     mutationFn: async ({ status, cancellation_reason }: { status: AppointmentStatus; cancellation_reason?: string }) =>
-      patch<{ data: Appointment; intake?: ConfirmIntake }>(`/api/appointments/${id}/status`, {
+      patch<{ data: Appointment }>(`/api/appointments/${id}/status`, {
         status,
         ...(cancellation_reason ? { cancellation_reason } : {}),
       }),

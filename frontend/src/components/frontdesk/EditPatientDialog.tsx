@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Field, FormDialog, SelectField, TextAreaField, TextField } from "@/components/ui/form";
 import { useUpdatePatient } from "@/lib/api/patients";
 import { changedFields } from "@/lib/utils/patient-form";
-import { SEXES, type Patient, type UpdatePatientPayload } from "@/types/api";
+import { CIVIL_STATUSES, SEXES, type Patient, type UpdatePatientPayload } from "@/types/api";
 
 /**
  * Correct a patient's details (from DentalOS's EditPatientDialog).
@@ -21,6 +21,9 @@ const formFrom = (patient: Patient): Record<string, string> => ({
   mobile: patient.mobile ?? "",
   email: patient.email ?? "",
   address: patient.address ?? "",
+  occupation: patient.occupation ?? "",
+  civil_status: patient.civil_status ?? "",
+  referred_by: patient.referred_by ?? "",
   notes: patient.notes ?? "",
 });
 
@@ -89,10 +92,20 @@ export function EditPatientDialog({ patient, open, onClose }: { patient: Patient
             ))}
           </SelectField>
         </Field>
+        <Field label="Civil status">
+          <SelectField value={form.civil_status} onChange={set("civil_status")}>
+            <option value="">Not recorded</option>
+            {CIVIL_STATUSES.map((value) => (
+              <option key={value} value={value}>
+                {value[0]!.toUpperCase() + value.slice(1)}
+              </option>
+            ))}
+          </SelectField>
+        </Field>
       </div>
 
       <div className="grid gap-3" style={grid}>
-        <Field label="Mobile" hint="Consent links and reminders go here.">
+        <Field label="Mobile">
           <TextField value={form.mobile} onChange={set("mobile")} maxLength={20} inputMode="tel" />
         </Field>
         <Field label="Email">
@@ -103,6 +116,15 @@ export function EditPatientDialog({ patient, open, onClose }: { patient: Patient
       <Field label="Address">
         <TextField value={form.address} onChange={set("address")} maxLength={255} />
       </Field>
+
+      <div className="grid gap-3" style={grid}>
+        <Field label="Occupation">
+          <TextField value={form.occupation} onChange={set("occupation")} maxLength={100} />
+        </Field>
+        <Field label="Referred by">
+          <TextField value={form.referred_by} onChange={set("referred_by")} maxLength={150} />
+        </Field>
+      </div>
 
       <Field label="Notes" hint="Administrative notes. Clinical findings belong on the chart.">
         <TextAreaField value={form.notes} onChange={set("notes")} rows={3} />

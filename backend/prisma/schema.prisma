@@ -39,21 +39,66 @@ model Patient {
   mobile      String?  @db.VarChar(20)
   email       String?
   address     String?
+  occupation  String?
+  /// single | married | widowed | separated
+  civilStatus String?  @map("civil_status")
+  referredBy  String?  @map("referred_by")
   notes       String?
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  odontogramEvents  OdontogramEvent[]
-  appointments      Appointment[]
-  intakeSubmissions IntakeSubmission[]
-  documents         Document[]
-  guardianOf        GuardianLink[]     @relation("Guardian")
-  wardOf            GuardianLink[]     @relation("Ward")
+  odontogramEvents OdontogramEvent[]
+  appointments     Appointment[]
+  documents        Document[]
+  consents         Consent[]
+  medicalHistory   MedicalHistory?
 
   /// Lets the alphabetical directory (A–Z by last name) read rows already sorted.
   @@index([lastName, firstName])
   @@map("patients")
+}
+
+/// The medical history from the clinic's paper dental record, one per patient.
+/// Every answer is nullable: null means "not asked yet", which is different
+/// from a recorded "No".
+model MedicalHistory {
+  id        String @id @default(cuid())
+  patientId String @unique @map("patient_id")
+
+  inGoodHealth Boolean? @map("in_good_health")
+
+  // "Have you ever had any of the following?"
+  rheumaticFever    Boolean? @map("rheumatic_fever")
+  heartCondition    Boolean? @map("heart_condition")
+  diabetes          Boolean?
+  kidneyDisease     Boolean? @map("kidney_disease")
+  highBloodPressure Boolean? @map("high_blood_pressure")
+  anemia            Boolean?
+  hepatitis         Boolean?
+  asthma            Boolean?
+  epilepsy          Boolean?
+
+  hasAllergies         Boolean? @map("has_allergies")
+  allergicToPenicillin Boolean? @map("allergic_to_penicillin")
+  otherAllergies       String?  @map("other_allergies")
+
+  takingMedicine      Boolean? @map("taking_medicine")
+  underPhysicianCare  Boolean? @map("under_physician_care")
+  physicianCareReason String?  @map("physician_care_reason")
+  previousExtraction  String?  @map("previous_extraction")
+
+  // "For women"
+  pregnant       Boolean?
+  bleeder        Boolean?
+  onMenstruation Boolean? @map("on_menstruation")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("medical_histories")
 }
 
 /// The odontogram (tooth chart), ported from DentalOS. It is **append-only**:
@@ -94,20 +139,13 @@ model OdontogramEvent {
   @@map("odontogram_events")
 }
 
-// ── Consent & intake (ported from DentalOS) ──────────────────────────────
+// ── Consent ─────────────────────────────────────────────────────────────
 //
-// Template  = one form (e.g. "Treatment Consent"), versioned, never edited.
-// Packet    = an ordered set of templates sent together ("New Patient Packet").
-// Submission = one patient's copy of a packet, opened by a secure link.
-// Document  = the immutable signed PDF produced when the patient signs.
-
-enum GuardianRelationship {
-  parent
-  legal_guardian
-  grandparent
-  sibling
-  other
-}
+// One consent form for the whole clinic; its wording lives in
+// backend/consent-form.txt. A patient signs it on the clinic's device, and the
+// signing is kept as a Consent row plus an immutable PDF in `documents`.
+// Signing again adds a new row — the latest one is the patient's current
+// consent, and the older ones stay on file.
 
 enum DocumentType {
   id_scan
@@ -119,95 +157,27 @@ enum DocumentType {
   other
 }
 
-/// Who may consent on a minor's behalf. `consentAuthorityFlag` is what the
-/// signing flow checks before accepting a signature for a patient under 18.
-model GuardianLink {
-  id                   String               @id @default(cuid())
-  guardianPatientId    String               @map("guardian_patient_id")
-  wardPatientId        String               @map("ward_patient_id")
-  relationship         GuardianRelationship
-  consentAuthorityFlag Boolean              @default(false) @map("consent_authority_flag")
-  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+/// One signing of the consent form. Never edited or deleted on its own.
+model Consent {
+  id                 String   @id @default(cuid())
+  patientId          String   @map("patient_id")
+  /// The form exactly as it was shown when signed, so later edits to
+  /// consent-form.txt never change what this patient agreed to.
+  formText           String   @map("form_text")
+  /// The patient, or for a minor, the parent or guardian who signed.
+  signerName         String   @map("signer_name")
+  /// Set only when someone signs on the patient's behalf (e.g. "Mother").
+  signerRelationship String?  @map("signer_relationship")
+  /// `data:image/png;base64,…` from the signature pad.
+  signatureImage     String   @map("signature_image")
+  documentId         String   @unique @map("document_id")
+  signedAt           DateTime @default(now()) @map("signed_at") @db.Timestamptz(6)
 
-  guardian Patient @relation("Guardian", fields: [guardianPatientId], references: [id], onDelete: Cascade)
-  ward     Patient @relation("Ward", fields: [wardPatientId], references: [id], onDelete: Cascade)
+  patient  Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: NoAction)
 
-  @@unique([guardianPatientId, wardPatientId])
-  @@map("guardian_links")
-}
-
-/// A form. Editing one creates a new version and retires the old row — a signed
-/// consent must stay readable exactly as it was worded when it was signed.
-model IntakeTemplate {
-  id               String   @id @default(cuid())
-  name             String
-  version          Int      @default(1) @db.SmallInt
-  parentTemplateId String?  @map("parent_template_id")
-  /// [{ key, type, label, required, options? }]
-  fieldsSchema     Json     @map("fields_schema") @db.JsonB
-  isActive         Boolean  @default(true) @map("is_active")
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  parent      IntakeTemplate?    @relation("TemplateVersion", fields: [parentTemplateId], references: [id], onDelete: SetNull)
-  versions    IntakeTemplate[]   @relation("TemplateVersion")
-  packetItems IntakePacketItem[]
-
-  @@index([isActive])
-  @@map("intake_templates")
-}
-
-model IntakePacket {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  items       IntakePacketItem[]
-  submissions IntakeSubmission[]
-
-  @@map("intake_packets")
-}
-
-model IntakePacketItem {
-  id         String   @id @default(cuid())
-  packetId   String   @map("packet_id")
-  templateId String   @map("template_id")
-  sortOrder  Int      @default(0) @map("sort_order") @db.SmallInt
-  isRequired Boolean  @default(true) @map("is_required")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  packet   IntakePacket   @relation(fields: [packetId], references: [id], onDelete: Cascade)
-  template IntakeTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
-
-  @@unique([packetId, templateId])
-  @@map("intake_packet_items")
-}
-
-model IntakeSubmission {
-  id            String    @id @default(cuid())
-  patientId     String    @map("patient_id")
-  packetId      String    @map("packet_id")
-  appointmentId String?   @map("appointment_id")
-  /// SHA-256 of the link token. The plaintext token is never stored.
-  tokenHash     String    @unique @map("token_hash") @db.Char(64)
-  responses     Json?     @db.JsonB
-  completedAt   DateTime? @map("completed_at") @db.Timestamptz(6)
-  documentId    String?   @map("document_id")
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  packet      IntakePacket @relation(fields: [packetId], references: [id], onDelete: Restrict)
-  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  document    Document?    @relation(fields: [documentId], references: [id], onDelete: SetNull)
-
-  @@index([patientId, completedAt])
-  @@map("intake_submissions")
+  @@index([patientId, signedAt])
+  @@map("consents")
 }
 
 /// A patient document. A signed consent is written with `immutableFlag`: it is
@@ -228,8 +198,8 @@ model Document {
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  patient     Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  submissions IntakeSubmission[]
+  patient Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  consent Consent?
 
   @@index([patientId])
   @@map("documents")
@@ -350,12 +320,11 @@ model Appointment {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  patient           Patient?           @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  provider          ProviderProfile    @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
-  appointmentType   AppointmentType?   @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
-  operatory         Operatory?         @relation(fields: [operatoryId], references: [id], onDelete: SetNull)
-  location          Location?          @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  intakeSubmissions IntakeSubmission[]
+  patient         Patient?         @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  provider        ProviderProfile  @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  appointmentType AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
+  operatory       Operatory?       @relation(fields: [operatoryId], references: [id], onDelete: SetNull)
+  location        Location?        @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   // Drives the day/week calendar and the chairside board.
   @@index([scheduledStart])
@@ -363,4 +332,19 @@ model Appointment {
   @@index([providerProfileId, scheduledStart])
   @@index([patientId])
   @@map("appointments")
+}
+
+// ── Sign-in ─────────────────────────────────────────────────────────────
+
+/// Someone who can sign in. For now there is one account, "admin"; its
+/// password is set with `npm run set-password`.
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  /// scrypt hash: `scrypt$<salt>$<hash>`. The password itself is never stored.
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("users")
 }

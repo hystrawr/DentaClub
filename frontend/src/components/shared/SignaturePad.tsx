@@ -3,21 +3,26 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactSignatureCanvas from 'react-signature-canvas'
 import type SignatureCanvas from 'react-signature-canvas'
-import { PenLine, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 
 interface SignaturePadProps {
-  /** Called with a base64 PNG data URI when the user confirms the signature */
-  onSave: (dataUrl: string) => void
+  /** A base64 PNG data URI after each stroke, or null once cleared. */
+  onChange: (dataUrl: string | null) => void
+  disabled?: boolean
 }
 
 /**
  * Touch-optimised signature capture using react-signature-canvas.
  * Works with a finger, stylus or mouse.
- * The "Save" button is disabled until the canvas has at least one stroke.
  */
-export function SignaturePad({ onSave }: SignaturePadProps) {
+export function SignaturePad({ onChange, disabled = false }: SignaturePadProps) {
   const padRef = useRef<SignatureCanvas>(null)
   const [isEmpty, setIsEmpty] = useState(true)
+
+  useEffect(() => {
+    if (disabled) padRef.current?.off()
+    else padRef.current?.on()
+  }, [disabled])
 
   /**
    * Keep the strokes when the window resizes.
@@ -49,32 +54,20 @@ export function SignaturePad({ onSave }: SignaturePadProps) {
   }, [])
 
   function handleEnd() {
-    if (padRef.current && !padRef.current.isEmpty()) setIsEmpty(false)
+    const pad = padRef.current
+    if (!pad || pad.isEmpty()) return
+    setIsEmpty(false)
+    onChange(pad.toDataURL('image/png'))
   }
 
   function handleClear() {
     padRef.current?.clear()
     setIsEmpty(true)
-  }
-
-  function handleSave() {
-    if (!padRef.current || padRef.current.isEmpty()) return
-    onSave(padRef.current.toDataURL('image/png'))
+    onChange(null)
   }
 
   return (
-    <div className="card-premium overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-2.5 px-5 py-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <PenLine size={17} style={{ color: 'var(--color-primary)' }} />
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--color-foreground)' }}>
-          Patient Signature
-        </h3>
-        <span className="ml-auto text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
-          Sign in the box below
-        </span>
-      </div>
-
+    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
       {/* Canvas */}
       <div className="relative" style={{ background: '#FAFBFC', borderBottom: '1px solid var(--color-border)' }}>
         <ReactSignatureCanvas
@@ -82,7 +75,7 @@ export function SignaturePad({ onSave }: SignaturePadProps) {
           penColor="#0F172A"
           clearOnResize={false}
           canvasProps={{
-            style: { width: '100%', height: 200, display: 'block', cursor: 'crosshair' },
+            style: { width: '100%', height: 200, display: 'block', cursor: disabled ? 'default' : 'crosshair' },
             'aria-label': 'Signature canvas — draw your signature here',
           }}
           onEnd={handleEnd}
@@ -93,28 +86,27 @@ export function SignaturePad({ onSave }: SignaturePadProps) {
           style={{ borderBottom: '1.5px dashed var(--color-border)' }}
           aria-hidden="true"
         />
+        {isEmpty && (
+          <span
+            className="absolute left-0 right-0 bottom-3 text-center text-xs pointer-events-none"
+            style={{ color: 'var(--color-subtle-foreground)' }}
+            aria-hidden="true"
+          >
+            Sign above the line with a finger, stylus or mouse
+          </span>
+        )}
       </div>
 
-      {/* Actions. type="button": this pad sits inside the intake <form>, where a
-          bare <button> is a submit — pressing Clear or Save would send the form. */}
-      <div className="flex items-center justify-between px-5 py-3">
+      <div className="flex items-center justify-end px-3 py-2">
         <button
           type="button"
           onClick={handleClear}
-          className="flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 transition-colors hover:bg-slate-100"
+          disabled={isEmpty || disabled}
+          className="flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 transition-colors hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none"
           style={{ color: 'var(--color-muted-foreground)', border: '1px solid var(--color-border)' }}
           aria-label="Clear signature"
         >
           <Trash2 size={13} /> Clear
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isEmpty}
-          className="btn-gradient flex items-center gap-1.5 px-4 py-2 text-sm font-semibold disabled:opacity-40 disabled:pointer-events-none"
-          aria-label="Save signature"
-        >
-          Save Signature
         </button>
       </div>
     </div>

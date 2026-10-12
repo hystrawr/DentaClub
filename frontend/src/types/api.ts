@@ -10,6 +10,9 @@ type ISODateTimeString = string;
 export const SEXES = ["male", "female", "other"] as const;
 export type Sex = (typeof SEXES)[number];
 
+export const CIVIL_STATUSES = ["single", "married", "widowed", "separated"] as const;
+export type CivilStatus = (typeof CIVIL_STATUSES)[number];
+
 export interface PatientSummary {
   id: string;
   full_name: string;
@@ -26,6 +29,9 @@ export interface PatientSummary {
 export interface Patient extends PatientSummary {
   middle_name: string | null;
   address: string | null;
+  occupation: string | null;
+  civil_status: CivilStatus | null;
+  referred_by: string | null;
   notes: string | null;
   created_at: ISODateTimeString | null;
   updated_at: ISODateTimeString | null;
@@ -40,123 +46,78 @@ export interface CreatePatientPayload {
   mobile?: string | null;
   email?: string | null;
   address?: string | null;
+  occupation?: string | null;
+  civil_status?: CivilStatus | null;
+  referred_by?: string | null;
   notes?: string | null;
 }
 
 export type UpdatePatientPayload = Partial<CreatePatientPayload>;
 
-/* ─── Consent & intake (shapes from DentalOS types/api.ts) ───────── */
+/* ─── Medical history ───────────────────────────────────────────── */
 
-type IntakeFieldType =
-  | "text" | "textarea" | "number" | "tel" | "email" | "date"
-  | "radio" | "select" | "checkbox" | "checkboxes" | "boolean"
-  | "signature" | "consent_html";
-
-export interface IntakeFieldSchema {
-  key: string;
-  type: IntakeFieldType;
-  label: string;
-  required?: boolean;
-  placeholder?: string;
-  options?: string[];
-  html?: string;
+/** Yes/No answers: `null` means not asked yet, which is not the same as "No". */
+export interface MedicalHistoryAnswers {
+  in_good_health: boolean | null;
+  rheumatic_fever: boolean | null;
+  heart_condition: boolean | null;
+  diabetes: boolean | null;
+  kidney_disease: boolean | null;
+  high_blood_pressure: boolean | null;
+  anemia: boolean | null;
+  hepatitis: boolean | null;
+  asthma: boolean | null;
+  epilepsy: boolean | null;
+  has_allergies: boolean | null;
+  allergic_to_penicillin: boolean | null;
+  other_allergies: string | null;
+  taking_medicine: boolean | null;
+  under_physician_care: boolean | null;
+  physician_care_reason: string | null;
+  previous_extraction: string | null;
+  pregnant: boolean | null;
+  bleeder: boolean | null;
+  on_menstruation: boolean | null;
 }
 
-/**
- * One wizard section. `show_if` is the HMO conditional; the server has already
- * folded it into `required`, so a hidden section can never block submission.
- */
-export interface IntakeSection {
-  key: string;
-  title: string;
-  template_id: string;
-  required: boolean;
-  show_if: { payor_type: string } | null;
-  fields: IntakeFieldSchema[];
+/** `GET /api/patients/:id/medical-history`. `updated_at` is null until first saved. */
+export interface MedicalHistory extends MedicalHistoryAnswers {
+  updated_at: ISODateTimeString | null;
 }
 
-interface IntakeTemplate {
-  id: string;
-  name: string;
-  version: number;
-  parent_template_id: string | null;
-  fields_schema: IntakeFieldSchema[];
-  is_active: boolean;
+/* ─── Consent ───────────────────────────────────────────────────── */
+
+/** `GET /api/consent-form` — the clinic's one consent form. */
+export interface ConsentForm {
+  text: string;
+  /** Sent back when signing, so a form edited mid-read is refused. */
+  version: string;
+  /** True while backend/consent-form.txt still holds the starter text. */
+  is_placeholder: boolean;
 }
 
-export interface IntakePacket {
-  id: string;
-  name: string;
-  description: string | null;
-  is_active: boolean;
-  items: Array<{
+/** `GET /api/patients/:id/consent`. */
+export interface PatientConsent {
+  /** The latest signing, or null if the patient has never signed. */
+  current: {
     id: string;
-    sort_order: number;
-    is_required: boolean;
-    template: IntakeTemplate;
-  }>;
+    form_text: string;
+    signer_name: string;
+    /** Set when a parent or guardian signed for the patient. */
+    signer_relationship: string | null;
+    signature_image: string;
+    document_id: string;
+    signed_at: ISODateTimeString;
+  } | null;
+  /** Earlier signed PDFs, newest first. */
+  previous: Array<{ document_id: string; title: string; size_bytes: number | null; signed_at: ISODateTimeString }>;
 }
 
-/** `GET /api/public/intake/:token`, unwrapped from `{ data }`. */
-export interface IntakePortalPacket {
-  packet: IntakePacket;
-  sections?: IntakeSection[];
-  payor_type?: string | null;
-  patient_name?: string;
-  /** What the clinic already holds, keyed by field key — used to pre-fill. */
-  patient_data: Record<string, unknown>;
-  submission_id: string;
-}
-
-export interface IntakeSubmitPayload {
-  responses: Record<string, unknown>;
-  /** base64 PNG data URI */
-  signature?: string;
-}
-
-export interface IntakeSubmission {
-  id: string;
-  patient_id: string;
-  packet_id: string;
-  appointment_id: string | null;
-  status: "pending" | "completed";
-  responses: Record<string, unknown> | null;
-  completed_at: ISODateTimeString | null;
-  document_id: string | null;
-  created_at: ISODateTimeString;
-}
-
-export interface IntakeLink {
-  token: string;
-  expires_at: ISODateTimeString;
-  submission_id: string;
-  url: string;
-}
-
-export interface PatientDocument {
-  id: string;
-  patient_id: string;
-  type: string;
-  title: string;
-  file_name: string | null;
-  mime_type: string | null;
-  size_bytes: number | null;
-  immutable: boolean;
-  created_at: ISODateTimeString;
-}
-
-export const GUARDIAN_RELATIONSHIPS = ["parent", "legal_guardian", "grandparent", "sibling", "other"] as const;
-export type GuardianRelationship = (typeof GUARDIAN_RELATIONSHIPS)[number];
-
-export interface GuardianLink {
-  id: string;
-  guardian_patient_id: string;
-  ward_patient_id: string;
-  relationship: GuardianRelationship;
-  consent_authority_flag: boolean;
-  guardian?: { id: string; first_name: string; last_name: string; date_of_birth: ISODateString | null };
-  ward?: { id: string; first_name: string; last_name: string; date_of_birth: ISODateString | null };
-  created_at: ISODateTimeString;
+export interface SignConsentPayload {
+  form_version: string;
+  signature_data_uri: string;
+  signer_name?: string;
+  signer_relationship?: string;
 }
 
 /* ─── Scheduling ─────────────────────────────────────────────────── */
@@ -188,13 +149,6 @@ export interface CreateAppointmentPayload {
   appointment_type_id?: string | null;
   operatory_id?: string | null;
   notes?: string | null;
-}
-
-/** What confirming returns beside the appointment: the consent link it minted. */
-export interface ConfirmIntake {
-  generated: boolean;
-  expires_at: ISODateTimeString | null;
-  url: string | null;
 }
 
 /** One row of the chairside board. */

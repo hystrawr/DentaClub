@@ -1,418 +1,302 @@
 "use client";
 
 import { use, useState } from "react";
-import { Check, Copy, ExternalLink, FileSignature, FileText, Send, ShieldCheck, Trash2, UserPlus } from "lucide-react";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { PatientSearch } from "@/components/frontdesk/PatientSearch";
-import { FormError } from "@/components/ui/form";
-import {
-  documentFileUrl,
-  useCreateGuardianLink,
-  useDeleteGuardianLink,
-  useGuardianLinks,
-  useMintIntakeLink,
-  usePackets,
-  usePatientDocuments,
-  usePatientSubmissions,
-  useUpdateGuardianLink,
-} from "@/lib/api/consent";
+import { useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, FileSignature, FileText, History, PenLine, RotateCcw } from "lucide-react";
+import { SignaturePad } from "@/components/shared/SignaturePad";
+import { Field, FormError, TextField } from "@/components/ui/form";
+import { ApiError } from "@/lib/api/client";
+import { documentFileUrl, useConsentForm, usePatientConsent, useSignConsent } from "@/lib/api/consent";
 import { usePatient } from "@/lib/api/patients";
-import { GUARDIAN_RELATIONSHIPS, type GuardianLink, type GuardianRelationship, type IntakeLink } from "@/types/api";
+import { clock, dateOf, longDate, timeOf } from "@/lib/utils/manila";
+import type { PatientConsent } from "@/types/api";
 
 /**
- * Consent for one patient: send the forms, see what came back, and — for a
- * minor — record who may sign on their behalf.
+ * The patient's consent: one form, signed on this device.
  *
- * DentalOS mints intake links only when an appointment is confirmed (its header
- * "Send Intake" button was never wired up). This tab gives the front desk the
- * missing door: pick a packet, get the link, hand the tablet over or send it.
- * Confirming an appointment still mints one automatically.
+ * Unsigned, the tab shows the form with a signature pad under it. Signed, it
+ * shows the form as it was signed, with the signature. "Sign again" files a new
+ * signing and keeps the old one under "Previous consents".
  */
 export default function PatientConsentPage({ params }: PageProps<"/patients/[id]/consent">) {
   const { id } = use(params);
-  const patient = usePatient(id);
+  const consent = usePatientConsent(id);
+  const [signingAgain, setSigningAgain] = useState(false);
+
+  if (consent.isLoading) {
+    return (
+      <div className="p-6 max-w-3xl" aria-busy="true">
+        <div className="skeleton" style={{ height: 320, borderRadius: 16 }} />
+      </div>
+    );
+  }
+
+  if (consent.isError || !consent.data) {
+    return (
+      <div className="p-6 max-w-3xl">
+        <p className="text-sm" role="alert" style={{ color: "var(--color-destructive)" }}>
+          The consent could not be loaded. Treat it as unknown rather than unsigned.
+        </p>
+      </div>
+    );
+  }
+
+  const { current, previous } = consent.data;
 
   return (
-    <div className="p-6 space-y-4 max-w-5xl">
-      {patient.data?.is_minor && <GuardianWarning patientId={id} />}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        <SendForms patientId={id} />
-        <Guardians patientId={id} patientName={patient.data?.full_name} />
-      </div>
-      <Requests patientId={id} />
+    <div className="p-6 space-y-4 max-w-3xl">
+      {current && !signingAgain ? (
+        <SignedConsent current={current} onSignAgain={() => setSigningAgain(true)} />
+      ) : (
+        <SignConsent
+          patientId={id}
+          onCancel={current ? () => setSigningAgain(false) : undefined}
+          onSigned={() => setSigningAgain(false)}
+        />
+      )}
+      {previous.length > 0 && <PreviousConsents previous={previous} />}
     </div>
   );
 }
 
-/* ─── Send ──────────────────────────────────────────────────────── */
+/* ─── Sign ──────────────────────────────────────────────────────── */
 
-function SendForms({ patientId }: { patientId: string }) {
-  const packets = usePackets();
-  const mint = useMintIntakeLink(patientId);
-  const [packetId, setPacketId] = useState("");
-  const [link, setLink] = useState<IntakeLink | null>(null);
-  const [copied, setCopied] = useState(false);
+function SignConsent({
+  patientId,
+  onCancel,
+  onSigned,
+}: {
+  patientId: string;
+  onCancel?: () => void;
+  onSigned: () => void;
+}) {
+  const qc = useQueryClient();
+  const patient = usePatient(patientId);
+  const form = useConsentForm();
+  const sign = useSignConsent(patientId);
 
-  const chosen = packetId || packets.data?.[0]?.id || "";
+  const [signature, setSignature] = useState<string | null>(null);
+  const [signerName, setSignerName] = useState("");
+  const [relationship, setRelationship] = useState("");
 
-  async function copy(url: string) {
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
+  const isMinor = patient.data?.is_minor ?? false;
+  const ready = !!form.data && !!signature && (!isMinor || (signerName.trim() !== "" && relationship.trim() !== ""));
+
+  function confirm() {
+    if (!form.data || !signature) return;
+    sign.mutate(
+      {
+        form_version: form.data.version,
+        signature_data_uri: signature,
+        ...(isMinor ? { signer_name: signerName.trim(), signer_relationship: relationship.trim() } : {}),
+      },
+      {
+        onSuccess: onSigned,
+        // The form was edited while it was open: show the new wording to sign.
+        onError: (error) => {
+          if (error instanceof ApiError && error.status === 409) void qc.invalidateQueries({ queryKey: ["consent-form"] });
+        },
+      },
+    );
   }
 
   return (
-    <Card title="Send consent forms" icon={Send} subtitle="Creates a private, single-use link for this patient">
-      <div className="space-y-3">
-        <div className="flex gap-2">
-          <select
-            aria-label="Forms to send"
-            value={chosen}
-            onChange={(e) => setPacketId(e.target.value)}
-            className="flex-1 h-9 rounded-lg px-3 text-sm outline-none field-focus"
-            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-            disabled={packets.isLoading}
-          >
-            {packets.data?.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} — {p.items.map((i) => i.template.name).join(", ")}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!chosen || mint.isPending}
-            onClick={() => mint.mutate(chosen, { onSuccess: setLink })}
-          >
-            {mint.isPending ? "Creating…" : "Create link"}
-          </button>
-        </div>
-
-        <FormError error={mint.error} />
-
-        {link && (
-          <div className="rounded-xl p-3 space-y-2" style={{ background: "var(--color-primary-light)" }}>
-            <p className="text-xs font-semibold" style={{ color: "var(--color-primary-hover)" }}>
-              Link ready — it is shown only now, so copy or open it before leaving this page.
-            </p>
-            <p className="text-xs font-mono break-all" style={{ color: "var(--color-foreground)" }}>
-              {link.url}
-            </p>
-            <div className="flex gap-2 flex-wrap">
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => void copy(link.url)}>
-                {copied ? <Check size={13} /> : <Copy size={13} />}
-                {copied ? "Copied" : "Copy link"}
-              </button>
-              <a className="btn btn-secondary btn-sm" href={link.url} target="_blank" rel="noreferrer">
-                <ExternalLink size={13} /> Open on this device
-              </a>
-              <span className="text-xs self-center" style={{ color: "var(--color-muted-foreground)" }}>
-                Expires {link.expires_at.slice(0, 16).replace("T", " ")}
+    <Card title="Consent Form" icon={FileSignature}>
+      {form.isLoading ? (
+        <div className="skeleton" style={{ height: 160, borderRadius: 10 }} />
+      ) : form.isError || !form.data ? (
+        <p className="text-sm" role="alert" style={{ color: "var(--color-destructive)" }}>
+          The consent form could not be loaded.
+        </p>
+      ) : (
+        <div className="space-y-5">
+          {form.data.is_placeholder && (
+            <div
+              role="alert"
+              className="rounded-xl px-4 py-3 text-sm flex items-start gap-2"
+              style={{ background: "var(--color-amber-light)", color: "#92400E", border: "1px solid #FCD34D" }}
+            >
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <span>
+                This form still has the starter text. Paste your clinic&apos;s wording into{" "}
+                <code className="font-mono text-xs">backend/consent-form.txt</code> before patients sign it.
               </span>
             </div>
-          </div>
-        )}
-      </div>
-    </Card>
-  );
-}
+          )}
 
-/* ─── Requests & signed documents ───────────────────────────────── */
+          <FormText text={form.data.text} />
 
-function Requests({ patientId }: { patientId: string }) {
-  const submissions = usePatientSubmissions(patientId);
-  const documents = usePatientDocuments(patientId);
-  const packets = usePackets();
-
-  const packetName = (id: string) => packets.data?.find((p) => p.id === id)?.name ?? "Forms";
-  const rows = submissions.data ?? [];
-
-  return (
-    <Card title="Consent requests" icon={FileSignature} subtitle="Every link sent to this patient, newest first. Signed forms are filed as PDFs.">
-      {submissions.isLoading ? (
-        <div className="space-y-2" aria-busy="true">
-          {[0, 1].map((i) => (
-            <div key={i} className="skeleton" style={{ height: 44, borderRadius: 10 }} />
-          ))}
-        </div>
-      ) : submissions.isError ? (
-        <p className="text-xs" role="alert" style={{ color: "var(--color-destructive)" }}>
-          The requests could not be loaded. Treat this list as unknown rather than empty.
-        </p>
-      ) : rows.length === 0 ? (
-        <EmptyState icon={FileText} title="No forms sent yet" description="Create a link above, or confirm an appointment — that sends the New Patient Packet automatically." />
-      ) : (
-        <ul className="divide-y -mx-5">
-          {rows.map((s) => {
-            const doc = documents.data?.find((d) => d.id === s.document_id);
-            return (
-              <li key={s.id} className="flex items-center gap-3 px-5 py-3">
-                <span className={s.status === "completed" ? "chip chip-confirmed" : "chip chip-pending"}>
-                  {s.status === "completed" ? "Signed" : "Waiting"}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium" style={{ color: "var(--color-foreground)" }}>
-                    {packetName(s.packet_id)}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--color-muted-foreground)" }}>
-                    Sent {s.created_at.slice(0, 16).replace("T", " ")}
-                    {s.completed_at && ` · signed ${s.completed_at.slice(0, 16).replace("T", " ")}`}
-                    {s.appointment_id && " · from an appointment"}
-                  </p>
+          <div className="space-y-3 pt-4" style={{ borderTop: "1px solid var(--color-border)" }}>
+            {isMinor ? (
+              <>
+                <p className="text-sm" style={{ color: "var(--color-foreground)" }}>
+                  This patient is under 18, so a <strong>parent or guardian</strong> signs for them.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Field label="Parent or guardian's full name">
+                    <TextField value={signerName} onChange={(e) => setSignerName(e.target.value)} autoComplete="off" />
+                  </Field>
+                  <Field label="Relationship to patient">
+                    <TextField
+                      value={relationship}
+                      onChange={(e) => setRelationship(e.target.value)}
+                      placeholder="e.g. Mother"
+                      autoComplete="off"
+                    />
+                  </Field>
                 </div>
-                {s.document_id && (
-                  <a className="btn btn-secondary btn-sm" href={documentFileUrl(s.document_id)} target="_blank" rel="noreferrer">
-                    <FileText size={13} /> Signed PDF{doc?.size_bytes ? ` · ${Math.round(doc.size_bytes / 1024)} KB` : ""}
-                  </a>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+              </>
+            ) : (
+              <p className="text-sm" style={{ color: "var(--color-foreground)" }}>
+                Signing as <strong>{patient.data?.full_name ?? "the patient"}</strong>
+              </p>
+            )}
+
+            <div>
+              <p className="text-xs font-medium mb-1 flex items-center gap-1.5" style={{ color: "var(--color-foreground)" }}>
+                <PenLine size={13} /> Signature
+              </p>
+              <SignaturePad onChange={setSignature} disabled={sign.isPending} />
+            </div>
+
+            <FormError error={sign.error} />
+
+            <div className="flex gap-2 justify-end">
+              {onCancel && (
+                <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={sign.isPending}>
+                  Cancel
+                </button>
+              )}
+              <button type="button" className="btn btn-primary" disabled={!ready || sign.isPending} onClick={confirm}>
+                {sign.isPending ? "Saving…" : "Confirm and save"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </Card>
   );
 }
 
-/* ─── Guardians ─────────────────────────────────────────────────── */
+/* ─── Signed ────────────────────────────────────────────────────── */
 
-const RELATIONSHIP_LABEL: Record<GuardianRelationship, string> = {
-  parent: "Parent",
-  legal_guardian: "Legal guardian",
-  grandparent: "Grandparent",
-  sibling: "Sibling",
-  other: "Other",
-};
+const signedOn = (iso: string) => `${longDate(dateOf(iso))} at ${clock(timeOf(iso))}`;
 
-function GuardianWarning({ patientId }: { patientId: string }) {
-  const links = useGuardianLinks(patientId);
-  const authorised = links.data?.some((l) => l.ward_patient_id === patientId && l.consent_authority_flag);
-  if (links.isLoading || authorised) return null;
-
-  return (
-    <div
-      role="alert"
-      className="rounded-xl px-4 py-3 text-sm flex items-start gap-2"
-      style={{ background: "var(--color-amber-light)", color: "#92400E", border: "1px solid #FCD34D" }}
-    >
-      <ShieldCheck size={16} className="mt-0.5 shrink-0" />
-      <span>
-        This patient is under 18 and cannot sign for themselves. Add a guardian with <strong>consent authority</strong>{" "}
-        before they open a consent link — otherwise signing will be refused.
-      </span>
-    </div>
-  );
-}
-
-function Guardians({ patientId, patientName }: { patientId: string; patientName?: string }) {
-  const links = useGuardianLinks(patientId);
-  const create = useCreateGuardianLink();
-  const update = useUpdateGuardianLink();
-  const remove = useDeleteGuardianLink();
-
-  const [adding, setAdding] = useState(false);
-  const [guardian, setGuardian] = useState<{ id: string; name: string } | null>(null);
-  const [relationship, setRelationship] = useState<GuardianRelationship>("parent");
-  const [authority, setAuthority] = useState(true);
-
-  const guardians = (links.data ?? []).filter((l) => l.ward_patient_id === patientId);
-  const wards = (links.data ?? []).filter((l) => l.guardian_patient_id === patientId);
-
-  function reset() {
-    setAdding(false);
-    setGuardian(null);
-    setRelationship("parent");
-    setAuthority(true);
-    create.reset();
-  }
-
+function SignedConsent({
+  current,
+  onSignAgain,
+}: {
+  current: NonNullable<PatientConsent["current"]>;
+  onSignAgain: () => void;
+}) {
   return (
     <Card
-      title="Guardians"
-      icon={ShieldCheck}
-      subtitle="Who may consent for a patient under 18"
+      title="Consent Form"
+      icon={FileSignature}
+      badge={<span className="chip chip-confirmed">Signed</span>}
       action={
-        !adding && (
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setAdding(true)}>
-            <UserPlus size={13} /> Add guardian
+        <div className="flex gap-2">
+          <a className="btn btn-secondary btn-sm" href={documentFileUrl(current.document_id)} target="_blank" rel="noreferrer">
+            <FileText size={13} /> View PDF
+          </a>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={onSignAgain}>
+            <RotateCcw size={13} /> Sign again
           </button>
-        )
+        </div>
       }
     >
-      <div className="space-y-3">
-        {adding && (
-          <div className="rounded-xl p-3 space-y-3" style={{ background: "var(--color-surface-subtle)", border: "1px solid var(--color-border)" }}>
-            {guardian ? (
-              <p className="text-sm" style={{ color: "var(--color-foreground)" }}>
-                Guardian: <strong>{guardian.name}</strong>{" "}
-                <button type="button" className="text-xs underline ml-1" style={{ color: "var(--color-primary)" }} onClick={() => setGuardian(null)}>
-                  change
-                </button>
-              </p>
-            ) : (
-              <PatientSearch
-                placeholder="Find the guardian's patient record…"
-                onSelect={(p) => setGuardian({ id: p.id, name: p.name })}
-              />
+      <div className="space-y-5">
+        <FormText text={current.form_text} />
+        <div className="pt-4" style={{ borderTop: "1px solid var(--color-border)" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a data: URI, which next/image cannot optimise */}
+          <img src={current.signature_image} alt={`Signature of ${current.signer_name}`} style={{ maxHeight: 100, maxWidth: 300 }} />
+          <div style={{ borderTop: "1px solid var(--color-foreground)", maxWidth: 300 }} />
+          <p className="text-sm font-semibold mt-1" style={{ color: "var(--color-foreground)" }}>
+            {current.signer_name}
+            {current.signer_relationship && (
+              <span className="font-normal" style={{ color: "var(--color-muted-foreground)" }}>
+                {" "}({current.signer_relationship}, on the patient&apos;s behalf)
+              </span>
             )}
-            <div className="flex gap-2 items-center flex-wrap">
-              <select
-                aria-label="Relationship"
-                value={relationship}
-                onChange={(e) => setRelationship(e.target.value as GuardianRelationship)}
-                className="h-9 rounded-lg px-3 text-sm outline-none field-focus"
-                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-              >
-                {GUARDIAN_RELATIONSHIPS.map((r) => (
-                  <option key={r} value={r}>
-                    {RELATIONSHIP_LABEL[r]}
-                  </option>
-                ))}
-              </select>
-              <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={authority}
-                  onChange={(e) => setAuthority(e.target.checked)}
-                  style={{ width: 15, height: 15, accentColor: "var(--color-primary)" }}
-                />
-                May sign consent
-              </label>
-            </div>
-            <FormError error={create.error} />
-            <div className="flex gap-2 justify-end">
-              <button type="button" className="btn btn-ghost btn-sm" onClick={reset}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                disabled={!guardian || create.isPending}
-                onClick={() =>
-                  guardian &&
-                  create.mutate(
-                    { guardian_patient_id: guardian.id, ward_patient_id: patientId, relationship, consent_authority_flag: authority },
-                    { onSuccess: reset },
-                  )
-                }
-              >
-                {create.isPending ? "Saving…" : "Save guardian"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {links.isLoading ? (
-          <div className="skeleton" style={{ height: 40, borderRadius: 10 }} />
-        ) : guardians.length === 0 && wards.length === 0 && !adding ? (
-          <p className="text-sm" style={{ color: "var(--color-subtle-foreground)" }}>
-            No guardians recorded.
           </p>
-        ) : null}
-
-        {guardians.map((link) => (
-          <GuardianRow
-            key={link.id}
-            name={`${link.guardian?.first_name ?? ""} ${link.guardian?.last_name ?? ""}`.trim()}
-            link={link}
-            onToggle={(next) => update.mutate({ id: link.id, consent_authority_flag: next })}
-            onRemove={() => remove.mutate(link.id)}
-            busy={update.isPending || remove.isPending}
-          />
-        ))}
-
-        {wards.length > 0 && (
-          <div className="pt-1">
-            <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--color-subtle-foreground)" }}>
-              {patientName ? `${patientName} is guardian of` : "Guardian of"}
-            </p>
-            {wards.map((link) => (
-              <p key={link.id} className="text-sm" style={{ color: "var(--color-foreground)" }}>
-                {link.ward?.first_name} {link.ward?.last_name}{" "}
-                <span className="text-xs" style={{ color: "var(--color-muted-foreground)" }}>
-                  ({RELATIONSHIP_LABEL[link.relationship]}
-                  {link.consent_authority_flag ? ", may sign" : ""})
-                </span>
-              </p>
-            ))}
-          </div>
-        )}
+          <p className="text-xs" style={{ color: "var(--color-muted-foreground)" }}>
+            Signed {signedOn(current.signed_at)}
+          </p>
+        </div>
       </div>
     </Card>
   );
 }
 
-function GuardianRow({
-  name,
-  link,
-  onToggle,
-  onRemove,
-  busy,
-}: {
-  name: string;
-  link: GuardianLink;
-  onToggle: (next: boolean) => void;
-  onRemove: () => void;
-  busy: boolean;
-}) {
+/* ─── Previous ──────────────────────────────────────────────────── */
+
+function PreviousConsents({ previous }: { previous: PatientConsent["previous"] }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ border: "1px solid var(--color-border)" }}>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium" style={{ color: "var(--color-foreground)" }}>
-          {name || "Unknown"}
-        </p>
-        <p className="text-xs" style={{ color: "var(--color-muted-foreground)" }}>
-          {RELATIONSHIP_LABEL[link.relationship]}
-        </p>
-      </div>
-      <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
-        <input
-          type="checkbox"
-          checked={link.consent_authority_flag}
-          disabled={busy}
-          onChange={(e) => onToggle(e.target.checked)}
-          style={{ width: 15, height: 15, accentColor: "var(--color-primary)" }}
-        />
-        May sign consent
-      </label>
-      <button type="button" className="btn-ghost p-1.5 rounded-md" aria-label={`Remove ${name}`} disabled={busy} onClick={onRemove}>
-        <Trash2 size={14} />
-      </button>
+    <Card title="Previous consents" icon={History}>
+      <ul className="divide-y -mx-5 -my-2">
+        {previous.map((p) => (
+          <li key={p.document_id} className="flex items-center gap-3 px-5 py-2.5">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium" style={{ color: "var(--color-foreground)" }}>
+                {p.title}
+              </p>
+              <p className="text-xs" style={{ color: "var(--color-muted-foreground)" }}>
+                Signed {signedOn(p.signed_at)}
+              </p>
+            </div>
+            <a className="btn btn-secondary btn-sm" href={documentFileUrl(p.document_id)} target="_blank" rel="noreferrer">
+              <FileText size={13} /> PDF{p.size_bytes ? ` · ${Math.round(p.size_bytes / 1024)} KB` : ""}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+/* ─── Pieces ────────────────────────────────────────────────────── */
+
+/** The form text: blank-line-separated paragraphs; a paragraph starting with "# " is a heading. */
+function FormText({ text }: { text: string }) {
+  return (
+    <div className="space-y-3 text-sm leading-relaxed" style={{ color: "var(--color-foreground)" }}>
+      {text.split(/\n\s*\n/).map((block, i) =>
+        block.startsWith("# ") ? (
+          <h3 key={i} className="text-base font-semibold pt-1">
+            {block.slice(2).trim()}
+          </h3>
+        ) : (
+          <p key={i} className="whitespace-pre-line">
+            {block.trim()}
+          </p>
+        ),
+      )}
     </div>
   );
 }
 
-/* ─── Card ──────────────────────────────────────────────────────── */
-
 function Card({
   title,
-  subtitle,
   icon: Icon,
+  badge,
   action,
   children,
 }: {
   title: string;
-  subtitle?: string;
   icon: React.ElementType;
+  badge?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="card-premium overflow-visible">
-      <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
+      <div className="flex items-center gap-3 px-5 py-4 flex-wrap" style={{ borderBottom: "1px solid var(--color-border)" }}>
         <Icon size={16} style={{ color: "var(--color-primary)" }} />
-        <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold" style={{ color: "var(--color-foreground)" }}>
-            {title}
-          </h2>
-          {subtitle && (
-            <p className="text-xs mt-0.5" style={{ color: "var(--color-muted-foreground)" }}>
-              {subtitle}
-            </p>
-          )}
-        </div>
-        {action}
+        <h2 className="text-sm font-semibold" style={{ color: "var(--color-foreground)" }}>
+          {title}
+        </h2>
+        {badge}
+        <div className="ml-auto">{action}</div>
       </div>
       <div className="p-5">{children}</div>
     </div>

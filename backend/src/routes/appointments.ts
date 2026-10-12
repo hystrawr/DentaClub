@@ -2,7 +2,6 @@ import { Router } from "express";
 import { z } from "zod";
 import { ruleViolation } from "../lib/http-error.js";
 import * as appointments from "../services/scheduling/appointments.js";
-import { confirmAppointment } from "../services/scheduling/confirm.js";
 import { appointmentResource } from "../services/scheduling/mapper.js";
 
 // Ported from DentalOS apps/api/src/scheduling/appointment.controller.ts.
@@ -100,8 +99,7 @@ appointmentsRouter.delete("/appointments/:id", async (req, res) => {
 /**
  * PATCH /api/appointments/:id/status — move through the status machine.
  *
- * `confirmed` goes through the confirm orchestrator, so the response also says
- * whether an intake link was minted (and, since there is no SMS here, the link).
+ * `confirmed` goes through `confirm`, which refuses a double-booking.
  */
 appointmentsRouter.patch("/appointments/:id/status", async (req, res) => {
   const dto = updateStatus.parse(req.body);
@@ -113,8 +111,8 @@ appointmentsRouter.patch("/appointments/:id/status", async (req, res) => {
   }
 
   if (dto.status === "confirmed") {
-    const { appointment, intake } = await confirmAppointment(req.params.id);
-    res.json({ data: appointmentResource(appointment), intake });
+    const appointment = await appointments.confirm(req.params.id);
+    res.json({ data: appointmentResource(appointment) });
     return;
   }
 

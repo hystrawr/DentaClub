@@ -5,9 +5,8 @@ import { ZodError } from "zod";
 import { Prisma } from "./generated/prisma/client.js";
 import { patientsRouter } from "./routes/patients.js";
 import { odontogramRouter } from "./routes/odontogram.js";
-import { intakeRouter } from "./routes/intake.js";
-import { publicIntakeRouter } from "./routes/public-intake.js";
-import { guardianLinksRouter } from "./routes/guardian-links.js";
+import { consentRouter } from "./routes/consent.js";
+import { medicalHistoryRouter } from "./routes/medical-history.js";
 import { documentsRouter } from "./routes/documents.js";
 import { appointmentsRouter } from "./routes/appointments.js";
 import { providersRouter } from "./routes/providers.js";
@@ -15,12 +14,20 @@ import { clinicStructureRouter } from "./routes/clinic-structure.js";
 import { appointmentTypesRouter } from "./routes/appointment-types.js";
 import { chairsideRouter } from "./routes/chairside.js";
 import { HttpError } from "./lib/http-error.js";
+import { requireSignIn } from "./lib/auth.js";
+import { authRouter } from "./routes/auth.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
 
 // Only the Next.js frontend may call this API from a browser.
-app.use(cors({ origin: process.env.FRONTEND_URL ?? "http://localhost:3000" }));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
+    // The sign-in cookie rides along with every request.
+    credentials: true,
+  }),
+);
 // Parse JSON bodies. 2 MB leaves room for signature images.
 app.use(express.json({ limit: "2mb" }));
 
@@ -28,11 +35,15 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.use("/api/auth", authRouter);
+
+// Everything below needs a signed-in user.
+app.use("/api", requireSignIn);
+
 app.use("/api/patients", patientsRouter);
 app.use("/api/patients/:id/odontogram", odontogramRouter);
-app.use("/api/intake", intakeRouter);
-app.use("/api/public/intake", publicIntakeRouter);
-app.use("/api/guardian-links", guardianLinksRouter);
+app.use("/api", consentRouter);
+app.use("/api", medicalHistoryRouter);
 app.use("/api", documentsRouter);
 app.use("/api", appointmentsRouter);
 app.use("/api", providersRouter);
@@ -59,7 +70,7 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  // P2002 = unique constraint, e.g. the same guardian linked to the same ward twice
+  // P2002 = unique constraint violated
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
     res.status(409).json({ error: "That record already exists" });
     return;
@@ -79,6 +90,7 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
 };
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+// "localhost" only: the API is not reachable from other devices on the network.
+app.listen(PORT, "localhost", () => {
   console.log(`API running at http://localhost:${PORT}`);
 });

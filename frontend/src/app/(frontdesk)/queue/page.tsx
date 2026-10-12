@@ -8,7 +8,7 @@ import { longDate, manilaToday } from "@/lib/utils/manila";
 export default function QueuePage() {
   return (
     <div>
-      <TopHeader title="Appointment Queue" subtitle={`${longDate(manilaToday())} · refreshes every 30 seconds`} />
+      <TopHeader title="Appointment Queue" subtitle={`${longDate(manilaToday())} `} />
       <div className="p-6">
         <OperatoryBoard />
       </div>

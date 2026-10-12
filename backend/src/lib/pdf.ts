@@ -8,7 +8,7 @@ import type { TDocumentDefinitions } from "pdfmake/interfaces.js";
  *
  * pdfmake takes a **document definition** rather than HTML, so a document's
  * layout is TypeScript, living beside the domain that owns it
- * (`services/intake-pdf.ts`).
+ * (`services/consent.ts`).
  *
  * ## Why Roboto
  *

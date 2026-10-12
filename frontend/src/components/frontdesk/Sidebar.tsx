@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { usePathname } from "next/navigation";
-import { Activity, Calendar, ChevronRight, ListOrdered, Users } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Activity, Calendar, ChevronRight, ListOrdered, LogOut, UserRound, Users } from "lucide-react";
+import { useCurrentUser, useSignOut } from "@/lib/api/auth";
 import { cn } from "@/lib/utils/cn";
 
 interface NavItem {
@@ -14,8 +15,8 @@ interface NavItem {
 
 /**
  * Ported from DentalOS's Sidebar. Only screens that exist are listed — a nav
- * item that leads nowhere is worse than a missing one. (DentalOS's signed-in
- * user row and help card are left out: there are no logins here.)
+ * item that leads nowhere is worse than a missing one. (DentalOS's help card
+ * is left out.)
  */
 const navItems: NavItem[] = [
   { label: "Queue", href: "/queue", icon: ListOrdered },
@@ -25,6 +26,9 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const user = useCurrentUser();
+  const signOut = useSignOut();
 
   return (
     <aside
@@ -59,7 +63,7 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-subtle-foreground)" }}>
-          Main Menu
+          
         </p>
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -87,6 +91,24 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Signed-in user */}
+      <div className="flex items-center gap-2 px-4 py-3" style={{ borderTop: "1px solid var(--color-border)" }}>
+        <UserRound size={16} style={{ color: "var(--color-muted-foreground)" }} className="shrink-0" aria-hidden="true" />
+        <span className="flex-1 min-w-0 truncate text-sm font-medium" style={{ color: "var(--color-foreground)" }}>
+          {user.data?.username}
+        </span>
+        <button
+          type="button"
+          onClick={() => signOut.mutate(undefined, { onSuccess: () => router.replace("/login") })}
+          disabled={signOut.isPending}
+          className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-2.5 py-1.5 hover:bg-slate-50"
+          style={{ color: "var(--color-muted-foreground)", border: "1px solid var(--color-border)" }}
+        >
+          <LogOut size={13} aria-hidden="true" />
+          Sign out
+        </button>
+      </div>
     </aside>
   );
 }

@@ -1,6 +1,5 @@
 /**
  * Starter data, matching what DentalOS seeds:
- *  - consent & intake forms (same names, fields and packets as seed-rich.ts)
  *  - scheduling: appointment types (DentalOS's list), one clinic, two chairs,
  *    two dentists working Mon–Sat 08:00–12:00 and 13:00–17:00
  *
@@ -11,88 +10,7 @@
 import { prisma } from "../src/lib/prisma.js";
 
 async function main() {
-  await seedIntake();
   await seedScheduling();
-}
-
-async function seedIntake() {
-  if ((await prisma.intakeTemplate.count()) > 0) {
-    console.log("Intake templates already exist — skipped.");
-    return;
-  }
-
-  const medicalV1 = await prisma.intakeTemplate.create({
-    data: {
-      name: "Medical History",
-      version: 1,
-      isActive: false,
-      fieldsSchema: [
-        { key: "allergies", label: "Do you have any allergies?", type: "textarea", required: true },
-        { key: "medications", label: "Current medications", type: "textarea", required: false },
-        { key: "pregnant", label: "Are you pregnant?", type: "boolean", required: false },
-      ],
-    },
-  });
-
-  // v2 supersedes v1 — exercises the version chain, exactly as DentalOS seeds it.
-  const medical = await prisma.intakeTemplate.create({
-    data: {
-      name: "Medical History",
-      version: 2,
-      parentTemplateId: medicalV1.id,
-      fieldsSchema: [
-        { key: "allergies", label: "Do you have any allergies?", type: "textarea", required: true },
-        { key: "medications", label: "Current medications", type: "textarea", required: false },
-        {
-          key: "conditions",
-          label: "Existing medical conditions",
-          type: "checkboxes",
-          required: false,
-          options: ["Hypertension", "Diabetes", "Asthma", "Heart disease"],
-        },
-        { key: "pregnant", label: "Are you pregnant?", type: "boolean", required: false },
-      ],
-    },
-  });
-
-  const treatment = await prisma.intakeTemplate.create({
-    data: {
-      name: "Treatment Consent",
-      fieldsSchema: [
-        { key: "acknowledge", label: "I consent to the proposed treatment.", type: "checkbox", required: true },
-        { key: "signature", label: "Signature", type: "signature", required: true },
-      ],
-    },
-  });
-
-  const privacy = await prisma.intakeTemplate.create({
-    data: {
-      name: "Data Privacy Consent (RA 10173)",
-      fieldsSchema: [
-        { key: "acknowledge", label: "I consent to the processing of my personal data.", type: "checkbox", required: true },
-        { key: "signature", label: "Signature", type: "signature", required: true },
-      ],
-    },
-  });
-
-  const packets: Array<[string, string, string[]]> = [
-    ["New Patient Packet", "Completed before the first visit.", [medical.id, treatment.id, privacy.id]],
-    ["Recall Update", "Short medical history refresh for returning patients.", [medical.id]],
-  ];
-
-  for (const [name, description, templateIds] of packets) {
-    await prisma.intakePacket.create({
-      data: {
-        name,
-        description,
-        items: {
-          create: templateIds.map((templateId, sortOrder) => ({ templateId, sortOrder, isRequired: true })),
-        },
-      },
-    });
-  }
-
-  console.log("Seeded 4 intake templates (Medical History v1→v2, Treatment Consent, Data Privacy Consent) and 2 packets.");
 }
 
 /** DentalOS prisma/seed.ts APPOINTMENT_TYPES: name, minutes, color, block time, recall months. */

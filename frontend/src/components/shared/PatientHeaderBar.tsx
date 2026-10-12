@@ -52,7 +52,7 @@ export function PatientHeaderBar({ name, dateOfBirth, age, isMinor, loading = fa
           )}
           {isMinor && (
             <span className="chip" style={{ background: "var(--color-purple-light)", color: "var(--color-purple)" }}>
-              Minor — guardian consent required
+              Minor — parent or guardian signs consent
             </span>
           )}
         </div>

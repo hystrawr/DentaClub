@@ -10,7 +10,7 @@ export default function PatientsPage() {
 
   return (
     <div>
-      <TopHeader title="Patients" subtitle="Alphabetical patient directory" ctaLabel="New Patient" onCta={() => setModalOpen(true)} />
+      <TopHeader title="Patients"  ctaLabel="New Patient" onCta={() => setModalOpen(true)} />
       <div className="p-6">
         <PatientDirectory onAddPatient={() => setModalOpen(true)} />
       </div>

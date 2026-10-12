@@ -4,10 +4,22 @@ import { useState } from "react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useCreatePatient } from "@/lib/api/patients";
-import { SEXES, type Sex } from "@/types/api";
+import { CIVIL_STATUSES, SEXES, type CivilStatus, type Sex } from "@/types/api";
 import { Field, FormDialog, SelectField, TextField } from "@/components/ui/form";
 
-const EMPTY = { first_name: "", last_name: "", middle_name: "", date_of_birth: "", sex: "", mobile: "", email: "" };
+const EMPTY = {
+  first_name: "",
+  last_name: "",
+  middle_name: "",
+  date_of_birth: "",
+  sex: "",
+  civil_status: "",
+  mobile: "",
+  email: "",
+  address: "",
+  occupation: "",
+  referred_by: "",
+};
 
 /**
  * Create a patient (from DentalOS's NewPatientModal). On success it opens the
@@ -37,8 +49,12 @@ export function NewPatientModal({ open, onClose }: { open: boolean; onClose: () 
         date_of_birth: form.date_of_birth,
         // Typed to the API's enum, so the form cannot send a value the API refuses.
         sex: form.sex as Sex,
+        civil_status: (form.civil_status || null) as CivilStatus | null,
         mobile: form.mobile || null,
         email: form.email || null,
+        address: form.address || null,
+        occupation: form.occupation || null,
+        referred_by: form.referred_by || null,
       },
       {
         onSuccess: (patient) => {
@@ -92,13 +108,38 @@ export function NewPatientModal({ open, onClose }: { open: boolean; onClose: () 
         </Field>
       </div>
 
-      <Field label="Mobile">
-        <TextField type="tel" placeholder="+63 9XX XXX XXXX" value={form.mobile} onChange={set("mobile")} maxLength={20} />
+      <Field label="Civil Status">
+        <SelectField value={form.civil_status} onChange={set("civil_status")}>
+          <option value="">— Select —</option>
+          {CIVIL_STATUSES.map((value) => (
+            <option key={value} value={value}>
+              {value[0]!.toUpperCase() + value.slice(1)}
+            </option>
+          ))}
+        </SelectField>
       </Field>
 
-      <Field label="Email">
-        <TextField type="email" value={form.email} onChange={set("email")} maxLength={150} />
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Mobile">
+          <TextField type="tel" placeholder="+63 9XX XXX XXXX" value={form.mobile} onChange={set("mobile")} maxLength={20} />
+        </Field>
+        <Field label="Email">
+          <TextField type="email" value={form.email} onChange={set("email")} maxLength={150} />
+        </Field>
+      </div>
+
+      <Field label="Address">
+        <TextField value={form.address} onChange={set("address")} maxLength={255} />
       </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Occupation">
+          <TextField value={form.occupation} onChange={set("occupation")} maxLength={100} />
+        </Field>
+        <Field label="Referred By">
+          <TextField value={form.referred_by} onChange={set("referred_by")} maxLength={150} />
+        </Field>
+      </div>
     </FormDialog>
   );
 }

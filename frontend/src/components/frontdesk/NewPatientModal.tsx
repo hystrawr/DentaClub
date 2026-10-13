@@ -59,7 +59,7 @@ export function NewPatientModal({ open, onClose }: { open: boolean; onClose: () 
       {
         onSuccess: (patient) => {
           handleClose();
-          router.push(`/patients/${patient.id}/overview` as Route);
+          router.push(`/patients/${patient.id}/info` as Route);
         },
       },
     );

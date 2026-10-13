@@ -45,6 +45,21 @@ model Patient {
   referredBy  String?  @map("referred_by")
   notes       String?
 
+  // Patient Information Record, Block A
+  /// Jr. | Sr. | II | III | IV
+  suffix             String? @db.VarChar(10)
+  religion           String?
+  nationality        String?
+  homeOfficePhone    String? @map("home_office_phone") @db.VarChar(30)
+  insuranceCarrier   String? @map("insurance_carrier")
+  /// Free text, as written on the card: "01/01/2026 · GRP-48213".
+  insuranceEffective String? @map("insurance_effective")
+  chiefComplaint     String? @map("chief_complaint")
+  /// For minors: the parent or guardian.
+  guardianName       String? @map("guardian_name")
+  guardianOccupation String? @map("guardian_occupation")
+  guardianContact    String? @map("guardian_contact") @db.VarChar(30)
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -53,6 +68,7 @@ model Patient {
   documents        Document[]
   consents         Consent[]
   medicalHistory   MedicalHistory?
+  treatmentRecords TreatmentRecord[]
 
   /// Lets the alphabetical directory (A–Z by last name) read rows already sorted.
   @@index([lastName, firstName])
@@ -93,12 +109,78 @@ model MedicalHistory {
   bleeder        Boolean?
   onMenstruation Boolean? @map("on_menstruation")
 
+  // Block B — dental history
+  previousDentist   String? @map("previous_dentist")
+  /// `YYYY-MM`
+  lastDentalVisit   String? @map("last_dental_visit") @db.VarChar(7)
+  /// low | moderate | severe
+  dentalAnxiety     String? @map("dental_anxiety") @db.VarChar(10)
+  flossingFrequency String? @map("flossing_frequency")
+
+  // Block C — physician
+  physicianName      String? @map("physician_name")
+  physicianSpecialty String? @map("physician_specialty")
+  physicianAddress   String? @map("physician_address")
+  physicianPhone     String? @map("physician_phone") @db.VarChar(30)
+
+  // Block C — questions 3–7 (1, 2 and 5 are in_good_health, under_physician_care, taking_medicine)
+  seriousIllness       Boolean? @map("serious_illness")
+  seriousIllnessDetail String?  @map("serious_illness_detail")
+  hospitalized         Boolean?
+  hospitalizedDetail   String?  @map("hospitalized_detail")
+  medicationDetail     String?  @map("medication_detail")
+  usesTobacco          Boolean? @map("uses_tobacco")
+  usesDrugs            Boolean? @map("uses_drugs")
+  drugsDetail          String?  @map("drugs_detail")
+
+  // Block C — item 8, allergies (penicillin and "others" are above)
+  allergicToLocalAnesthetic Boolean? @map("allergic_to_local_anesthetic")
+  allergicToSulfa           Boolean? @map("allergic_to_sulfa")
+  allergicToAspirin         Boolean? @map("allergic_to_aspirin")
+  allergicToLatex           Boolean? @map("allergic_to_latex")
+
+  // Block C — items 10–12 (9, bleeding time, is `bleeder`)
+  nursing           Boolean?
+  birthControlPills Boolean? @map("birth_control_pills")
+  /// A+ | A- | B+ | B- | AB+ | AB- | O+ | O-
+  bloodType         String?  @map("blood_type") @db.VarChar(3)
+  bpSystolic        Int?     @map("bp_systolic") @db.SmallInt
+  bpDiastolic       Int?     @map("bp_diastolic") @db.SmallInt
+
+  /// Section 13 items that have no column above, by code (see routes/medical-history.ts).
+  conditions      String[] @default([])
+  otherConditions String?  @map("other_conditions")
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@map("medical_histories")
+}
+
+/// One row of the Treatment Record sheet. The sheet is saved whole, so rows
+/// keep the order they were typed in (`position`). Balance is not stored: it is
+/// the running total of charged minus paid, worked out from the rows above.
+model TreatmentRecord {
+  id              String    @id @default(cuid())
+  patientId       String    @map("patient_id")
+  position        Int       @db.SmallInt
+  visitDate       DateTime? @map("visit_date") @db.Date
+  teeth           String?   @db.VarChar(50)
+  procedure       String?
+  doctor          String?
+  amountCharged   Decimal?  @map("amount_charged") @db.Decimal(10, 2)
+  amountPaid      Decimal?  @map("amount_paid") @db.Decimal(10, 2)
+  nextAppointment DateTime? @map("next_appointment") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, position])
+  @@map("treatment_records")
 }
 
 /// The odontogram (tooth chart), ported from DentalOS. It is **append-only**:

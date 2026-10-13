@@ -12,9 +12,40 @@ export const patientsRouter = Router();
 const SEX = ["male", "female", "other"] as const;
 const CIVIL_STATUS = ["single", "married", "widowed", "separated"] as const;
 
-/** DentalOS: "Juan Santos Dela Cruz" — middle name included when present. */
-const fullName = (p: { firstName: string; middleName: string | null; lastName: string }): string =>
-  `${p.firstName} ${p.middleName ?? ""} ${p.lastName}`.replace(/\s+/g, " ").trim();
+/** DentalOS: "Juan Santos Dela Cruz Jr." — middle name and suffix included when present. */
+const fullName = (p: { firstName: string; middleName: string | null; lastName: string; suffix: string | null }): string =>
+  `${p.firstName} ${p.middleName ?? ""} ${p.lastName} ${p.suffix ?? ""}`.replace(/\s+/g, " ").trim();
+
+/**
+ * The Patient Information Record's own fields (Block A): wire name → column and
+ * length limit. All optional text, read and written the same way.
+ */
+const RECORD_TEXT = {
+  suffix: ["suffix", 10],
+  religion: ["religion", 100],
+  nationality: ["nationality", 100],
+  home_office_phone: ["homeOfficePhone", 30],
+  insurance_carrier: ["insuranceCarrier", 150],
+  insurance_effective: ["insuranceEffective", 150],
+  chief_complaint: ["chiefComplaint", 1000],
+  guardian_name: ["guardianName", 150],
+  guardian_occupation: ["guardianOccupation", 100],
+  guardian_contact: ["guardianContact", 30],
+} as const satisfies Record<string, readonly [keyof Patient, number]>;
+
+type RecordWire = { [K in keyof typeof RECORD_TEXT]?: string | null };
+
+const recordText = (p: Patient) =>
+  Object.fromEntries(Object.entries(RECORD_TEXT).map(([wire, [column]]) => [wire, p[column]])) as Required<RecordWire>;
+
+/** Only the keys that were sent: absent = untouched, null = cleared. */
+const recordData = (dto: RecordWire) =>
+  Object.fromEntries(
+    Object.entries(RECORD_TEXT).flatMap(([wire, [column]]) => {
+      const value = dto[wire as keyof RecordWire];
+      return value === undefined ? [] : [[column, value]];
+    }),
+  );
 
 /** `PatientSummaryResource` — the directory and search results. */
 function patientSummary(p: Patient) {
@@ -43,6 +74,7 @@ function patientDetail(p: Patient) {
     civil_status: p.civilStatus,
     referred_by: p.referredBy,
     notes: p.notes,
+    ...recordText(p),
     created_at: isoOffset(p.createdAt),
     updated_at: isoOffset(p.updatedAt),
   };
@@ -76,6 +108,9 @@ const createPatient = z.object({
   civil_status: z.enum(CIVIL_STATUS, "The selected civil status is invalid.").nullish(),
   referred_by: optionalText(150),
   notes: optionalText(5000),
+  ...(Object.fromEntries(Object.entries(RECORD_TEXT).map(([wire, [, max]]) => [wire, optionalText(max)])) as {
+    [K in keyof typeof RECORD_TEXT]: ReturnType<typeof optionalText>;
+  }),
 });
 
 /** Every field optional: absent = untouched, null = cleared (DentalOS's PartialType). */
@@ -98,13 +133,15 @@ function toData(dto: PatientInput) {
     ...(dto.civil_status !== undefined ? { civilStatus: dto.civil_status } : {}),
     ...(dto.referred_by !== undefined ? { referredBy: dto.referred_by } : {}),
     ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+    ...recordData(dto),
   };
 }
 
 /**
  * GET /api/patients?search=dela
- * Every patient, A–Z by last name then first name — the directory groups them
- * by letter. Search matches first name, last name or mobile number.
+ * Every patient, A–Z by last name then first name, each with their last
+ * completed visit and next booked appointment (and who it is with).
+ * Search matches first name, last name or mobile number.
  */
 patientsRouter.get("/", async (req, res) => {
   const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
@@ -122,7 +159,37 @@ patientsRouter.get("/", async (req, res) => {
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { id: "asc" }],
   });
 
-  res.json({ data: patients.map(patientSummary) });
+  const ids = patients.map((p) => p.id);
+  const withProvider = { provider: { select: { id: true, name: true } } } as const;
+
+  // One row per patient: their latest completed visit and their soonest booked appointment.
+  const [lastVisits, nextAppointments] = await Promise.all([
+    prisma.appointment.findMany({
+      where: { patientId: { in: ids }, status: "completed" },
+      orderBy: [{ patientId: "asc" }, { scheduledStart: "desc" }],
+      distinct: ["patientId"],
+      include: withProvider,
+    }),
+    prisma.appointment.findMany({
+      where: { patientId: { in: ids }, status: { in: ["scheduled", "confirmed"] }, scheduledStart: { gte: new Date() } },
+      orderBy: [{ patientId: "asc" }, { scheduledStart: "asc" }],
+      distinct: ["patientId"],
+      include: withProvider,
+    }),
+  ]);
+
+  const visit = (a: (typeof lastVisits)[number] | undefined) =>
+    a ? { appointment_id: a.id, start: isoOffset(a.scheduledStart), provider: a.provider } : null;
+  const lastByPatient = new Map(lastVisits.map((a) => [a.patientId, a]));
+  const nextByPatient = new Map(nextAppointments.map((a) => [a.patientId, a]));
+
+  res.json({
+    data: patients.map((p) => ({
+      ...patientSummary(p),
+      last_visit: visit(lastByPatient.get(p.id)),
+      next_appointment: visit(nextByPatient.get(p.id)),
+    })),
+  });
 });
 
 patientsRouter.get("/:id", async (req, res) => {
@@ -147,6 +214,7 @@ patientsRouter.post("/", async (req, res) => {
       civilStatus: dto.civil_status ?? null,
       referredBy: dto.referred_by ?? null,
       notes: dto.notes ?? null,
+      ...recordData(dto),
     },
   });
   res.status(201).json({ data: patientDetail(patient) });

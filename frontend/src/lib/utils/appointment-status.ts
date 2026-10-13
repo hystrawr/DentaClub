@@ -41,3 +41,25 @@ export const NEXT_ACTION: Partial<Record<AppointmentStatus, { to: AppointmentSta
 /** The side exits the API allows from each status. */
 export const CAN_CANCEL: AppointmentStatus[] = ["scheduled", "confirmed", "arrived"];
 export const CAN_NO_SHOW: AppointmentStatus[] = ["scheduled", "confirmed"];
+
+/** A pale wash of a colour over white — for appointment cards tinted by procedure. */
+export const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, white)`;
+
+/** "Dr. Miguel Reyes" → "MR"; skips titles so dentists don't all read "D". */
+export function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter((word) => word && !/^(dr|dra|drg)\.?$/i.test(word))
+    .map((word) => word[0]!.toUpperCase())
+    .slice(0, 2)
+    .join("");
+}
+
+/** The colour an appointment is drawn in: its procedure, else its dentist, else its status. */
+export function appointmentColor(apt: {
+  status: string;
+  appointment_type: { color_hex: string } | null;
+  provider: { color_hex: string } | null;
+}): string {
+  return apt.appointment_type?.color_hex || apt.provider?.color_hex || styleFor(apt.status).dot;
+}

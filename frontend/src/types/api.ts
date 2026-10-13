@@ -26,6 +26,19 @@ export interface PatientSummary {
   email: string | null;
 }
 
+/** A visit or booking on the patient list: when, and with which dentist. */
+export interface PatientVisit {
+  appointment_id: string;
+  start: ISODateTimeString;
+  provider: { id: string; name: string };
+}
+
+/** A row of the patient list: the summary plus their last visit and next appointment. */
+export interface PatientListItem extends PatientSummary {
+  last_visit: PatientVisit | null;
+  next_appointment: PatientVisit | null;
+}
+
 export interface Patient extends PatientSummary {
   middle_name: string | null;
   address: string | null;
@@ -33,6 +46,16 @@ export interface Patient extends PatientSummary {
   civil_status: CivilStatus | null;
   referred_by: string | null;
   notes: string | null;
+  suffix: string | null;
+  religion: string | null;
+  nationality: string | null;
+  home_office_phone: string | null;
+  insurance_carrier: string | null;
+  insurance_effective: string | null;
+  chief_complaint: string | null;
+  guardian_name: string | null;
+  guardian_occupation: string | null;
+  guardian_contact: string | null;
   created_at: ISODateTimeString | null;
   updated_at: ISODateTimeString | null;
 }
@@ -50,39 +73,109 @@ export interface CreatePatientPayload {
   civil_status?: CivilStatus | null;
   referred_by?: string | null;
   notes?: string | null;
+  suffix?: string | null;
+  religion?: string | null;
+  nationality?: string | null;
+  home_office_phone?: string | null;
+  insurance_carrier?: string | null;
+  insurance_effective?: string | null;
+  chief_complaint?: string | null;
+  guardian_name?: string | null;
+  guardian_occupation?: string | null;
+  guardian_contact?: string | null;
 }
 
 export type UpdatePatientPayload = Partial<CreatePatientPayload>;
 
 /* ─── Medical history ───────────────────────────────────────────── */
 
-/** Yes/No answers: `null` means not asked yet, which is not the same as "No". */
+export const DENTAL_ANXIETY = ["low", "moderate", "severe"] as const;
+export type DentalAnxiety = (typeof DENTAL_ANXIETY)[number];
+
+export const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
+export type BloodType = (typeof BLOOD_TYPES)[number];
+
+/**
+ * Blocks B and C and Section 13 of the Patient Information Record.
+ * Yes/No answers: `null` means not asked yet, which is not the same as "No".
+ */
 export interface MedicalHistoryAnswers {
+  // Block B — dental history
+  previous_dentist: string | null;
+  /** `YYYY-MM` */
+  last_dental_visit: string | null;
+  dental_anxiety: DentalAnxiety | null;
+  flossing_frequency: string | null;
+  previous_extraction: string | null;
+
+  // Block C — physician
+  physician_name: string | null;
+  physician_specialty: string | null;
+  physician_address: string | null;
+  physician_phone: string | null;
+
+  // Block C — questions 1–7
   in_good_health: boolean | null;
-  rheumatic_fever: boolean | null;
-  heart_condition: boolean | null;
-  diabetes: boolean | null;
-  kidney_disease: boolean | null;
-  high_blood_pressure: boolean | null;
-  anemia: boolean | null;
-  hepatitis: boolean | null;
-  asthma: boolean | null;
-  epilepsy: boolean | null;
-  has_allergies: boolean | null;
-  allergic_to_penicillin: boolean | null;
-  other_allergies: string | null;
-  taking_medicine: boolean | null;
   under_physician_care: boolean | null;
   physician_care_reason: string | null;
-  previous_extraction: string | null;
-  pregnant: boolean | null;
+  serious_illness: boolean | null;
+  serious_illness_detail: string | null;
+  hospitalized: boolean | null;
+  hospitalized_detail: string | null;
+  taking_medicine: boolean | null;
+  medication_detail: string | null;
+  uses_tobacco: boolean | null;
+  uses_drugs: boolean | null;
+  drugs_detail: string | null;
+
+  // Block C — item 8, allergies
+  has_allergies: boolean | null;
+  allergic_to_local_anesthetic: boolean | null;
+  allergic_to_penicillin: boolean | null;
+  allergic_to_sulfa: boolean | null;
+  allergic_to_aspirin: boolean | null;
+  allergic_to_latex: boolean | null;
+  other_allergies: string | null;
+
+  // Block C — items 9–12
+  /** Item 9, bleeding time: true = prolonged. */
   bleeder: boolean | null;
+  pregnant: boolean | null;
+  nursing: boolean | null;
+  birth_control_pills: boolean | null;
   on_menstruation: boolean | null;
+  blood_type: BloodType | null;
+  bp_systolic: number | null;
+  bp_diastolic: number | null;
+
+  // Section 13
+  /** Codes of the ticked conditions (see `CONDITIONS` in lib/utils/medical-history). */
+  conditions: string[];
+  other_conditions: string | null;
 }
 
 /** `GET /api/patients/:id/medical-history`. `updated_at` is null until first saved. */
 export interface MedicalHistory extends MedicalHistoryAnswers {
   updated_at: ISODateTimeString | null;
+}
+
+/* ─── Treatment record ──────────────────────────────────────────── */
+
+/** One row of the Treatment Record sheet. Balance is worked out on screen, not stored. */
+export interface TreatmentRow {
+  visit_date: ISODateString | null;
+  teeth: string | null;
+  procedure: string | null;
+  doctor: string | null;
+  /** Pesos. */
+  amount_charged: number | null;
+  amount_paid: number | null;
+  next_appointment: ISODateString | null;
+}
+
+/** `GET /api/patients/:id/treatment-records`, top to bottom. */
+export interface TreatmentRecord extends TreatmentRow {
+  id: string;
 }
 
 /* ─── Consent ───────────────────────────────────────────────────── */

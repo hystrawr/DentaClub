@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Ban, Check, CheckCircle, Play, UserCheck, UserX } from "lucide-react";
 import { ApiError } from "@/lib/api/client";
 import { useUpdateAppointmentStatus } from "@/lib/api/appointments";
@@ -9,15 +9,29 @@ import { timeOf } from "@/lib/utils/manila";
 import type { Appointment } from "@/types/api";
 
 /**
- * The buttons that move an appointment along, shared by the schedule's detail
- * panel and the chairside sheet.
+ * The buttons that move an appointment along, shared by the schedule popover,
+ * the patient's detail panel and the chairside sheet.
  *
  * DentalOS's schedule panel had no actions at all — a receptionist could see
  * an appointment and do nothing with it. The rules stay on the server: a 422
  * (illegal hop) or 409 (double-booking) comes back as a message here, and a
  * 409 names the appointment that is in the way.
+ *
+ * `layout="row"` puts the next step, `extra` and Cancel side by side for the
+ * schedule popover; no-show drops to a quiet link underneath.
  */
-export function AppointmentActions({ appointment, size = "md" }: { appointment: Appointment; size?: "md" | "lg" }) {
+export function AppointmentActions({
+  appointment,
+  size = "md",
+  layout = "stack",
+  extra,
+}: {
+  appointment: Appointment;
+  size?: "md" | "lg";
+  layout?: "stack" | "row";
+  /** Rendered between the next step and Cancel in the row layout. */
+  extra?: ReactNode;
+}) {
   const transition = useUpdateAppointmentStatus(appointment.id);
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
@@ -47,6 +61,85 @@ export function AppointmentActions({ appointment, size = "md" }: { appointment: 
     : next?.to === "in_chair" ? <Play size={17} strokeWidth={2.5} />
     : next?.to === "arrived" ? <UserCheck size={17} />
     : <Check size={17} />;
+
+  const cancelForm = (
+    <div className="rounded-xl p-3 space-y-2" style={{ background: "var(--color-destructive-light)" }}>
+      <input
+        autoFocus
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="Why is this being cancelled?"
+        aria-label="Cancellation reason"
+        className="w-full h-9 rounded-lg px-3 text-sm outline-none field-focus"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      />
+      <div className="flex gap-2 justify-end">
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCancelling(false)}>
+          Keep appointment
+        </button>
+        <button
+          type="button"
+          className="btn btn-danger btn-sm"
+          disabled={!reason.trim() || transition.isPending}
+          onClick={() => run("cancelled", reason.trim())}
+        >
+          Cancel appointment
+        </button>
+      </div>
+    </div>
+  );
+
+  const errorLine = transition.error && (
+    <p className="text-xs" role="alert" style={{ color: "var(--color-destructive)" }}>
+      {transition.error instanceof Error ? transition.error.message : "That action could not be completed."}
+      {conflict && ` It overlaps the appointment at ${timeOf(conflict.scheduled_start)}–${timeOf(conflict.scheduled_end)}.`}
+    </p>
+  );
+
+  if (layout === "row") {
+    return (
+      <div className="flex flex-col gap-2">
+        {!cancelling && (
+          <div className="flex gap-2">
+            {next && (
+              <button
+                type="button"
+                onClick={() => run(next.to)}
+                disabled={transition.isPending}
+                className="btn btn-primary flex-1 whitespace-nowrap"
+              >
+                {transition.isPending ? "Working…" : next.label}
+              </button>
+            )}
+            {extra}
+            {canCancel && (
+              <button
+                type="button"
+                className="btn btn-danger flex-1 whitespace-nowrap"
+                disabled={transition.isPending}
+                onClick={() => setCancelling(true)}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        )}
+        {canNoShow && !cancelling && (
+          <button
+            type="button"
+            className="self-center text-xs font-medium hover:underline disabled:opacity-40"
+            style={{ color: "var(--color-muted-foreground)" }}
+            disabled={transition.isPending}
+            onClick={() => run("no_show")}
+          >
+            Mark as no-show
+          </button>
+        )}
+        {cancelling && cancelForm}
+        {errorLine}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -83,39 +176,8 @@ export function AppointmentActions({ appointment, size = "md" }: { appointment: 
         </div>
       )}
 
-      {cancelling && (
-        <div className="rounded-xl p-3 space-y-2" style={{ background: "var(--color-destructive-light)" }}>
-          <input
-            autoFocus
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Why is this being cancelled?"
-            aria-label="Cancellation reason"
-            className="w-full h-9 rounded-lg px-3 text-sm outline-none field-focus"
-            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-          />
-          <div className="flex gap-2 justify-end">
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCancelling(false)}>
-              Keep appointment
-            </button>
-            <button
-              type="button"
-              className="btn btn-danger btn-sm"
-              disabled={!reason.trim() || transition.isPending}
-              onClick={() => run("cancelled", reason.trim())}
-            >
-              Cancel appointment
-            </button>
-          </div>
-        </div>
-      )}
-
-      {transition.error && (
-        <p className="text-xs" role="alert" style={{ color: "var(--color-destructive)" }}>
-          {transition.error instanceof Error ? transition.error.message : "That action could not be completed."}
-          {conflict && ` It overlaps the appointment at ${timeOf(conflict.scheduled_start)}–${timeOf(conflict.scheduled_end)}.`}
-        </p>
-      )}
+      {cancelling && cancelForm}
+      {errorLine}
     </div>
   );
 }

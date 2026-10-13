@@ -25,7 +25,7 @@ export default function PatientConsentPage({ params }: PageProps<"/patients/[id]
 
   if (consent.isLoading) {
     return (
-      <div className="p-6 max-w-3xl" aria-busy="true">
+      <div className="p-6" aria-busy="true">
         <div className="skeleton" style={{ height: 320, borderRadius: 16 }} />
       </div>
     );
@@ -33,7 +33,7 @@ export default function PatientConsentPage({ params }: PageProps<"/patients/[id]
 
   if (consent.isError || !consent.data) {
     return (
-      <div className="p-6 max-w-3xl">
+      <div className="p-6">
         <p className="text-sm" role="alert" style={{ color: "var(--color-destructive)" }}>
           The consent could not be loaded. Treat it as unknown rather than unsigned.
         </p>
@@ -44,7 +44,7 @@ export default function PatientConsentPage({ params }: PageProps<"/patients/[id]
   const { current, previous } = consent.data;
 
   return (
-    <div className="p-6 space-y-4 max-w-3xl">
+    <div className="p-6 space-y-10">
       {current && !signingAgain ? (
         <SignedConsent current={current} onSignAgain={() => setSigningAgain(true)} />
       ) : (
@@ -101,7 +101,7 @@ function SignConsent({
   }
 
   return (
-    <Card title="Consent Form" icon={FileSignature}>
+    <Section title="Consent Form" icon={FileSignature}>
       {form.isLoading ? (
         <div className="skeleton" style={{ height: 160, borderRadius: 10 }} />
       ) : form.isError || !form.data ? (
@@ -161,7 +161,7 @@ function SignConsent({
 
             <FormError error={sign.error} />
 
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 justify-end" data-print="hide">
               {onCancel && (
                 <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={sign.isPending}>
                   Cancel
@@ -174,7 +174,7 @@ function SignConsent({
           </div>
         </div>
       )}
-    </Card>
+    </Section>
   );
 }
 
@@ -190,12 +190,12 @@ function SignedConsent({
   onSignAgain: () => void;
 }) {
   return (
-    <Card
+    <Section
       title="Consent Form"
       icon={FileSignature}
       badge={<span className="chip chip-confirmed">Signed</span>}
       action={
-        <div className="flex gap-2">
+        <div className="flex gap-2" data-print="hide">
           <a className="btn btn-secondary btn-sm" href={documentFileUrl(current.document_id)} target="_blank" rel="noreferrer">
             <FileText size={13} /> View PDF
           </a>
@@ -224,7 +224,7 @@ function SignedConsent({
           </p>
         </div>
       </div>
-    </Card>
+    </Section>
   );
 }
 
@@ -232,10 +232,10 @@ function SignedConsent({
 
 function PreviousConsents({ previous }: { previous: PatientConsent["previous"] }) {
   return (
-    <Card title="Previous consents" icon={History}>
-      <ul className="divide-y -mx-5 -my-2">
+    <Section title="Previous consents" icon={History}>
+      <ul className="divide-y -mt-2">
         {previous.map((p) => (
-          <li key={p.document_id} className="flex items-center gap-3 px-5 py-2.5">
+          <li key={p.document_id} className="flex items-center gap-3 py-2.5">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium" style={{ color: "var(--color-foreground)" }}>
                 {p.title}
@@ -244,13 +244,13 @@ function PreviousConsents({ previous }: { previous: PatientConsent["previous"] }
                 Signed {signedOn(p.signed_at)}
               </p>
             </div>
-            <a className="btn btn-secondary btn-sm" href={documentFileUrl(p.document_id)} target="_blank" rel="noreferrer">
+            <a className="btn btn-secondary btn-sm" href={documentFileUrl(p.document_id)} target="_blank" rel="noreferrer" data-print="hide">
               <FileText size={13} /> PDF{p.size_bytes ? ` · ${Math.round(p.size_bytes / 1024)} KB` : ""}
             </a>
           </li>
         ))}
       </ul>
-    </Card>
+    </Section>
   );
 }
 
@@ -275,7 +275,8 @@ function FormText({ text }: { text: string }) {
   );
 }
 
-function Card({
+/** A titled part of the tab: a heading over a rule, straight on the panel. */
+function Section({
   title,
   icon: Icon,
   badge,
@@ -289,8 +290,8 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="card-premium overflow-visible">
-      <div className="flex items-center gap-3 px-5 py-4 flex-wrap" style={{ borderBottom: "1px solid var(--color-border)" }}>
+    <section>
+      <div className="flex items-center gap-3 pb-2 mb-4 flex-wrap" style={{ borderBottom: "1px solid var(--color-border)" }}>
         <Icon size={16} style={{ color: "var(--color-primary)" }} />
         <h2 className="text-sm font-semibold" style={{ color: "var(--color-foreground)" }}>
           {title}
@@ -298,7 +299,7 @@ function Card({
         {badge}
         <div className="ml-auto">{action}</div>
       </div>
-      <div className="p-5">{children}</div>
-    </div>
+      {children}
+    </section>
   );
 }

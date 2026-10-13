@@ -1,34 +1,56 @@
 import { describe, expect, it } from "vitest";
-import { emptyAnswers, MEDICAL_HISTORY, showGroup } from "./medical-history";
+import { ALLERGENS, allergiesOnFile, CONDITIONS, emptyAnswers, SCREENING, showWomenOnly, toSave } from "./medical-history";
 
-describe("MEDICAL_HISTORY", () => {
-  it("asks every answer the API stores, once", () => {
-    const keys = Object.keys(emptyAnswers());
-    expect(keys).toHaveLength(20);
-    expect(new Set(keys).size).toBe(keys.length);
-    expect(Object.values(emptyAnswers()).every((v) => v === null)).toBe(true);
+describe("emptyAnswers", () => {
+  it("leaves every answer unanswered", () => {
+    const answers = emptyAnswers();
+    expect(Object.values(answers).every((v) => v === null || (Array.isArray(v) && v.length === 0))).toBe(true);
   });
 
-  it("flags 'No' as the concern only for good health", () => {
-    const flagged = MEDICAL_HISTORY.flatMap((g) => g.questions).filter((q) => q.concernIf === false);
-    expect(flagged.map((q) => q.key)).toEqual(["in_good_health"]);
+  it("covers every question asked on the form, once", () => {
+    const keys = new Set(Object.keys(emptyAnswers()));
+    const asked = [
+      ...SCREENING.flatMap((q) => [q.key, ...(q.detail ? [q.detail.key] : [])]),
+      ...ALLERGENS.map((a) => a.key),
+    ];
+    expect(asked.every((k) => keys.has(k))).toBe(true);
+    expect(new Set(asked).size).toBe(asked.length);
   });
 });
 
-describe("showGroup", () => {
-  const women = MEDICAL_HISTORY.find((g) => g.womenOnly)!;
-  const general = MEDICAL_HISTORY[0]!;
-
-  it("always shows general groups", () => {
-    expect(showGroup(general, "male", emptyAnswers())).toBe(true);
+describe("CONDITIONS", () => {
+  it("has no repeated code", () => {
+    const codes = CONDITIONS.map((c) => c.code);
+    expect(new Set(codes).size).toBe(codes.length);
   });
+});
 
+describe("showWomenOnly", () => {
   it("shows the women's questions for female patients", () => {
-    expect(showGroup(women, "female", emptyAnswers())).toBe(true);
-    expect(showGroup(women, "male", emptyAnswers())).toBe(false);
+    expect(showWomenOnly("female", emptyAnswers())).toBe(true);
+    expect(showWomenOnly("male", emptyAnswers())).toBe(false);
   });
 
   it("never hides an answer that was recorded", () => {
-    expect(showGroup(women, "other", { ...emptyAnswers(), bleeder: true })).toBe(true);
+    expect(showWomenOnly("other", { ...emptyAnswers(), on_menstruation: true })).toBe(true);
+  });
+});
+
+describe("toSave", () => {
+  it("turns unticked allergies into No and keeps has_allergies in step", () => {
+    const saved = toSave({ ...emptyAnswers(), allergic_to_latex: true });
+    expect(saved.allergic_to_latex).toBe(true);
+    expect(saved.allergic_to_penicillin).toBe(false);
+    expect(saved.has_allergies).toBe(true);
+  });
+
+  it("counts a written allergy", () => {
+    const answers = { ...emptyAnswers(), other_allergies: "Shellfish" };
+    expect(allergiesOnFile(answers)).toEqual(["Shellfish"]);
+    expect(toSave(answers).has_allergies).toBe(true);
+  });
+
+  it("records no allergies as No, not unanswered", () => {
+    expect(toSave(emptyAnswers()).has_allergies).toBe(false);
   });
 });

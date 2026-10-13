@@ -90,7 +90,7 @@ export function AppointmentDetailPanel({ appointmentId, onClose }: { appointment
                   label="Patient"
                   value={
                     <Link
-                      href={`/patients/${apt.patient.id}/overview` as Route}
+                      href={`/patients/${apt.patient.id}/info` as Route}
                       className="inline-flex items-center gap-1 hover:underline"
                       style={{ color: "var(--color-primary)" }}
                     >

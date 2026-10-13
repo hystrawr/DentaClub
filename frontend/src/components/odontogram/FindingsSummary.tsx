@@ -19,7 +19,7 @@ export function FindingsSummary({
   missingCount: number
 }) {
   return (
-    <div className="odontogram card-premium px-5 py-4">
+    <div className="odontogram">
       <p
         className="text-[10px] font-semibold uppercase tracking-wider mb-2"
         style={{ color: 'var(--color-subtle-foreground)' }}

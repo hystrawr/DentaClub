@@ -165,7 +165,7 @@ export function ToothInspector({
   return (
     <div
       ref={dockRef}
-      className="odontogram od-dock card-premium"
+      className="odontogram od-dock"
       data-variant={variant}
       role="region"
       aria-label={`Chart ${toothName(fdi)}`}

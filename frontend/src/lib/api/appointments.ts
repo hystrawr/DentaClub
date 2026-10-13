@@ -16,7 +16,13 @@ import type {
 
 /* ─── List ──────────────────────────────────────────────────────── */
 
-export function useAppointments(params: { date?: string; date_from?: string; date_to?: string; patient_id?: string }) {
+export function useAppointments(params: {
+  date?: string;
+  date_from?: string;
+  date_to?: string;
+  patient_id?: string;
+  status?: AppointmentStatus;
+}) {
   return useQuery({
     queryKey: ["appointments", params],
     queryFn: async () => {
@@ -39,13 +45,14 @@ export function useAppointment(id: string | undefined | null) {
 
 /* ─── Writes ────────────────────────────────────────────────────── */
 
-/** Everything that shows an appointment's status: the calendar, the detail panel, the board. */
+/** Everything that shows an appointment's status: the calendar, the detail panel, the board, the patient list. */
 function useInvalidateSchedule() {
   const qc = useQueryClient();
   return () => {
     void qc.invalidateQueries({ queryKey: ["appointments"] });
     void qc.invalidateQueries({ queryKey: OPERATORY_BOARD_KEY });
     void qc.invalidateQueries({ queryKey: ["slots"] });
+    void qc.invalidateQueries({ queryKey: ["patients", "list"] });
   };
 }
 

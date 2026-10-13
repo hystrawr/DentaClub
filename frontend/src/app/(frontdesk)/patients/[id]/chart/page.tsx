@@ -12,7 +12,7 @@ import { usePatient } from "@/lib/api/patients";
  * The clinical chart: the odontogram, and the record behind it.
  *
  * DentalOS shows the patient's visits (encounters) under the chart. This project
- * has no encounters, so the card below lists the chart's own history instead —
+ * has no encounters, so the list below shows the chart's own history instead —
  * every event ever charted, oldest first, **including** corrected and retracted
  * ones. The graphic drops a withdrawn finding; this list keeps it, marked, which
  * is the point of an append-only chart.
@@ -24,11 +24,13 @@ export default function PatientChartPage({ params }: PageProps<"/patients/[id]/c
   const events = history.data ?? [];
 
   return (
-    <div className="p-6 space-y-4">
-      <ToothChart patientId={id} patientAge={patient.data?.age} variant="desk" />
+    <div className="pb-6">
+      <div className="p-6">
+        <ToothChart patientId={id} patientAge={patient.data?.age} variant="desk" />
+      </div>
 
-      <div className="card-premium overflow-hidden">
-        <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
+      <section>
+        <div className="px-6 py-3" style={{ borderTop: "1px solid var(--color-border)", borderBottom: "1px solid var(--color-border)" }}>
           <h2 className="text-sm font-semibold" style={{ color: "var(--color-foreground)" }}>
             Chart History
           </h2>
@@ -38,7 +40,7 @@ export default function PatientChartPage({ params }: PageProps<"/patients/[id]/c
         </div>
 
         {history.isLoading && (
-          <div className="p-5 space-y-2" aria-busy="true">
+          <div className="px-6 py-4 space-y-2" aria-busy="true">
             {[0, 1, 2].map((i) => (
               <div key={i} className="skeleton" style={{ height: 44, borderRadius: 10 }} />
             ))}
@@ -46,7 +48,7 @@ export default function PatientChartPage({ params }: PageProps<"/patients/[id]/c
         )}
 
         {history.isError && (
-          <p className="px-5 py-4 text-xs" role="alert" style={{ color: "var(--color-destructive)" }}>
+          <p className="px-6 py-4 text-xs" role="alert" style={{ color: "var(--color-destructive)" }}>
             The chart history could not be loaded. Treat this list as unknown rather than empty.
           </p>
         )}
@@ -56,13 +58,13 @@ export default function PatientChartPage({ params }: PageProps<"/patients/[id]/c
         )}
 
         {events.length > 0 && (
-          <ul className="divide-y" style={{ borderColor: "var(--color-border)" }}>
+          <ul className="divide-y" style={{ borderBottom: "1px solid var(--color-border)" }}>
             {[...events].reverse().map((event) => (
               <HistoryRow key={event.id} event={event} />
             ))}
           </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 }
@@ -84,7 +86,7 @@ function HistoryRow({ event }: { event: OdontogramEvent }) {
   const withdrawn = event.status !== "final";
 
   return (
-    <li className="px-5 py-3 flex items-start gap-4 table-row-hover">
+    <li className="px-6 py-3 flex items-start gap-4 table-row-hover">
       <span
         className="font-mono text-xs font-bold rounded-lg px-2 py-1 shrink-0"
         style={{ background: "var(--color-surface-subtle)", color: "var(--color-foreground)" }}

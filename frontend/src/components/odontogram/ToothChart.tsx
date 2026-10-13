@@ -101,7 +101,7 @@ export function ToothChart({
   return (
     <div className="space-y-4">
       {/* ─── Controls ──────────────────────────────────────────────────── */}
-      <div className="odontogram flex items-center justify-between gap-3 flex-wrap">
+      <div className="odontogram flex items-center justify-between gap-3 flex-wrap" data-print="hide">
         <div className="flex items-center gap-1.5">
           {(['permanent', 'mixed', 'deciduous'] as Dentition[]).map((option) => (
             <button
@@ -137,7 +137,7 @@ export function ToothChart({
       </div>
 
       {/* ─── The chart ─────────────────────────────────────────────────── */}
-      <div className="card-premium px-4 py-4">
+      <div className="py-2">
         {chartQuery.isLoading ? (
           <OdontogramSkeleton dentition={shown} size={size} />
         ) : chartQuery.isError ? (
@@ -231,8 +231,9 @@ export function ToothChart({
         with it for the space beside the chart.
       */}
       <div
-        className="grid gap-4 items-start"
+        className="grid gap-x-8 gap-y-4 items-start pt-4"
         style={{
+          borderTop: '1px solid var(--color-border)',
           gridTemplateColumns: variant === 'chair' ? '1fr' : 'minmax(0, 1fr) minmax(0, 360px)',
         }}
       >

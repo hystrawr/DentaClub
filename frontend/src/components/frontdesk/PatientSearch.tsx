@@ -57,7 +57,7 @@ export function PatientSearch({ onSelect, placeholder = "Search by name or phone
     setQuery("");
     setFocused(-1);
     if (onSelect) onSelect(patient);
-    else router.push(`/patients/${patient.id}/overview` as Route);
+    else router.push(`/patients/${patient.id}/info` as Route);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {

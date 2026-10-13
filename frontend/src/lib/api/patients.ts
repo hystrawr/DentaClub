@@ -1,23 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { get, patch, post, put } from "./client";
+import { del, get, patch, post, put } from "./client";
 import type {
   CreatePatientPayload,
   MedicalHistory,
   MedicalHistoryAnswers,
   Patient,
-  PatientSummary,
+  PatientListItem,
   UpdatePatientPayload,
 } from "@/types/api";
 
 /* ─── List / search ─────────────────────────────────────────────── */
 
-/** Every patient, A–Z by last name. `search` narrows by name or mobile. */
+/** Every patient, A–Z by last name, with their last visit and next appointment. `search` narrows by name or mobile. */
 export function usePatients(params?: { search?: string }, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["patients", "list", params?.search ?? ""],
     queryFn: async () => {
       const qs = params?.search ? `?search=${encodeURIComponent(params.search)}` : "";
-      return (await get<{ data: PatientSummary[] }>(`/api/patients${qs}`)).data;
+      return (await get<{ data: PatientListItem[] }>(`/api/patients${qs}`)).data;
     },
     enabled: options?.enabled ?? true,
     // Keep the previous results on screen while the next search loads.
@@ -54,6 +54,18 @@ export function useUpdatePatient(id: string) {
       (await patch<{ data: Patient }>(`/api/patients/${id}`, payload)).data,
     onSuccess: (patient) => {
       qc.setQueryData(["patients", id], patient);
+      void qc.invalidateQueries({ queryKey: ["patients", "list"] });
+    },
+  });
+}
+
+/** Deletes the patient with their chart, consents, documents and treatment record. Appointments are kept. */
+export function useDeletePatient(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => del<void>(`/api/patients/${id}`),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: ["patients", id] });
       void qc.invalidateQueries({ queryKey: ["patients", "list"] });
     },
   });

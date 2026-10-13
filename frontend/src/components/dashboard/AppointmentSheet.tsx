@@ -9,7 +9,7 @@ import { clock, timeOf } from "@/lib/utils/manila";
 import { AppointmentActions } from "@/components/schedule/AppointmentActions";
 
 /**
- * The bottom sheet a queue card opens (from DentalOS's chairside AppointmentSheet).
+ * The bottom sheet an appointment's "View details" opens (from DentalOS's chairside AppointmentSheet).
  *
  * DentalOS's "Seat Patient" also opened a clinical encounter and jumped to it;
  * there are no encounters here, so seating only moves the status, and "Open

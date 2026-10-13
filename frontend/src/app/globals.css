@@ -65,7 +65,7 @@
   --shadow-dropdown:   0 4px 16px -2px rgb(0 0 0 / 0.10), 0 1px 4px 0 rgb(0 0 0 / 0.06);
 
   /* --- Layout --- */
-  --sidebar-width: 256px;
+  --rail-width: 96px;
   --header-height: 64px;
 }
 
@@ -238,6 +238,11 @@ body {
 
 .table-row-hover:hover { background: var(--color-surface-raised); }
 
+/* Patient list rows: a soft mint stripe on every other row, blue on hover. */
+.patient-row:nth-child(even) { background: #F3FBF9; }
+.patient-row:last-child { border-bottom: 0 !important; }
+.patient-row:hover { background: #EEF4FF; }
+
 /* Search inputs draw their own clear (×) button; hide the browser's, or there are two. */
 input[type="search"]::-webkit-search-cancel-button { appearance: none; }
 
@@ -246,4 +251,196 @@ input[type="search"]::-webkit-search-cancel-button { appearance: none; }
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* =========================================================
+   Patient record — folder tabs, the record panel, and the
+   paper-form controls (fields, Yes/No toggles, allergy cards).
+   Used by app/(frontdesk)/patients/[id]/ and
+   components/patient-record/.
+   ========================================================= */
+
+/* Folder tabs on top of the record panel, in the app's own colours. They
+   overlap a little, like the tabs of a paper folder; the active one is
+   white, taller, and joins the panel. */
+.record-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 18px;
+  margin-right: -6px;
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  background: var(--color-surface-subtle);
+  color: var(--color-muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  position: relative;
+  transition: background 150ms ease, color 150ms ease;
+}
+.record-tab:hover { background: var(--color-surface); color: var(--color-foreground); z-index: 1; }
+.record-tab[aria-current="page"] {
+  height: 42px;
+  padding: 0 22px;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: inset 0 2px 0 var(--color-primary);
+  z-index: 2;
+}
+
+/* A fixed-size panel: it fills the rest of the screen, and a tab whose content
+   is taller scrolls inside it. The Save bar stays put at the bottom. */
+.record-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0 var(--radius-xl) var(--radius-xl) var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  margin-top: -1px;
+  position: relative;
+  flex: 1 1 0;
+  min-height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A section of the form, "Patient Information": a heading over a
+   rule, straight on the panel — no box around it. */
+.record-block + .record-block { margin-top: 32px; }
+.record-block-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.record-label { font-size: 0.75rem; font-weight: 500; color: var(--color-muted-foreground); }
+
+/* Form fields, as the app's other forms draw them. */
+.record-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  color: var(--color-foreground);
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.record-input:hover { border-color: var(--color-border-strong); }
+.record-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15); }
+.record-input[readonly] { background: var(--color-surface-subtle); border-color: var(--color-border); color: var(--color-muted-foreground); }
+.record-input[aria-invalid="true"] { border-color: var(--color-destructive); }
+.record-input::placeholder { color: var(--color-placeholder); }
+
+/* Yes / No (and Low / Moderate / Severe): nothing pressed means not answered yet. */
+.record-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--color-surface-subtle); border: 1px solid var(--color-border); flex: none; }
+.record-seg button { padding: 5px 12px; min-width: 50px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; color: var(--color-muted-foreground); transition: background 150ms ease, color 150ms ease; }
+.record-seg button:hover { color: var(--color-foreground); }
+.record-seg button[aria-pressed="true"] { background: var(--color-surface); color: var(--color-primary); box-shadow: 0 1px 2px rgb(15 23 42 / 0.12); }
+.record-seg button[aria-pressed="true"][data-severe] { color: var(--color-destructive); }
+
+.record-allergen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  text-align: left;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+.record-allergen:hover { border-color: #FCA5A5; }
+.record-allergen[aria-pressed="true"] { background: var(--color-destructive); border-color: var(--color-destructive); color: #fff; font-weight: 600; }
+
+.record-check:hover { background: var(--color-surface-subtle); }
+.record-check:has(input:checked) { background: var(--color-primary-light); color: var(--color-primary); font-weight: 600; }
+
+/* Appointments tab: a read-only list; a row opens the appointment. */
+.appt-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; color: var(--color-foreground); }
+.appt-table th { text-align: left; padding: 8px 12px; font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted-foreground); background: var(--color-surface-raised); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.appt-table td { padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+.appt-table tbody tr { cursor: pointer; transition: background 150ms ease; }
+.appt-table tbody tr:hover { background: var(--color-surface-raised); }
+.appt-table tbody tr:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.appt-table th:last-child, .appt-table td:last-child { width: 1%; white-space: nowrap; }
+
+/* Treatment Record: an editable grid. */
+.sheet { border-collapse: collapse; width: 100%; min-width: 980px; font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+.sheet th { background: var(--color-surface-raised); color: var(--color-muted-foreground); font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 8px; border: 1px solid var(--color-border); border-top: none; white-space: nowrap; }
+.sheet td { border: 1px solid var(--color-border); padding: 0; height: 42px; }
+.sheet th:first-child, .sheet td:first-child { border-left: none; }
+.sheet th:last-child, .sheet td:last-child { border-right: none; }
+.sheet tbody tr:hover td { background: var(--color-surface-raised); }
+.sheet td input { width: 100%; height: 42px; border: none; background: transparent; padding: 0 10px; text-align: center; outline: none; }
+.sheet td input.money { text-align: right; font-family: var(--font-mono); font-size: 0.75rem; }
+.sheet td input:focus { outline: 2px solid var(--color-primary); outline-offset: -2px; background: var(--color-surface); }
+.sheet tfoot td { background: var(--color-surface-raised); border-bottom: none; font-weight: 700; padding: 0 10px; font-family: var(--font-mono); font-size: 0.75rem; text-align: right; }
+
+/* The whole record, for printing: hidden on screen, one section per page. */
+.print-record { display: none; }
+
+/* Print / Save as PDF: the record alone, without the app around it. */
+@page { size: A4 portrait; margin: 12mm; }
+@media print {
+  /* Keep the colours that carry meaning: a pressed Yes, a ticked allergy. */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* The record runs as one long page, not a full-height app. */
+  .h-full { height: auto !important; }
+
+  .print-record { display: block; margin-top: 16px; }
+  .print-section + .print-section { break-before: page; }
+  .print-section-title {
+    font-size: 1.125rem; font-weight: 700; color: var(--color-foreground);
+    padding: 0 0 6px; margin: 0 24px 4px; border-bottom: 2px solid var(--color-foreground);
+    break-after: avoid;
+  }
+
+  /* Fields print as their full text, written out by PrintRecord. */
+  .print-record input:not([type="checkbox"]):not([type="radio"]), .print-record select, .print-record textarea { display: none !important; }
+  .print-value {
+    display: block; min-height: 1.6em; padding: 3px 2px;
+    border-bottom: 1px solid var(--color-border-strong);
+    font-size: 0.8125rem; color: var(--color-foreground);
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+
+  /* Treatment table: fit the page width, wrap long procedures. */
+  .print-record .overflow-x-auto { overflow: visible !important; }
+  .sheet { min-width: 0; table-layout: auto; font-size: 0.6875rem; }
+  .sheet th { white-space: normal; padding: 6px 4px; }
+  .sheet td { height: auto; }
+  .sheet .print-value { border: 0; min-height: 0; padding: 5px 6px; font-size: 0.6875rem; }
+  .sheet .print-value.money { text-align: right; font-family: var(--font-mono); }
+
+  /* Appointments: the page is narrower than the screen, but keep every column. */
+  .appt-table th.hidden, .appt-table td.hidden { display: table-cell !important; }
+  .appt-table td { padding: 6px 8px; }
+
+  /* Dental chart: shrink the arches to the page instead of cutting them off. */
+  .od-scroll { overflow: visible !important; }
+  .od-scroll > div { zoom: 0.48; }
+
+  /* Never split a row, a question or a heading from what follows it. */
+  .print-record li, .print-record tr, .record-check, .record-allergen { break-inside: avoid; }
+  .record-block-head, .print-record h2, .print-record h3 { break-after: avoid; }
+  header, aside, nav, [data-print="hide"] { display: none !important; }
+  .h-screen { height: auto !important; overflow: visible !important; }
+  main { padding: 0 !important; overflow: visible !important; }
+  body { background: #fff !important; }
+  .record-panel { border: none; box-shadow: none; overflow: visible; min-height: 0; }
+  .card-premium { box-shadow: none !important; }
 }

@@ -75,8 +75,34 @@ export function shortDate(date: string, withYear = false): string {
   });
 }
 
+/** "October 5, 2026" */
+export function fullDate(date: string): string {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 /** "9:30 AM" */
 export function clock(hhmm: string): string {
   const [h = 0, m = 0] = hhmm.split(":").map(Number);
   return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+
+/** The hour (0–23) on the clinic's clock right now. */
+export function manilaHour(): number {
+  return new Date(Date.now() + MANILA_OFFSET_MS).getUTCHours();
+}
+
+/** Minutes since midnight on the clinic's clock right now. */
+export function manilaMinutes(): number {
+  const now = new Date(Date.now() + MANILA_OFFSET_MS);
+  return now.getUTCHours() * 60 + now.getUTCMinutes();
+}
+
+/** "October 2026" */
+export function monthYear(date: string): string {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-PH", { month: "long", year: "numeric", timeZone: "UTC" });
 }

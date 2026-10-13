@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { usePathname, useRouter } from "next/navigation";
-import { Activity, Calendar, ChevronRight, ListOrdered, LogOut, UserRound, Users } from "lucide-react";
-import { useCurrentUser, useSignOut } from "@/lib/api/auth";
+import { usePathname } from "next/navigation";
+import { Calendar, LayoutDashboard, Users } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 interface NavItem {
@@ -13,102 +12,71 @@ interface NavItem {
   icon: React.ElementType;
 }
 
-/**
- * Ported from DentalOS's Sidebar. Only screens that exist are listed — a nav
- * item that leads nowhere is worse than a missing one. (DentalOS's help card
- * is left out.)
- */
+/** Only screens that exist are listed — a nav item that leads nowhere is worse than a missing one. */
 const navItems: NavItem[] = [
-  { label: "Queue", href: "/queue", icon: ListOrdered },
-  { label: "Schedule", href: "/schedule", icon: Calendar },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Appointments", href: "/appointments", icon: Calendar },
   { label: "Patients", href: "/patients", icon: Users },
 ];
 
+/** Floating icon rail below the app header, always shown. */
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const user = useCurrentUser();
-  const signOut = useSignOut();
 
   return (
     <aside
-      className="flex flex-col h-full shrink-0"
+      className="fixed z-30 flex flex-col"
       style={{
-        width: "var(--sidebar-width)",
+        left: 16,
+        top: "calc(var(--header-height) + 16px)",
+        bottom: 16,
+        width: "var(--rail-width)",
         background: "var(--color-surface)",
-        borderRight: "1px solid var(--color-border)",
+        border: "1px solid var(--color-border-strong)",
+        borderRadius: 24,
+        boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
       }}
     >
-      {/* Brand */}
-      <div
-        className="flex items-center gap-3 px-5"
-        style={{ height: "var(--header-height)", borderBottom: "1px solid var(--color-border)" }}
-      >
-        <div
-          className="flex items-center justify-center rounded-xl shrink-0"
-          style={{ width: 36, height: 36, background: "linear-gradient(135deg, #2563EB 0%, #0D9488 100%)" }}
-        >
-          <Activity size={18} color="#fff" strokeWidth={2} />
-        </div>
-        <div>
-          <p className="text-sm font-bold" style={{ color: "var(--color-foreground)", lineHeight: 1.2 }}>
-            DentaClub
-          </p>
-          <p className="text-xs" style={{ color: "var(--color-muted-foreground)", lineHeight: 1.4 }}>
-            Clinic Manager
-          </p>
-        </div>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-subtle-foreground)" }}>
-          
-        </p>
+      <nav className="flex-1 flex flex-col justify-center gap-6 py-6">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}
               href={item.href as Route}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
-                isActive ? "nav-pill-active" : "hover:bg-slate-50",
-              )}
-              style={isActive ? {} : { color: "var(--color-muted-foreground)" }}
+              className="group flex flex-col items-center gap-1.5"
               aria-current={isActive ? "page" : undefined}
             >
-              <Icon
-                size={18}
-                strokeWidth={isActive ? 2 : 1.75}
+              <span
+                className={cn(
+                  "flex items-center justify-center rounded-full transition-colors duration-150",
+                  !isActive && "group-hover:bg-slate-50",
+                )}
+                style={{
+                  width: 48,
+                  height: 48,
+                  background: isActive ? "var(--color-primary)" : undefined,
+                  border: `1.5px solid ${isActive ? "var(--color-primary)" : "var(--color-border-strong)"}`,
+                }}
+              >
+                <Icon
+                  size={20}
+                  strokeWidth={isActive ? 2 : 1.75}
+                  style={{ color: isActive ? "var(--color-primary-foreground)" : "var(--color-muted-foreground)" }}
+                  aria-hidden="true"
+                />
+              </span>
+              <span
+                className={cn("text-[11px]", isActive ? "font-semibold" : "font-medium")}
                 style={{ color: isActive ? "var(--color-primary)" : "var(--color-muted-foreground)" }}
-                className="shrink-0"
-              />
-              <span className="flex-1">{item.label}</span>
-              {isActive && <ChevronRight size={14} style={{ color: "var(--color-primary)" }} className="opacity-60" />}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}
       </nav>
-
-      {/* Signed-in user */}
-      <div className="flex items-center gap-2 px-4 py-3" style={{ borderTop: "1px solid var(--color-border)" }}>
-        <UserRound size={16} style={{ color: "var(--color-muted-foreground)" }} className="shrink-0" aria-hidden="true" />
-        <span className="flex-1 min-w-0 truncate text-sm font-medium" style={{ color: "var(--color-foreground)" }}>
-          {user.data?.username}
-        </span>
-        <button
-          type="button"
-          onClick={() => signOut.mutate(undefined, { onSuccess: () => router.replace("/login") })}
-          disabled={signOut.isPending}
-          className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-2.5 py-1.5 hover:bg-slate-50"
-          style={{ color: "var(--color-muted-foreground)", border: "1px solid var(--color-border)" }}
-        >
-          <LogOut size={13} aria-hidden="true" />
-          Sign out
-        </button>
-      </div>
     </aside>
   );
 }

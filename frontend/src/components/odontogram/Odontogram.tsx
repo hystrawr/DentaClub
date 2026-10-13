@@ -125,7 +125,7 @@ export function Odontogram({
         move(fdi, e.key)
       }}
     >
-      <div style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+      <div className="od-scroll" style={{ overflowX: 'auto', overflowY: 'hidden' }}>
         <div ref={gridRef} className="mx-auto" style={{ minWidth: 'min-content', padding: '4px 2px' }}>
           {rows.map((row, rowIndex) => {
             const upper = rowIsUpper(row)
@@ -207,7 +207,7 @@ export function OdontogramSkeleton({
 
   return (
     <div className="odontogram" aria-busy="true" aria-label="Loading tooth chart">
-      <div style={{ overflowX: 'auto' }}>
+      <div className="od-scroll" style={{ overflowX: 'auto' }}>
         <div className="mx-auto od-skeleton" style={{ minWidth: 'min-content', padding: '4px 2px' }}>
           {rows.map((row) => {
             const upper = rowIsUpper(row)

@@ -4,6 +4,7 @@ import type {
   Appointment,
   AppointmentStatus,
   AppointmentType,
+  AppointmentTypePayload,
   ChairsideBoard,
   CreateAppointmentPayload,
   Operatory,
@@ -97,6 +98,18 @@ export function useAppointmentTypes() {
     queryKey: ["appointment-types"],
     queryFn: () => get<AppointmentType[]>("/api/appointment-types"),
     staleTime: 60_000,
+  });
+}
+
+/** Add a service (no id) or change one. Booking and the Treatment sheet read the same list. */
+export function useSaveAppointmentType() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...payload }: AppointmentTypePayload & { id?: string }) =>
+      id
+        ? patch<AppointmentType>(`/api/appointment-types/${id}`, payload)
+        : post<AppointmentType>("/api/appointment-types", payload),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["appointment-types"] }),
   });
 }
 

@@ -59,6 +59,12 @@ dentaclub/
 - **Double-booking protection:** an appointment can't be confirmed if the dentist or chair is already taken. The message names the clashing time.
 - Each patient has an Appointments tab listing upcoming and past visits.
 
+### Services and prices
+- **Settings → Services** lists the clinic's services with their length, calendar colour and price. Services are the same list that booking calls appointment types.
+- Add or edit a service, and deactivate one you no longer offer. Services are never deleted, because past appointments still point at them.
+- On a patient's **Treatment** sheet, the Procedure cell suggests services. Picking one fills an empty Amount Charged with its price, which can still be changed for a discount.
+- The price is copied into the treatment row, so changing a price later never changes what a patient was already charged.
+
 ## Setup
 
 ### Requirements

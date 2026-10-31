@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { FormError } from "@/components/ui/form";
+import { useAppointmentTypes } from "@/lib/api/appointments";
 import { useSaveTreatmentRecords } from "@/lib/api/treatment-records";
+import { peso, pesos } from "@/lib/utils/money";
+import { pricedServices, priceFor } from "@/lib/utils/services";
 import type { TreatmentRecord, TreatmentRow } from "@/types/api";
 import { ResetDelete, SaveBar } from "./RecordPanel";
 
@@ -59,19 +62,6 @@ const cellsFrom = (r: TreatmentRecord): Cells => ({
   next_appointment: r.next_appointment ?? "",
 });
 
-/** "1,500.50" or "₱1500.5" → 1500.5; "" → null. */
-function pesos(value: string): number | null {
-  const n = Number(value.replace(/[^\d.]/g, ""));
-  return value.trim() === "" || Number.isNaN(n) ? null : Math.round(n * 100) / 100;
-}
-
-const peso = (n: number) =>
-  "₱" +
-  n.toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
 const toRow = (c: Cells): TreatmentRow => ({
   visit_date: c.visit_date || null,
   teeth: c.teeth.trim() || null,
@@ -108,9 +98,14 @@ const fingerprint = (rows: Cells[]) => JSON.stringify(rows.filter((r) => !isBlan
  * Enter and ↑/↓ move between rows as in Excel, and Enter on the last row adds
  * one. Balance carries down from the row above (charged minus paid, running),
  * so it is worked out here and never typed.
+ *
+ * Procedure suggests the clinic's services; naming one fills an empty Amount
+ * Charged with its price. The price is copied into the row, so changing it in
+ * Settings later never rewrites what a patient was charged.
  */
 export function TreatmentSheet({ patientId, records }: { patientId: string; records: TreatmentRecord[] }) {
   const save = useSaveTreatmentRecords(patientId);
+  const { data: types = [] } = useAppointmentTypes();
   const [saved, setSaved] = useState(() => records.map(cellsFrom));
   const [rows, setRows] = useState(() => withBlanks(saved));
   // Which money cell is being typed in: shown raw while focused, as pesos otherwise.
@@ -120,7 +115,15 @@ export function TreatmentSheet({ patientId, records }: { patientId: string; reco
   const dirty = fingerprint(rows) !== fingerprint(saved);
 
   const setCell = (i: number, key: keyof TreatmentRow, value: string) =>
-    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, [key]: value } : r)));
+    setRows((rs) =>
+      rs.map((r, j) => {
+        if (j !== i) return r;
+        const next = { ...r, [key]: value };
+        // A typed amount is never overwritten, so a discount survives re-picking the service.
+        const price = key === "procedure" && r.amount_charged.trim() === "" ? priceFor(value, types) : null;
+        return price === null ? next : { ...next, amount_charged: String(price) };
+      }),
+    );
 
   async function persist(next: Cells[]) {
     try {
@@ -180,6 +183,7 @@ export function TreatmentSheet({ patientId, records }: { patientId: string; reco
                         style={c.align ? { textAlign: c.align } : undefined}
                         value={value}
                         maxLength={c.key === "teeth" ? 50 : 255}
+                        list={c.key === "procedure" ? "treatment-services" : undefined}
                         aria-label={`${c.label}, row ${i + 1}`}
                         onFocus={() => money && setEditing(id)}
                         onBlur={() => money && setEditing(null)}
@@ -241,6 +245,13 @@ export function TreatmentSheet({ patientId, records }: { patientId: string; reco
             </tr>
           </tfoot>
         </table>
+        <datalist id="treatment-services">
+          {pricedServices(types).map((t) => (
+            <option key={t.id} value={t.name}>
+              {t.price === null ? undefined : peso(t.price)}
+            </option>
+          ))}
+        </datalist>
       </div>
 
       <div

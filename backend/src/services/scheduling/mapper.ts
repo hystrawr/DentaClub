@@ -80,6 +80,7 @@ export function appointmentTypeModel(t: AppointmentType) {
     color_hex: t.colorHex,
     is_block_time: t.isBlockTime,
     recall_interval_months: t.recallIntervalMonths,
+    price: t.price === null ? null : Number(t.price),
     is_active: t.isActive,
     created_at: isoUtc(t.createdAt),
     updated_at: isoUtc(t.updatedAt),

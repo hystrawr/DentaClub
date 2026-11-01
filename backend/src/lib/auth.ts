@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import type { Request, RequestHandler } from "express";
+import type { UserRole } from "../generated/prisma/client.js";
 import { prisma } from "./prisma.js";
 import { HttpError } from "./http-error.js";
 
@@ -53,8 +54,18 @@ export function createSessionToken(user: { username: string; passwordHash: strin
   return `${payload}.${sign(payload, user.passwordHash)}`;
 }
 
-/** The signed-in username, or null for a missing, expired, forged or outdated token. */
-export async function verifySessionToken(token: string | undefined): Promise<string | null> {
+/** Who is signed in, as the routes see them. */
+export interface SessionUser {
+  username: string;
+  role: UserRole;
+}
+
+/**
+ * The signed-in user, or null for a missing, expired, forged or outdated token.
+ * The role is read from the database on every request, so a change of role
+ * takes effect at once.
+ */
+export async function verifySessionToken(token: string | undefined): Promise<SessionUser | null> {
   if (!token) return null;
   const [payload, signature] = token.split(".");
   if (!payload || !signature) return null;
@@ -72,7 +83,9 @@ export async function verifySessionToken(token: string | undefined): Promise<str
 
   const expected = Buffer.from(sign(payload, user.passwordHash));
   const actual = Buffer.from(signature);
-  return expected.length === actual.length && timingSafeEqual(expected, actual) ? user.username : null;
+  return expected.length === actual.length && timingSafeEqual(expected, actual)
+    ? { username: user.username, role: user.role }
+    : null;
 }
 
 /** One cookie from the Cookie header (no cookie-parser dependency for one value). */
@@ -84,11 +97,22 @@ export function readCookie(req: Request, name: string): string | undefined {
   return undefined;
 }
 
-/** Refuse every request that is not signed in. */
+/** Refuse every request that is not signed in. The user is left in `res.locals.user`. */
 export const requireSignIn: RequestHandler = async (req, res, next) => {
-  const username = await verifySessionToken(readCookie(req, SESSION_COOKIE));
-  if (!username) throw new HttpError(401, "Please sign in.");
-  res.locals.username = username;
+  const user = await verifySessionToken(readCookie(req, SESSION_COOKIE));
+  if (!user) throw new HttpError(401, "Please sign in.");
+  res.locals.user = user;
+  next();
+};
+
+/**
+ * Refuse staff: for routes that change the clinic's settings (services,
+ * dentists, chairs). Runs after requireSignIn. Checked here, on the server,
+ * so hiding a page in the app is never the only thing in the way.
+ */
+export const requireAdmin: RequestHandler<Record<string, string>> = (_req, res, next) => {
+  const user = res.locals.user as SessionUser | undefined;
+  if (user?.role !== "admin") throw new HttpError(403, "Only an admin can do this.");
   next();
 };
 

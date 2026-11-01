@@ -46,7 +46,7 @@ authRouter.post("/login", async (req, res) => {
 
   clearFailures(ip);
   res.cookie(SESSION_COOKIE, createSessionToken(user), { ...cookieOptions, maxAge: SESSION_HOURS * 60 * 60 * 1000 });
-  res.json({ data: { username: user.username } });
+  res.json({ data: { username: user.username, role: user.role } });
 });
 
 /** POST /api/auth/logout */
@@ -55,9 +55,9 @@ authRouter.post("/logout", (_req, res) => {
   res.status(204).end();
 });
 
-/** GET /api/auth/me — who is signed in, or 401. */
+/** GET /api/auth/me — who is signed in and their role, or 401. */
 authRouter.get("/me", async (req, res) => {
-  const username = await verifySessionToken(readCookie(req, SESSION_COOKIE));
-  if (!username) throw new HttpError(401, "Please sign in.");
-  res.json({ data: { username } });
+  const user = await verifySessionToken(readCookie(req, SESSION_COOKIE));
+  if (!user) throw new HttpError(401, "Please sign in.");
+  res.json({ data: user });
 });

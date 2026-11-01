@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { requireAdmin } from "../lib/auth.js";
 import { notFound } from "../lib/http-error.js";
 import { appointmentTypeModel } from "../services/scheduling/mapper.js";
 
@@ -26,7 +27,7 @@ appointmentTypesRouter.get("/", async (_req, res) => {
   res.json(rows.map(appointmentTypeModel));
 });
 
-appointmentTypesRouter.post("/", async (req, res) => {
+appointmentTypesRouter.post("/", requireAdmin, async (req, res) => {
   const dto = createType.parse(req.body);
   const created = await prisma.appointmentType.create({
     data: {
@@ -43,7 +44,7 @@ appointmentTypesRouter.post("/", async (req, res) => {
   res.status(201).json(appointmentTypeModel(created));
 });
 
-appointmentTypesRouter.patch("/:id", async (req, res) => {
+appointmentTypesRouter.patch("/:id", requireAdmin, async (req, res) => {
   const dto = updateType.parse(req.body);
   const found = await prisma.appointmentType.findUnique({ where: { id: req.params.id } });
   if (!found) throw notFound(`No appointment type ${req.params.id}`);

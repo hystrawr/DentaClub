@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { requireAdmin } from "../lib/auth.js";
 import { invalidField, notFound } from "../lib/http-error.js";
 import { locationResource, operatoryResource } from "../services/scheduling/mapper.js";
 
@@ -54,7 +55,7 @@ clinicStructureRouter.get("/locations", async (req, res) => {
   res.json({ data: rows.map(locationResource) });
 });
 
-clinicStructureRouter.post("/locations", async (req, res) => {
+clinicStructureRouter.post("/locations", requireAdmin, async (req, res) => {
   const dto = createLocation.parse(req.body);
   const created = await prisma.location.create({
     data: {
@@ -68,7 +69,7 @@ clinicStructureRouter.post("/locations", async (req, res) => {
   res.status(201).json({ data: locationResource(created) });
 });
 
-clinicStructureRouter.patch("/locations/:id", async (req, res) => {
+clinicStructureRouter.patch("/locations/:id", requireAdmin, async (req, res) => {
   const dto = updateLocation.parse(req.body);
   const found = await prisma.location.findUnique({ where: { id: req.params.id } });
   if (!found) throw notFound(`No location ${req.params.id}`);
@@ -102,7 +103,7 @@ clinicStructureRouter.get("/operatories", async (req, res) => {
   res.json({ data: rows.map(operatoryResource) });
 });
 
-clinicStructureRouter.post("/operatories", async (req, res) => {
+clinicStructureRouter.post("/operatories", requireAdmin, async (req, res) => {
   const dto = createOperatory.parse(req.body);
 
   // Checked here rather than left to the foreign key, which would be a 500.
@@ -122,7 +123,7 @@ clinicStructureRouter.post("/operatories", async (req, res) => {
   res.status(201).json({ data: operatoryResource(created) });
 });
 
-clinicStructureRouter.patch("/operatories/:id", async (req, res) => {
+clinicStructureRouter.patch("/operatories/:id", requireAdmin, async (req, res) => {
   const dto = updateOperatory.parse(req.body);
   const found = await prisma.operatory.findUnique({ where: { id: req.params.id } });
   if (!found) throw notFound(`No operatory ${req.params.id}`);

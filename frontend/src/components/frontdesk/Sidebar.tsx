@@ -4,12 +4,15 @@ import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import { Calendar, LayoutDashboard, Settings, Users } from "lucide-react";
+import { useIsAdmin } from "@/lib/api/auth";
 import { cn } from "@/lib/utils/cn";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
+  /** Shown to admins only; the API also refuses staff on these screens' changes. */
+  adminOnly?: boolean;
 }
 
 /** Only screens that exist are listed — a nav item that leads nowhere is worse than a missing one. */
@@ -17,12 +20,14 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Appointments", href: "/appointments", icon: Calendar },
   { label: "Patients", href: "/patients", icon: Users },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Settings", href: "/settings", icon: Settings, adminOnly: true },
 ];
 
 /** Floating icon rail below the app header, always shown. */
 export function Sidebar() {
   const pathname = usePathname();
+  const isAdmin = useIsAdmin();
+  const visible = navItems.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <aside
@@ -39,7 +44,7 @@ export function Sidebar() {
       }}
     >
       <nav className="flex-1 flex flex-col justify-center gap-6 py-6">
-        {navItems.map((item) => {
+        {visible.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (

@@ -10,6 +10,7 @@ export function AppHeader() {
   const user = useCurrentUser();
   const signOut = useSignOut();
   const username = user.data?.username ?? "";
+  const role = user.data?.role;
 
   return (
     <header
@@ -43,8 +44,15 @@ export function AppHeader() {
         >
           {username.slice(0, 1)}
         </div>
-        <span className="max-w-40 truncate text-sm font-semibold" style={{ color: "var(--color-foreground)" }}>
-          {username}
+        <span className="flex flex-col leading-tight min-w-0">
+          <span className="max-w-40 truncate text-sm font-semibold" style={{ color: "var(--color-foreground)" }}>
+            {username}
+          </span>
+          {role && (
+            <span className="text-[11px] font-medium" style={{ color: "var(--color-muted-foreground)" }}>
+              {role === "admin" ? "Admin" : "Staff"}
+            </span>
+          )}
         </span>
         <button
           type="button"

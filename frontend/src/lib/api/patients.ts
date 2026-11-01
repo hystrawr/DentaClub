@@ -46,6 +46,13 @@ export function useCreatePatient() {
   });
 }
 
+/** Whether a patient by this name is already on file (capitals and spacing aside). */
+export async function checkPatientName(name: { first_name: string; middle_name: string; last_name: string }) {
+  const qs = new URLSearchParams({ first_name: name.first_name, last_name: name.last_name });
+  if (name.middle_name.trim()) qs.set("middle_name", name.middle_name);
+  return (await get<{ data: { exists: false } | { exists: true; id: string; full_name: string } }>(`/api/patients/name-check?${qs}`)).data;
+}
+
 /** Partial update: an absent key is untouched, `null` clears the field. */
 export function useUpdatePatient(id: string) {
   const qc = useQueryClient();

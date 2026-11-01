@@ -132,12 +132,12 @@ type Name = { firstName: string; middleName: string | null; lastName: string };
 const sameText = (value: string) => ({ equals: value, mode: "insensitive" as const });
 
 /**
- * Refuse a second patient with the same first, middle and last name, whatever
- * the capitals. No middle name only matches no middle name. `exceptId` is the
- * patient being renamed, who may keep their own name.
+ * The patient already filed under this first, middle and last name, whatever
+ * the capitals, or null. No middle name only matches no middle name.
+ * `exceptId` is the patient being renamed, who may keep their own name.
  */
-async function assertNameFree(db: Prisma.TransactionClient, name: Name, exceptId?: string) {
-  const clash = await db.patient.findFirst({
+function findNameClash(db: Prisma.TransactionClient, name: Name, exceptId?: string) {
+  return db.patient.findFirst({
     where: {
       firstName: sameText(name.firstName),
       lastName: sameText(name.lastName),
@@ -146,6 +146,11 @@ async function assertNameFree(db: Prisma.TransactionClient, name: Name, exceptId
     },
     select: { id: true, firstName: true, middleName: true, lastName: true, suffix: true },
   });
+}
+
+/** Refuse a second patient with the same name (see findNameClash). */
+async function assertNameFree(db: Prisma.TransactionClient, name: Name, exceptId?: string) {
+  const clash = await findNameClash(db, name, exceptId);
   if (clash) {
     throw new HttpError(409, `A patient named ${fullName(clash)} already exists.`, undefined, { existing_patient_id: clash.id });
   }
@@ -225,6 +230,19 @@ patientsRouter.get("/", async (req, res) => {
       next_appointment: visit(nextByPatient.get(p.id)),
     })),
   });
+});
+
+const nameCheck = createPatient.pick({ first_name: true, middle_name: true, last_name: true });
+
+/**
+ * GET /api/patients/name-check?first_name=…&middle_name=…&last_name=…
+ * Whether a patient by that name is already on file, so registration can say
+ * so on its first step. Creating still checks again.
+ */
+patientsRouter.get("/name-check", async (req, res) => {
+  const dto = nameCheck.parse(req.query);
+  const clash = await findNameClash(prisma, { firstName: dto.first_name, middleName: dto.middle_name ?? null, lastName: dto.last_name });
+  res.json({ data: clash ? { exists: true, id: clash.id, full_name: fullName(clash) } : { exists: false } });
 });
 
 patientsRouter.get("/:id", async (req, res) => {

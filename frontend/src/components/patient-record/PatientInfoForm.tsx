@@ -2,12 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Users } from "lucide-react";
+import { Users, X } from "lucide-react";
 import { FormError } from "@/components/ui/form";
-import { useDeletePatient, useSaveMedicalHistory, useUpdatePatient } from "@/lib/api/patients";
-import { FLOSSING, SCREENING, showWomenOnly, toSave, WOMEN_ONLY } from "@/lib/utils/medical-history";
+import { useCreatePatient, useDeletePatient, useSaveMedicalHistory, useUpdatePatient } from "@/lib/api/patients";
+import { emptyAnswers, FLOSSING, SCREENING, showWomenOnly, toSave, WOMEN_ONLY } from "@/lib/utils/medical-history";
 import { manilaToday } from "@/lib/utils/manila";
-import { BLOOD_TYPES, SEXES, type MedicalHistory, type MedicalHistoryAnswers, type Patient, type Sex } from "@/types/api";
+import {
+  BLOOD_TYPES,
+  CIVIL_STATUSES,
+  SEXES,
+  type CivilStatus,
+  type MedicalHistory,
+  type MedicalHistoryAnswers,
+  type Patient,
+  type Sex,
+} from "@/types/api";
 import { AllergyCards } from "./AllergyCards";
 import { ConditionsChecklist } from "./ConditionsChecklist";
 import { ResetDelete, SaveBar } from "./RecordPanel";
@@ -21,6 +30,7 @@ const DETAIL_KEYS = [
   "suffix",
   "date_of_birth",
   "sex",
+  "civil_status",
   "religion",
   "nationality",
   "address",
@@ -40,8 +50,8 @@ const DETAIL_KEYS = [
 type DetailKey = (typeof DETAIL_KEYS)[number];
 type Details = Record<DetailKey, string>;
 
-const detailsFrom = (p: Patient): Details =>
-  Object.fromEntries(DETAIL_KEYS.map((k) => [k, (p[k] as string | null) ?? ""])) as Details;
+const detailsFrom = (p: Patient | null): Details =>
+  Object.fromEntries(DETAIL_KEYS.map((k) => [k, (p?.[k] as string | null | undefined) ?? ""])) as Details;
 
 /** Only the answers, without `updated_at`, so they compare and save as they are. */
 function answersFrom(history: MedicalHistory): MedicalHistoryAnswers {
@@ -52,6 +62,7 @@ function answersFrom(history: MedicalHistory): MedicalHistoryAnswers {
 
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV"];
 const SEX_LABEL: Record<Sex, string> = { male: "Male", female: "Female", other: "Other" };
+const CIVIL_LABEL: Record<CivilStatus, string> = { single: "Single", married: "Married", widowed: "Widowed", separated: "Separated" };
 const ANXIETY = [
   { value: "low", label: "Low" },
   { value: "moderate", label: "Moderate" },
@@ -71,14 +82,27 @@ function ageOn(dob: string): number | null {
  * (conditions), laid out as on the clinic's paper form and edited in place.
  *
  * "Unsaved changes" is measured against what the server last sent back.
+ *
+ * With `patient` null it registers a new patient instead: the same form, empty,
+ * saved in one request with Create Patient, and closed with `onCancel`.
  */
-export function PatientInfoForm({ patient, history }: { patient: Patient; history: MedicalHistory }) {
+export function PatientInfoForm(
+  props:
+    | { patient: Patient; history: MedicalHistory; onCancel?: never }
+    | { patient: null; history?: never; onCancel: () => void },
+) {
+  const { patient, onCancel } = props;
+  const creating = patient === null;
   const router = useRouter();
-  const updatePatient = useUpdatePatient(patient.id);
-  const saveHistory = useSaveMedicalHistory(patient.id);
-  const deletePatient = useDeletePatient(patient.id);
+  const createPatient = useCreatePatient();
+  const updatePatient = useUpdatePatient(patient?.id ?? "");
+  const saveHistory = useSaveMedicalHistory(patient?.id ?? "");
+  const deletePatient = useDeletePatient(patient?.id ?? "");
 
-  const [saved, setSaved] = useState(() => ({ details: detailsFrom(patient), answers: answersFrom(history) }));
+  const [saved, setSaved] = useState(() => ({
+    details: detailsFrom(patient),
+    answers: props.history ? answersFrom(props.history) : emptyAnswers(),
+  }));
   const [details, setDetails] = useState(saved.details);
   const [answers, setAnswers] = useState(saved.answers);
   // Bumped by Reset, to remount the pieces that keep their own open/closed state.
@@ -87,13 +111,13 @@ export function PatientInfoForm({ patient, history }: { patient: Patient; histor
 
   const age = ageOn(details.date_of_birth);
   const [guardianOpen, setGuardianOpen] = useState(
-    () => (age !== null && age < 18) || Boolean(patient.guardian_name || patient.guardian_occupation || patient.guardian_contact),
+    () => (age !== null && age < 18) || Boolean(patient?.guardian_name || patient?.guardian_occupation || patient?.guardian_contact),
   );
   const showGuardian = guardianOpen || (age !== null && age < 18);
 
   const detailsDirty = DETAIL_KEYS.some((k) => details[k] !== saved.details[k]);
   const answersDirty = JSON.stringify(answers) !== JSON.stringify(saved.answers);
-  const saving = updatePatient.isPending || saveHistory.isPending;
+  const saving = createPatient.isPending || updatePatient.isPending || saveHistory.isPending;
 
   const set = (key: DetailKey) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setDetails((d) => ({ ...d, [key]: e.target.value }));
@@ -109,15 +133,29 @@ export function PatientInfoForm({ patient, history }: { patient: Patient; histor
     setMissing(empty);
     if (empty.length) return;
 
+    const patientFields = {
+      ...Object.fromEntries(DETAIL_KEYS.map((k) => [k, details[k].trim() || null])),
+      first_name: details.first_name.trim(),
+      last_name: details.last_name.trim(),
+      date_of_birth: details.date_of_birth,
+      sex: details.sex as Sex,
+      civil_status: (details.civil_status || null) as CivilStatus | null,
+    };
+
     try {
-      if (detailsDirty) {
-        const updated = await updatePatient.mutateAsync({
-          ...Object.fromEntries(DETAIL_KEYS.map((k) => [k, details[k].trim() || null])),
-          first_name: details.first_name.trim(),
-          last_name: details.last_name.trim(),
-          date_of_birth: details.date_of_birth,
-          sex: details.sex as Sex,
+      if (creating) {
+        // History only when something in it was answered: an untouched checklist
+        // would otherwise be stored as "No" to every condition.
+        const created = await createPatient.mutateAsync({
+          ...patientFields,
+          ...(answersDirty ? { medical_history: toSave(answers) } : {}),
         });
+        router.push(`/patients/${created.id}/info`);
+        onCancel();
+        return;
+      }
+      if (detailsDirty) {
+        const updated = await updatePatient.mutateAsync(patientFields);
         const fresh = detailsFrom(updated);
         setDetails(fresh);
         setSaved((s) => ({ ...s, details: fresh }));
@@ -137,6 +175,7 @@ export function PatientInfoForm({ patient, history }: { patient: Patient; histor
     setAnswers(saved.answers);
     setMissing([]);
     setResets((n) => n + 1);
+    createPatient.reset();
     updatePatient.reset();
     saveHistory.reset();
   }
@@ -153,8 +192,26 @@ export function PatientInfoForm({ patient, history }: { patient: Patient; histor
 
   const women = showWomenOnly(details.sex, answers);
 
+  function cancel() {
+    if ((detailsDirty || answersDirty) && !window.confirm("Discard this new patient? Nothing has been saved.")) return;
+    onCancel?.();
+  }
+
   return (
     <>
+      {creating && (
+        <div
+          className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-6 py-4"
+          style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}
+        >
+          <h2 className="text-base font-semibold" style={{ color: "var(--color-foreground)" }}>
+            New Patient
+          </h2>
+          <button type="button" onClick={cancel} className="btn-ghost p-1 rounded-md" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+      )}
       <form
         className="p-4 sm:p-6"
         autoComplete="off"
@@ -187,7 +244,7 @@ export function PatientInfoForm({ patient, history }: { patient: Patient; histor
             <F label="Birthdate" required className="col-span-12 sm:col-span-6 lg:col-span-3">
               {input("date_of_birth", { type: "date", max: manilaToday() })}
             </F>
-            <F label="Age" className="col-span-6 lg:col-span-2">
+            <F label="Age" className="col-span-6 lg:col-span-1">
               <input className="record-input" value={age ?? ""} readOnly tabIndex={-1} />
             </F>
             <F label="Sex" required className="col-span-6 lg:col-span-2">
@@ -200,7 +257,17 @@ export function PatientInfoForm({ patient, history }: { patient: Patient; histor
                 ))}
               </select>
             </F>
-            <F label="Religion" className="col-span-12 sm:col-span-6 lg:col-span-3">
+            <F label="Civil Status" className="col-span-12 sm:col-span-6 lg:col-span-2">
+              <select className="record-input" value={details.civil_status} onChange={set("civil_status")}>
+                <option value="">Select</option>
+                {CIVIL_STATUSES.map((c) => (
+                  <option key={c} value={c}>
+                    {CIVIL_LABEL[c]}
+                  </option>
+                ))}
+              </select>
+            </F>
+            <F label="Religion" className="col-span-12 sm:col-span-6 lg:col-span-2">
               {input("religion", { maxLength: 100 })}
             </F>
             <F label="Nationality" className="col-span-12 sm:col-span-6 lg:col-span-2">
@@ -468,14 +535,21 @@ export function PatientInfoForm({ patient, history }: { patient: Patient; histor
       <SaveBar
         dirty={detailsDirty || answersDirty}
         saving={saving}
+        saveLabel={creating ? "Create Patient" : undefined}
         tools={
-          <ResetDelete
-            onReset={reset}
-            resetDisabled={!detailsDirty && !answersDirty}
-            onDelete={() => deletePatient.mutate(undefined, { onSuccess: () => router.replace("/patients") })}
-            confirmText="Delete this patient and every record?"
-            deleting={deletePatient.isPending}
-          />
+          creating ? (
+            <button type="button" className="btn btn-ghost" onClick={cancel} disabled={saving}>
+              Cancel
+            </button>
+          ) : (
+            <ResetDelete
+              onReset={reset}
+              resetDisabled={!detailsDirty && !answersDirty}
+              onDelete={() => deletePatient.mutate(undefined, { onSuccess: () => router.replace("/patients") })}
+              confirmText="Delete this patient and every record?"
+              deleting={deletePatient.isPending}
+            />
+          )
         }
         onSave={() => void save()}
         error={
@@ -484,7 +558,7 @@ export function PatientInfoForm({ patient, history }: { patient: Patient; histor
               Fill in the last name, first name, birthdate and sex.
             </span>
           ) : (
-            <FormError error={updatePatient.error ?? saveHistory.error ?? deletePatient.error} />
+            <FormError error={createPatient.error ?? updatePatient.error ?? saveHistory.error ?? deletePatient.error} />
           )
         }
       />

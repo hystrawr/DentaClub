@@ -1,3 +1,5 @@
+import { ApiError } from "@/lib/api/client";
+import { timeOf } from "@/lib/utils/manila";
 import type { AppointmentStatus } from "@/types/api";
 
 export interface StatusStyle {
@@ -41,6 +43,21 @@ export const NEXT_ACTION: Partial<Record<AppointmentStatus, { to: AppointmentSta
 /** The side exits the API allows from each status. */
 export const CAN_CANCEL: AppointmentStatus[] = ["scheduled", "confirmed", "arrived"];
 export const CAN_NO_SHOW: AppointmentStatus[] = ["scheduled", "confirmed"];
+/** Only a visit still to come can move; the API refuses the rest too. */
+export const CAN_RESCHEDULE: AppointmentStatus[] = ["scheduled", "confirmed"];
+
+/** The appointment a 409 (double-booking) names, if the error is one. */
+export function conflictOf(error: unknown) {
+  return error instanceof ApiError && error.status === 409
+    ? (error.body as { conflicting_appointment?: { scheduled_start: string; scheduled_end: string } } | undefined)?.conflicting_appointment
+    : undefined;
+}
+
+/** " It overlaps the appointment at 09:00–09:30." for a double-booking, else "". */
+export function conflictNote(error: unknown): string {
+  const conflict = conflictOf(error);
+  return conflict ? ` It overlaps the appointment at ${timeOf(conflict.scheduled_start)}–${timeOf(conflict.scheduled_end)}.` : "";
+}
 
 /** A pale wash of a colour over white — for appointment cards tinted by procedure. */
 export const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, white)`;

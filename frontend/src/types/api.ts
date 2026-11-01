@@ -85,6 +85,11 @@ export interface CreatePatientPayload {
   guardian_contact?: string | null;
 }
 
+/** `POST /api/patients`: the patient, and their medical history when any of it was answered. */
+export interface RegisterPatientPayload extends CreatePatientPayload {
+  medical_history?: MedicalHistoryAnswers;
+}
+
 export type UpdatePatientPayload = Partial<CreatePatientPayload>;
 
 /* ─── Medical history ───────────────────────────────────────────── */

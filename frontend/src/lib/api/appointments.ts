@@ -83,6 +83,19 @@ export function useUpdateAppointmentStatus(id: string) {
   });
 }
 
+/**
+ * Move an appointment to a new time (and chair). The dentist stays. A confirmed
+ * appointment is checked for double-booking; the 409 names the clash.
+ */
+export function useRescheduleAppointment(id: string) {
+  const invalidate = useInvalidateSchedule();
+  return useMutation({
+    mutationFn: async (payload: { scheduled_start: string; scheduled_end: string; operatory_id: string | null }) =>
+      (await patch<{ data: Appointment }>(`/api/appointments/${id}`, payload)).data,
+    onSuccess: invalidate,
+  });
+}
+
 /* ─── Clinic structure ──────────────────────────────────────────── */
 
 export function useProviders() {

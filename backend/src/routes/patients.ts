@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { Patient } from "../generated/prisma/client.js";
+import type { Patient, Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
-import { notFound } from "../lib/http-error.js";
+import { HttpError, notFound } from "../lib/http-error.js";
 import { ageFrom, dateString, isoOffset } from "../lib/dates.js";
+import { historyData, saveHistory } from "../lib/medical-history.js";
 
 // Patients, in DentalOS's wire format (snake_case, `{ data }` envelope) so the
 // ported frontend reads them unchanged. Mounted at /api/patients.
@@ -93,10 +94,13 @@ const optionalText = (max: number) =>
     .transform((s) => (s === "" ? null : s))
     .nullish();
 
+/** Runs of spaces in a name become one, so "Juan  Dela Cruz" is stored as "Juan Dela Cruz". */
+const singleSpaced = (s: string) => s.replace(/\s+/g, " ");
+
 const createPatient = z.object({
-  first_name: z.string().trim().min(1, "The first name field is required.").max(100),
-  last_name: z.string().trim().min(1, "The last name field is required.").max(100),
-  middle_name: optionalText(100),
+  first_name: z.string().trim().min(1, "The first name field is required.").max(100).transform(singleSpaced),
+  last_name: z.string().trim().min(1, "The last name field is required.").max(100).transform(singleSpaced),
+  middle_name: optionalText(100).transform((s) => (s ? singleSpaced(s) : s)),
   date_of_birth: z.iso.date("The date of birth field must be a valid date."),
   sex: z.enum(SEX, "The selected sex is invalid."),
   mobile: optionalText(20),
@@ -113,8 +117,39 @@ const createPatient = z.object({
   }),
 });
 
+/**
+ * Registration: the patient, and optionally their medical history, saved
+ * together. History is left out when nothing in it was answered, so a blank
+ * checklist is never stored as "No" to every condition.
+ */
+const registerPatient = createPatient.extend({ medical_history: saveHistory.optional() });
+
 /** Every field optional: absent = untouched, null = cleared (DentalOS's PartialType). */
 const updatePatient = createPatient.partial();
+
+type Name = { firstName: string; middleName: string | null; lastName: string };
+
+const sameText = (value: string) => ({ equals: value, mode: "insensitive" as const });
+
+/**
+ * Refuse a second patient with the same first, middle and last name, whatever
+ * the capitals. No middle name only matches no middle name. `exceptId` is the
+ * patient being renamed, who may keep their own name.
+ */
+async function assertNameFree(db: Prisma.TransactionClient, name: Name, exceptId?: string) {
+  const clash = await db.patient.findFirst({
+    where: {
+      firstName: sameText(name.firstName),
+      lastName: sameText(name.lastName),
+      ...(name.middleName ? { middleName: sameText(name.middleName) } : { OR: [{ middleName: null }, { middleName: "" }] }),
+      ...(exceptId ? { NOT: { id: exceptId } } : {}),
+    },
+    select: { id: true, firstName: true, middleName: true, lastName: true, suffix: true },
+  });
+  if (clash) {
+    throw new HttpError(409, `A patient named ${fullName(clash)} already exists.`, undefined, { existing_patient_id: clash.id });
+  }
+}
 
 type PatientInput = z.infer<typeof updatePatient>;
 
@@ -199,9 +234,11 @@ patientsRouter.get("/:id", async (req, res) => {
 });
 
 patientsRouter.post("/", async (req, res) => {
-  const dto = createPatient.parse(req.body);
-  const patient = await prisma.patient.create({
-    data: {
+  const { medical_history, ...dto } = registerPatient.parse(req.body);
+  const patient = await prisma.$transaction(async (tx) => {
+    await assertNameFree(tx, { firstName: dto.first_name, middleName: dto.middle_name ?? null, lastName: dto.last_name });
+    const created = await tx.patient.create({
+      data: {
       firstName: dto.first_name,
       lastName: dto.last_name,
       dateOfBirth: new Date(dto.date_of_birth),
@@ -215,7 +252,12 @@ patientsRouter.post("/", async (req, res) => {
       referredBy: dto.referred_by ?? null,
       notes: dto.notes ?? null,
       ...recordData(dto),
-    },
+      },
+    });
+    if (medical_history) {
+      await tx.medicalHistory.create({ data: { patientId: created.id, ...historyData(medical_history) } });
+    }
+    return created;
   });
   res.status(201).json({ data: patientDetail(patient) });
 });
@@ -223,7 +265,23 @@ patientsRouter.post("/", async (req, res) => {
 /** PATCH /api/patients/:id — partial update. */
 patientsRouter.patch("/:id", async (req, res) => {
   const dto = updatePatient.parse(req.body);
-  const patient = await prisma.patient.update({ where: { id: req.params.id }, data: toData(dto) });
+  const id = req.params.id;
+  const patient = await prisma.$transaction(async (tx) => {
+    if (dto.first_name !== undefined || dto.middle_name !== undefined || dto.last_name !== undefined) {
+      const current = await tx.patient.findUnique({ where: { id } });
+      if (!current) throw notFound("Patient not found");
+      await assertNameFree(
+        tx,
+        {
+          firstName: dto.first_name ?? current.firstName,
+          middleName: dto.middle_name !== undefined ? dto.middle_name : current.middleName,
+          lastName: dto.last_name ?? current.lastName,
+        },
+        id,
+      );
+    }
+    return tx.patient.update({ where: { id }, data: toData(dto) });
+  });
   res.json({ data: patientDetail(patient) });
 });
 

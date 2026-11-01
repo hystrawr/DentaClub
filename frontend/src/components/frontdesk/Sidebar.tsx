@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { Calendar, LayoutDashboard, Users } from "lucide-react";
+import { Calendar, LayoutDashboard, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 interface NavItem {
@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Appointments", href: "/appointments", icon: Calendar },
   { label: "Patients", href: "/patients", icon: Users },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 /** Floating icon rail below the app header, always shown. */

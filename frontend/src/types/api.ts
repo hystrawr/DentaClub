@@ -85,6 +85,11 @@ export interface CreatePatientPayload {
   guardian_contact?: string | null;
 }
 
+/** `POST /api/patients`: the patient, and their medical history when any of it was answered. */
+export interface RegisterPatientPayload extends CreatePatientPayload {
+  medical_history?: MedicalHistoryAnswers;
+}
+
 export type UpdatePatientPayload = Partial<CreatePatientPayload>;
 
 /* ─── Medical history ───────────────────────────────────────────── */
@@ -272,8 +277,13 @@ export interface AppointmentType {
   color_hex: string;
   is_block_time: boolean;
   recall_interval_months: number | null;
+  /** Pesos; null when the service has no set price. */
+  price: number | null;
   is_active: boolean;
 }
+
+/** `POST /api/appointment-types` and `PATCH /api/appointment-types/:id`. */
+export type AppointmentTypePayload = Partial<Omit<AppointmentType, "id">>;
 
 export interface Operatory {
   id: string;

@@ -1,12 +1,11 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
-import { Ban, Check, CheckCircle, Play, UserCheck, UserX } from "lucide-react";
-import { ApiError } from "@/lib/api/client";
+import { Ban, CalendarClock, Check, CheckCircle, Play, UserCheck, UserX } from "lucide-react";
 import { useUpdateAppointmentStatus } from "@/lib/api/appointments";
-import { CAN_CANCEL, CAN_NO_SHOW, NEXT_ACTION } from "@/lib/utils/appointment-status";
-import { timeOf } from "@/lib/utils/manila";
+import { CAN_CANCEL, CAN_NO_SHOW, CAN_RESCHEDULE, conflictNote, NEXT_ACTION } from "@/lib/utils/appointment-status";
 import type { Appointment } from "@/types/api";
+import { RescheduleModal } from "./RescheduleModal";
 
 /**
  * The buttons that move an appointment along, shared by the schedule popover,
@@ -35,10 +34,12 @@ export function AppointmentActions({
   const transition = useUpdateAppointmentStatus(appointment.id);
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
+  const [rescheduling, setRescheduling] = useState(false);
 
   const next = NEXT_ACTION[appointment.status];
   const canCancel = CAN_CANCEL.includes(appointment.status);
   const canNoShow = CAN_NO_SHOW.includes(appointment.status);
+  const canReschedule = CAN_RESCHEDULE.includes(appointment.status);
   const height = size === "lg" ? 52 : 40;
 
   function run(status: Parameters<typeof transition.mutate>[0]["status"], cancellation_reason?: string) {
@@ -52,10 +53,6 @@ export function AppointmentActions({
       },
     );
   }
-
-  const conflict = transition.error instanceof ApiError && transition.error.status === 409
-    ? (transition.error.body as { conflicting_appointment?: { scheduled_start: string; scheduled_end: string } } | undefined)?.conflicting_appointment
-    : undefined;
 
   const icon = next?.to === "completed" ? <CheckCircle size={17} />
     : next?.to === "in_chair" ? <Play size={17} strokeWidth={2.5} />
@@ -92,8 +89,12 @@ export function AppointmentActions({
   const errorLine = transition.error && (
     <p className="text-xs" role="alert" style={{ color: "var(--color-destructive)" }}>
       {transition.error instanceof Error ? transition.error.message : "That action could not be completed."}
-      {conflict && ` It overlaps the appointment at ${timeOf(conflict.scheduled_start)}–${timeOf(conflict.scheduled_end)}.`}
+      {conflictNote(transition.error)}
     </p>
+  );
+
+  const rescheduleModal = rescheduling && (
+    <RescheduleModal appointment={appointment} onClose={() => setRescheduling(false)} />
   );
 
   if (layout === "row") {
@@ -124,6 +125,16 @@ export function AppointmentActions({
             )}
           </div>
         )}
+        {canReschedule && !cancelling && (
+          <button
+            type="button"
+            className="btn btn-secondary w-full"
+            disabled={transition.isPending}
+            onClick={() => setRescheduling(true)}
+          >
+            <CalendarClock size={14} aria-hidden="true" /> Reschedule
+          </button>
+        )}
         {canNoShow && !cancelling && (
           <button
             type="button"
@@ -137,6 +148,7 @@ export function AppointmentActions({
         )}
         {cancelling && cancelForm}
         {errorLine}
+        {rescheduleModal}
       </div>
     );
   }
@@ -153,6 +165,12 @@ export function AppointmentActions({
         >
           {icon}
           {transition.isPending ? "Working…" : next.label}
+        </button>
+      )}
+
+      {canReschedule && !cancelling && (
+        <button type="button" className="btn btn-secondary" disabled={transition.isPending} onClick={() => setRescheduling(true)}>
+          <CalendarClock size={14} aria-hidden="true" /> Reschedule
         </button>
       )}
 
@@ -178,6 +196,7 @@ export function AppointmentActions({
 
       {cancelling && cancelForm}
       {errorLine}
+      {rescheduleModal}
     </div>
   );
 }

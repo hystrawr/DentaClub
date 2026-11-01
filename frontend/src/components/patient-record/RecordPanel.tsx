@@ -69,6 +69,7 @@ export function SaveBar({
   error,
   tools,
   onSave,
+  saveLabel,
 }: {
   dirty: boolean;
   saving: boolean;
@@ -76,6 +77,8 @@ export function SaveBar({
   error?: React.ReactNode;
   tools?: React.ReactNode;
   onSave: () => void;
+  /** For a form that creates rather than edits: the button's label, with no saved/unsaved status beside it. */
+  saveLabel?: string;
 }) {
   return (
     <div
@@ -85,11 +88,13 @@ export function SaveBar({
     >
       {tools && <div className="flex items-center gap-2 flex-wrap">{tools}</div>}
       <div className="mr-auto min-w-0 text-xs">{error}</div>
-      <span className="text-xs font-semibold" style={{ color: dirty ? "var(--color-warning)" : "var(--color-muted-foreground)" }}>
-        {dirty ? "Unsaved changes" : "All changes saved"}
-      </span>
-      <button type="button" className="btn btn-primary" onClick={onSave} disabled={!dirty || saving || disabled}>
-        {saving ? "Saving…" : "Save changes"}
+      {!saveLabel && (
+        <span className="text-xs font-semibold" style={{ color: dirty ? "var(--color-warning)" : "var(--color-muted-foreground)" }}>
+          {dirty ? "Unsaved changes" : "All changes saved"}
+        </span>
+      )}
+      <button type="button" className="btn btn-primary" onClick={onSave} disabled={(!dirty && !saveLabel) || saving || disabled}>
+        {saving ? "Saving…" : (saveLabel ?? "Save changes")}
       </button>
     </div>
   );

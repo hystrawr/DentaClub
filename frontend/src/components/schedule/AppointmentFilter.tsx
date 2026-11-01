@@ -31,6 +31,18 @@ export function matchesFilter(filter: ScheduleFilter, apt: Appointment): boolean
   return !group || !filter.hiddenGroups.includes(group.key);
 }
 
+/**
+ * How many dentists and statuses are ticked, for the Filter badge — or null when
+ * every box is ticked, since then nothing is filtered and no badge shows.
+ * `providerIds` are the dentists listed in the menu.
+ */
+export function selectedCount(filter: ScheduleFilter, providerIds: string[]): number | null {
+  const dentists = providerIds.filter((id) => !filter.hiddenProviders.includes(id)).length;
+  const groups = STATUS_GROUPS.filter((g) => !filter.hiddenGroups.includes(g.key)).length;
+  const total = dentists + groups;
+  return total === providerIds.length + STATUS_GROUPS.length ? null : total;
+}
+
 const toggle = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
 /** The Filter button and its menu: which dentists and which statuses the calendar shows. */
@@ -38,6 +50,8 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const providers = useProviders();
+  const listed = (providers.data ?? []).filter((p) => p.is_active).map((p) => p.id);
+  const selected = selectedCount(value, listed);
   const active = value.hiddenProviders.length + value.hiddenGroups.length;
 
   useEffect(() => {
@@ -67,13 +81,13 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
       >
         <SlidersHorizontal size={14} aria-hidden="true" />
         Filter
-        {active > 0 && (
+        {selected !== null && (
           <span
             className="rounded-full px-1.5 text-[10px] font-bold leading-4"
             style={{ background: "var(--color-primary)", color: "#fff" }}
-            aria-label={`${active} hidden`}
+            aria-label={`${selected} selected`}
           >
-            {active}
+            {selected}
           </span>
         )}
       </button>

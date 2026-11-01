@@ -48,9 +48,12 @@ export function AppointmentPopover({
 
   useEffect(() => {
     if (!appointmentId) return;
-    const inside = (target: EventTarget | null) => target instanceof Node && ref.current?.contains(target);
+    // A dialog opened from the popover (Reschedule) is outside it in the DOM, but still part of it.
+    const inside = (target: EventTarget | null) =>
+      target instanceof Node &&
+      (ref.current?.contains(target) || Boolean((target as HTMLElement).closest?.("[data-keeps-popover]")));
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !document.querySelector("[data-keeps-popover]")) onClose();
     }
     function onPointerDown(e: PointerEvent) {
       // A press on another block re-targets the popover instead of closing it.

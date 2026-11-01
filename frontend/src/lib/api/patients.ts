@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { del, get, patch, post, put } from "./client";
 import type {
-  CreatePatientPayload,
   MedicalHistory,
   MedicalHistoryAnswers,
   Patient,
   PatientListItem,
+  RegisterPatientPayload,
   UpdatePatientPayload,
 } from "@/types/api";
 
@@ -40,10 +40,17 @@ export function usePatient(id: string | undefined) {
 export function useCreatePatient() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: CreatePatientPayload) =>
+    mutationFn: async (payload: RegisterPatientPayload) =>
       (await post<{ data: Patient }>("/api/patients", payload)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["patients"] }),
   });
+}
+
+/** Whether a patient by this name is already on file (capitals and spacing aside). */
+export async function checkPatientName(name: { first_name: string; middle_name: string; last_name: string }) {
+  const qs = new URLSearchParams({ first_name: name.first_name, last_name: name.last_name });
+  if (name.middle_name.trim()) qs.set("middle_name", name.middle_name);
+  return (await get<{ data: { exists: false } | { exists: true; id: string; full_name: string } }>(`/api/patients/name-check?${qs}`)).data;
 }
 
 /** Partial update: an absent key is untouched, `null` clears the field. */

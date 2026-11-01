@@ -14,6 +14,8 @@ const createType = z.object({
   color_hex: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullish(),
   is_block_time: z.boolean().nullish(),
   recall_interval_months: z.number().int().min(1).nullish(),
+  /** Pesos; the column is DECIMAL(10,2). Null clears it. */
+  price: z.number().min(0, "The price must be at least 0.").max(99_999_999.99).nullish(),
   is_active: z.boolean().nullish(),
 });
 
@@ -34,6 +36,7 @@ appointmentTypesRouter.post("/", async (req, res) => {
       ...(dto.color_hex != null ? { colorHex: dto.color_hex } : {}),
       ...(dto.is_block_time != null ? { isBlockTime: dto.is_block_time } : {}),
       recallIntervalMonths: dto.recall_interval_months ?? null,
+      price: dto.price ?? null,
       ...(dto.is_active != null ? { isActive: dto.is_active } : {}),
     },
   });
@@ -53,6 +56,7 @@ appointmentTypesRouter.patch("/:id", async (req, res) => {
       ...(dto.color_hex != null ? { colorHex: dto.color_hex } : {}),
       ...(dto.is_block_time != null ? { isBlockTime: dto.is_block_time } : {}),
       ...(dto.recall_interval_months !== undefined ? { recallIntervalMonths: dto.recall_interval_months } : {}),
+      ...(dto.price !== undefined ? { price: dto.price } : {}),
       ...(dto.is_active != null ? { isActive: dto.is_active } : {}),
     },
   });

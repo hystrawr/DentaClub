@@ -199,6 +199,11 @@ export async function update(id: string, dto: UpdateInput) {
       end.getTime() !== current.scheduledEnd.getTime() ||
       next.operatoryId !== current.operatoryId;
 
+    // Only a visit still to come can move: once the patient is here, or it is over, the times are a record.
+    if (moved && current.status !== "scheduled" && current.status !== "confirmed") {
+      throw ruleViolation(`A ${current.status.replace("_", " ")} appointment cannot be rescheduled.`);
+    }
+
     if (moved && current.status !== "scheduled" && !RELEASES_SLOT.includes(current.status)) {
       await assertNoConflicts(tx, next);
     }

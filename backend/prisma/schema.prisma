@@ -421,11 +421,19 @@ model Appointment {
 
 // ── Sign-in ─────────────────────────────────────────────────────────────
 
-/// Someone who can sign in. For now there is one account, "admin"; its
-/// password is set with `npm run set-password`.
+/// admin: everything, including Settings (services, dentists, chairs).
+/// staff: the front desk only (dashboard, appointments, patients).
+enum UserRole {
+  admin
+  staff
+}
+
+/// Someone who can sign in. Accounts are made, and passwords set, on the
+/// clinic computer with `npm run set-password`.
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
+  role         UserRole @default(staff)
   /// scrypt hash: `scrypt$<salt>$<hash>`. The password itself is never stored.
   passwordHash String   @map("password_hash")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

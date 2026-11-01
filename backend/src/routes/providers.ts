@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
+import { requireAdmin } from "../lib/auth.js";
 import { invalidField, notFound, ruleViolation } from "../lib/http-error.js";
 import { isDateString } from "../lib/dates.js";
 import { getAvailableSlots } from "../services/scheduling/availability.js";
@@ -73,7 +74,7 @@ providersRouter.get("/providers", async (_req, res) => {
   res.json({ data: rows.map(providerProfileResource) });
 });
 
-providersRouter.post("/providers", async (req, res) => {
+providersRouter.post("/providers", requireAdmin, async (req, res) => {
   const dto = createProvider.parse(req.body);
   const created = await prisma.providerProfile.create({
     data: {
@@ -91,7 +92,7 @@ providersRouter.get("/providers/:id", async (req, res) => {
   res.json(providerProfileResource(await findOrFail(req.params.id)));
 });
 
-providersRouter.patch("/providers/:id", async (req, res) => {
+providersRouter.patch("/providers/:id", requireAdmin, async (req, res) => {
   const dto = updateProvider.parse(req.body);
   await findOrFail(req.params.id);
   const updated = await prisma.providerProfile.update({
@@ -127,7 +128,7 @@ providersRouter.get("/providers/:id/availability", async (req, res) => {
  * re-create run in **one transaction** — a failure halfway must not leave the
  * dentist with no availability at all.
  */
-providersRouter.put("/providers/:id/availability", async (req, res) => {
+providersRouter.put("/providers/:id/availability", requireAdmin, async (req, res) => {
   const dto = setAvailability.parse(req.body);
   const id = req.params.id;
   await findOrFail(id);

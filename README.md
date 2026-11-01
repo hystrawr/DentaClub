@@ -21,9 +21,14 @@ dentaclub/
 
 ## Features
 
-### Sign-in
-- The app opens on a sign-in page, with one account: `admin`. The API refuses every request without a valid sign-in, so patient data can't be read by going around the page.
-- A sign-in lasts 12 hours, or until **Sign out** (bottom of the sidebar).
+### Sign-in and roles
+- The app opens on a sign-in page. The API refuses every request without a valid sign-in, so patient data can't be read by going around the page.
+- There are two kinds of account:
+  - **Admin:** everything, including **Settings → Services**, where services and prices are added and edited.
+  - **Staff:** the front desk only: **Dashboard**, **Appointments** and **Patients** (with their chart, consent and treatment sheet).
+- The server checks the role on every request. A staff account that tries to change services, dentists or chairs gets **403 Forbidden**, even from outside the app.
+- The header shows who is signed in and their role.
+- A sign-in lasts 12 hours, or until **Sign out** (top right).
 - Five wrong passwords in a row pause sign-in for a minute.
 
 ### Alphabetical patient directory
@@ -64,6 +69,10 @@ dentaclub/
 - Add or edit a service, and deactivate one you no longer offer. Services are never deleted, because past appointments still point at them.
 - On a patient's **Treatment** sheet, the Procedure cell suggests services. Picking one fills an empty Amount Charged with its price, which can still be changed for a discount.
 - The price is copied into the treatment row, so changing a price later never changes what a patient was already charged.
+
+## Database design
+- [Entity-Relationship Diagram](docs/database/ERD.md)
+- [Relational schema](docs/database/relational-schema.md)
 
 ## Setup
 
@@ -109,12 +118,17 @@ npm run db:seed             # appointment types, a clinic, 2 chairs, 2 dentists
 cd ..
 ```
 
-### 5. Set the admin password
-The app opens on a sign-in page. There is one account, `admin`. Set its password (at least 8 characters) with:
+### 5. Create the accounts
+Accounts are made on the clinic computer with:
 ```bash
 npm run set-password --prefix backend
 ```
-Run the same command again to change it. Changing it signs out every device.
+It asks for:
+- a **username** (press Enter for `admin`),
+- a **role**, `admin` or `staff`,
+- a **password** (at least 8 characters), typed twice.
+
+Run it once for the admin, then once for each staff member. Running it again for an existing username changes that account's password or role. Changing a password signs out every device using the old one.
 
 ### 6. Write your consent form
 Open `backend/consent-form.txt` and replace the starter text with your clinic's consent wording. Leave a blank line between paragraphs, and start a line with `# ` to make it a heading. Until the starter text is replaced, the Consent tab shows a warning.

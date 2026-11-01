@@ -1,0 +1,237 @@
+erDiagram
+    patients ||--o| medical_histories : "has"
+    patients ||--o{ treatment_records : "has"
+    patients ||--o{ odontogram_events : "has"
+    odontogram_events |o--o{ odontogram_events : "replaces"
+    patients ||--o{ consents : "signs"
+    patients ||--o{ documents : "owns"
+    documents ||--o| consents : "is the signed PDF of"
+    patients |o--o{ appointments : "books"
+    provider_profiles ||--o{ appointments : "attends"
+    appointment_types |o--o{ appointments : "classifies"
+    operatories |o--o{ appointments : "seats"
+    locations |o--o{ appointments : "hosts"
+    locations ||--o{ operatories : "contains"
+    locations ||--o{ provider_availabilities : "hosts"
+    provider_profiles ||--o{ provider_availabilities : "works"
+
+    patients {
+        text id PK
+        text first_name
+        text last_name
+        text middle_name
+        varchar suffix
+        date date_of_birth
+        Sex sex
+        text civil_status
+        varchar mobile
+        varchar home_office_phone
+        text email
+        text address
+        text occupation
+        text religion
+        text nationality
+        text insurance_carrier
+        text insurance_effective
+        text referred_by
+        text chief_complaint
+        text guardian_name
+        text guardian_occupation
+        varchar guardian_contact
+        text notes
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    medical_histories {
+        text id PK
+        text patient_id FK, UK
+        boolean in_good_health
+        boolean under_physician_care
+        text physician_care_reason
+        boolean serious_illness
+        text serious_illness_detail
+        boolean hospitalized
+        text hospitalized_detail
+        boolean taking_medicine
+        text medication_detail
+        boolean uses_tobacco
+        boolean uses_drugs
+        text drugs_detail
+        boolean rheumatic_fever
+        boolean heart_condition
+        boolean diabetes
+        boolean kidney_disease
+        boolean high_blood_pressure
+        boolean anemia
+        boolean hepatitis
+        boolean asthma
+        boolean epilepsy
+        boolean has_allergies
+        boolean allergic_to_local_anesthetic
+        boolean allergic_to_penicillin
+        boolean allergic_to_sulfa
+        boolean allergic_to_aspirin
+        boolean allergic_to_latex
+        text other_allergies
+        boolean bleeder
+        boolean pregnant
+        boolean nursing
+        boolean birth_control_pills
+        boolean on_menstruation
+        varchar blood_type
+        smallint bp_systolic
+        smallint bp_diastolic
+        text_array conditions
+        text other_conditions
+        text previous_dentist
+        varchar last_dental_visit
+        varchar dental_anxiety
+        text flossing_frequency
+        text previous_extraction
+        text physician_name
+        text physician_specialty
+        text physician_address
+        varchar physician_phone
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    treatment_records {
+        text id PK
+        text patient_id FK
+        smallint position
+        date visit_date
+        varchar teeth
+        text procedure
+        text doctor
+        decimal amount_charged
+        decimal amount_paid
+        date next_appointment
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    odontogram_events {
+        bigint id PK
+        text patient_id FK
+        bigint replaces_event_id FK
+        smallint tooth_number
+        jsonb surfaces
+        text event_type
+        text condition_code
+        text notes
+        varchar supersession_type
+        text supersession_reason
+        timestamptz observed_at
+        timestamptz created_at
+    }
+
+    consents {
+        text id PK
+        text patient_id FK
+        text document_id FK, UK
+        text form_text
+        text signer_name
+        text signer_relationship
+        text signature_image
+        timestamptz signed_at
+    }
+
+    documents {
+        text id PK
+        text patient_id FK
+        DocumentType type
+        text title
+        bytea file_data
+        text mime_type
+        text file_name
+        integer size_bytes
+        boolean immutable_flag
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    locations {
+        text id PK
+        text name
+        text address
+        text city
+        text phone
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    operatories {
+        text id PK
+        text location_id FK
+        text name
+        varchar color
+        smallint sort_order
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    provider_profiles {
+        text id PK
+        text name
+        text prc_number
+        jsonb specializations
+        varchar color_hex
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    provider_availabilities {
+        text id PK
+        text provider_profile_id FK
+        text location_id FK
+        smallint day_of_week
+        time start_time
+        time end_time
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    appointment_types {
+        text id PK
+        text name
+        smallint duration_minutes
+        varchar color_hex
+        boolean is_block_time
+        smallint recall_interval_months
+        decimal price
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    appointments {
+        text id PK
+        text patient_id FK
+        text provider_profile_id FK
+        text appointment_type_id FK
+        text operatory_id FK
+        text location_id FK
+        AppointmentStatus status
+        timestamptz scheduled_start
+        timestamptz scheduled_end
+        timestamptz actual_start
+        timestamptz actual_end
+        text cancellation_reason
+        text notes
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    users {
+        text id PK
+        text username UK
+        UserRole role
+        text password_hash
+        timestamptz created_at
+        timestamptz updated_at
+    }

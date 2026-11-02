@@ -6,7 +6,7 @@ import { AlertTriangle, FileSignature, FileText, History, PenLine, RotateCcw } f
 import { SignaturePad } from "@/components/shared/SignaturePad";
 import { Field, FormError, TextField } from "@/components/ui/form";
 import { ApiError } from "@/lib/api/client";
-import { documentFileUrl, useConsentForm, usePatientConsent, useSignConsent } from "@/lib/api/consent";
+import { documentFileUrl, signatureUrl, useConsentForm, usePatientConsent, useSignConsent } from "@/lib/api/consent";
 import { usePatient } from "@/lib/api/patients";
 import { clock, dateOf, longDate, timeOf } from "@/lib/utils/manila";
 import type { PatientConsent } from "@/types/api";
@@ -208,8 +208,8 @@ function SignedConsent({
       <div className="space-y-5">
         <FormText text={current.form_text} />
         <div className="pt-4" style={{ borderTop: "1px solid var(--color-border)" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- a data: URI, which next/image cannot optimise */}
-          <img src={current.signature_image} alt={`Signature of ${current.signer_name}`} style={{ maxHeight: 100, maxWidth: 300 }} />
+          {/* eslint-disable-next-line @next/next/no-img-element -- served by the API behind the sign-in cookie, which next/image would not send */}
+          <img src={signatureUrl(current.id)} alt={`Signature of ${current.signer_name}`} style={{ maxHeight: 100, maxWidth: 300 }} />
           <div style={{ borderTop: "1px solid var(--color-foreground)", maxWidth: 300 }} />
           <p className="text-sm font-semibold mt-1" style={{ color: "var(--color-foreground)" }}>
             {current.signer_name}

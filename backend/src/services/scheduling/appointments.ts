@@ -2,6 +2,7 @@ import type { Appointment, AppointmentStatus, Prisma } from "../../generated/pri
 import { prisma } from "../../lib/prisma.js";
 import { HttpError, invalidField, notFound, ruleViolation } from "../../lib/http-error.js";
 import { isDateString, manilaDayEnd, manilaDayStart } from "../../lib/dates.js";
+import { assertActivePatient } from "../../lib/patients.js";
 import { appointmentResource } from "./mapper.js";
 
 // Ported from DentalOS apps/api/src/scheduling/appointment.service.ts.
@@ -107,7 +108,7 @@ export interface BookInput {
  * exactly as in DentalOS: a tentative booking may overlap, a confirmed one may not.
  *
  * Added here: every referenced id is checked first so a typo is a 422 naming the
- * field rather than a database error, and the branch is taken from the chair.
+ * field rather than a database error.
  */
 export async function book(dto: BookInput) {
   const start = new Date(dto.scheduled_start);
@@ -120,6 +121,7 @@ export async function book(dto: BookInput) {
   if (dto.patient_id && !(await prisma.patient.findUnique({ where: { id: dto.patient_id }, select: { id: true } }))) {
     throw invalidField("patient_id");
   }
+  if (dto.patient_id) await assertActivePatient(dto.patient_id);
 
   let type = null;
   if (dto.appointment_type_id) {
@@ -134,11 +136,8 @@ export async function book(dto: BookInput) {
     });
   }
 
-  let locationId: string | null = null;
-  if (dto.operatory_id) {
-    const operatory = await prisma.operatory.findUnique({ where: { id: dto.operatory_id } });
-    if (!operatory) throw invalidField("operatory_id");
-    locationId = operatory.locationId;
+  if (dto.operatory_id && !(await prisma.operatory.findUnique({ where: { id: dto.operatory_id }, select: { id: true } }))) {
+    throw invalidField("operatory_id");
   }
 
   const appointment = await prisma.appointment.create({
@@ -147,7 +146,6 @@ export async function book(dto: BookInput) {
       providerProfileId: dto.provider_profile_id,
       appointmentTypeId: dto.appointment_type_id ?? null,
       operatoryId: dto.operatory_id ?? null,
-      locationId,
       status: "scheduled",
       scheduledStart: start,
       scheduledEnd: end,
@@ -180,11 +178,8 @@ export async function update(id: string, dto: UpdateInput) {
     const end = dto.scheduled_end !== undefined ? new Date(dto.scheduled_end) : current.scheduledEnd;
     assertRange(start, end);
 
-    let locationId = current.locationId;
-    if (dto.operatory_id) {
-      const operatory = await tx.operatory.findUnique({ where: { id: dto.operatory_id } });
-      if (!operatory) throw invalidField("operatory_id");
-      locationId = operatory.locationId;
+    if (dto.operatory_id && !(await tx.operatory.findUnique({ where: { id: dto.operatory_id }, select: { id: true } }))) {
+      throw invalidField("operatory_id");
     }
 
     const next = {
@@ -214,7 +209,7 @@ export async function update(id: string, dto: UpdateInput) {
         scheduledStart: start,
         scheduledEnd: end,
         ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
-        ...(dto.operatory_id !== undefined ? { operatoryId: dto.operatory_id, locationId } : {}),
+        ...(dto.operatory_id !== undefined ? { operatoryId: dto.operatory_id } : {}),
       },
     });
 

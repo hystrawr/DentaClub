@@ -4,6 +4,7 @@ import type { TreatmentRecord } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 import { notFound } from "../lib/http-error.js";
 import { dateString } from "../lib/dates.js";
+import { assertActivePatient } from "../lib/patients.js";
 
 // The Treatment Record sheet: one row per procedure, typed in like a
 // spreadsheet. Mounted at /api.
@@ -64,6 +65,7 @@ treatmentRecordsRouter.get("/patients/:id/treatment-records", async (req, res) =
  * saved exactly as it looks. `{ rows: [] }` clears it.
  */
 treatmentRecordsRouter.put("/patients/:id/treatment-records", async (req, res) => {
+  await assertActivePatient(req.params.id);
   const { rows } = saveSheet.parse(req.body);
   const patientId = req.params.id;
   await assertPatient(patientId);

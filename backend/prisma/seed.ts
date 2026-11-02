@@ -13,16 +13,16 @@ async function main() {
   await seedScheduling();
 }
 
-/** DentalOS prisma/seed.ts APPOINTMENT_TYPES: name, minutes, color, block time, recall months. */
-const APPOINTMENT_TYPES: ReadonlyArray<[string, number, string, boolean, number | null]> = [
-  ["Recall / Cleaning", 45, "#10B981", false, 6],
-  ["New Patient Exam", 60, "#3B82F6", false, null],
-  ["Restorative", 60, "#F59E0B", false, null],
-  ["Root Canal", 90, "#EF4444", false, null],
-  ["Extraction", 45, "#8B5CF6", false, null],
-  ["Ortho Adjustment", 30, "#EC4899", false, null],
-  ["Emergency", 30, "#DC2626", false, null],
-  ["Lunch Break", 60, "#9CA3AF", true, null],
+/** DentalOS prisma/seed.ts APPOINTMENT_TYPES: name, minutes, color, block time. */
+const APPOINTMENT_TYPES: ReadonlyArray<[string, number, string, boolean]> = [
+  ["Recall / Cleaning", 45, "#10B981", false],
+  ["New Patient Exam", 60, "#3B82F6", false],
+  ["Restorative", 60, "#F59E0B", false],
+  ["Root Canal", 90, "#EF4444", false],
+  ["Extraction", 45, "#8B5CF6", false],
+  ["Ortho Adjustment", 30, "#EC4899", false],
+  ["Emergency", 30, "#DC2626", false],
+  ["Lunch Break", 60, "#9CA3AF", true],
 ];
 
 const time = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
@@ -33,9 +33,9 @@ async function seedScheduling() {
     return;
   }
 
-  for (const [name, durationMinutes, colorHex, isBlockTime, recallIntervalMonths] of APPOINTMENT_TYPES) {
+  for (const [name, durationMinutes, colorHex, isBlockTime] of APPOINTMENT_TYPES) {
     await prisma.appointmentType.create({
-      data: { name, durationMinutes, colorHex, isBlockTime, recallIntervalMonths },
+      data: { name, durationMinutes, colorHex, isBlockTime },
     });
   }
 

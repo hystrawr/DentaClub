@@ -8,7 +8,6 @@ const service = (over: Partial<AppointmentType>): AppointmentType => ({
   duration_minutes: 30,
   color_hex: "#6B7280",
   is_block_time: false,
-  recall_interval_months: null,
   price: 800,
   is_active: true,
   ...over,

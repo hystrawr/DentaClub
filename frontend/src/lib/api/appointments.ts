@@ -23,7 +23,7 @@ export function useAppointments(params: {
   date_to?: string;
   patient_id?: string;
   status?: AppointmentStatus;
-}) {
+}, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["appointments", params],
     queryFn: async () => {
@@ -31,6 +31,7 @@ export function useAppointments(params: {
       for (const [key, value] of Object.entries(params)) if (value) qs.set(key, value);
       return (await get<{ data: Appointment[] }>(`/api/appointments?${qs}`)).data;
     },
+    enabled: options?.enabled ?? true,
     placeholderData: (previous) => previous,
     refetchInterval: 30_000,
   });

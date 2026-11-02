@@ -29,3 +29,6 @@ export function useSignConsent(patientId: string) {
 
 /** Where a signed PDF is served, inline in the browser. */
 export const documentFileUrl = (documentId: string) => `${API_URL}/api/documents/${documentId}/file`;
+
+/** Where a signing's signature image is served. */
+export const signatureUrl = (consentId: string) => `${API_URL}/api/consents/${consentId}/signature`;

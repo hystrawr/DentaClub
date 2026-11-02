@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { notFound } from "../lib/http-error.js";
 import { historyData, historyResource, saveHistory } from "../lib/medical-history.js";
+import { assertActivePatient } from "../lib/patients.js";
 
 // The medical history from the clinic's paper dental record, one per patient:
 // Blocks B and C and Section 13 of the Patient Information Record.
@@ -22,8 +23,8 @@ medicalHistoryRouter.get("/patients/:id/medical-history", async (req, res) => {
 
 /** PUT /api/patients/:id/medical-history — save the whole form. */
 medicalHistoryRouter.put("/patients/:id/medical-history", async (req, res) => {
+  await assertActivePatient(req.params.id);
   const dto = saveHistory.parse(req.body);
-  await assertPatient(req.params.id);
   const data = historyData(dto);
   const history = await prisma.medicalHistory.upsert({
     where: { patientId: req.params.id },

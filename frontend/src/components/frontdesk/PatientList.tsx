@@ -16,14 +16,17 @@ const PAGE_SIZE = 20;
 
 type SortKey = "last" | "first" | "visit" | "appointment";
 type AppointmentFilter = "all" | "has" | "none";
+/** Current patients, or the ones removed from the directory (to look up or restore). */
+type StatusFilter = "active" | "inactive";
 
 export interface PatientFilter {
+  status: StatusFilter;
   appointment: AppointmentFilter;
   /** Dentist ids to show; empty means every dentist. */
   providers: string[];
 }
 
-const DEFAULT_FILTER: PatientFilter = { appointment: "all", providers: [] };
+const DEFAULT_FILTER: PatientFilter = { status: "active", appointment: "all", providers: [] };
 
 /** The dentist a patient is seeing next, or saw last. */
 const doctorOf = (p: PatientListItem) => (p.next_appointment ?? p.last_visit)?.provider ?? null;
@@ -57,7 +60,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
     return () => clearTimeout(timer);
   }, [query]);
 
-  const { data, isLoading, isError, isFetching } = usePatients({ search });
+  const { data, isLoading, isError, isFetching } = usePatients({ search, status: filter.status });
 
   const rows = useMemo(() => {
     const value = sortValue[sort.key];
@@ -85,7 +88,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
   // A refetch can shrink the list under the current page; show the last one that exists.
   const current = Math.min(page, pages - 1);
   const shown = rows.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE);
-  const filtered = Boolean(search) || filter.appointment !== "all" || filter.providers.length > 0;
+  const filtered = Boolean(search) || filter.status !== "active" || filter.appointment !== "all" || filter.providers.length > 0;
   const weekEnd = addDays(manilaToday(), 7);
 
   // Any change to what is shown starts back on the first page.
@@ -222,6 +225,11 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
                         </td>
                         <td className="px-4 py-3 font-semibold" style={{ color: "var(--color-foreground)" }}>
                           {p.last_name}
+                          {filter.status === "inactive" && (
+                            <span className="chip ml-1.5 !py-0 !text-[11px]" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                              Inactive
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3" style={{ color: "var(--color-foreground)" }}>
                           {p.first_name}
@@ -358,12 +366,12 @@ function When({ visit, soon = false }: { visit: PatientVisit | null; soon?: bool
   );
 }
 
-/** The Filter button and its menu: upcoming appointment or not, and which dentist. */
+/** The Filter button and its menu: current or removed patients, upcoming appointment or not, and which dentist. */
 function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange: (next: PatientFilter) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const providers = useProviders();
-  const active = (value.appointment !== "all" ? 1 : 0) + value.providers.length;
+  const active = (value.status !== "active" ? 1 : 0) + (value.appointment !== "all" ? 1 : 0) + value.providers.length;
 
   useEffect(() => {
     if (!open) return;
@@ -380,6 +388,11 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
       window.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  const statusOptions: Array<{ key: StatusFilter; label: string }> = [
+    { key: "active", label: "Current patients" },
+    { key: "inactive", label: "Removed patients" },
+  ];
 
   const appointmentOptions: Array<{ key: AppointmentFilter; label: string }> = [
     { key: "all", label: "All patients" },
@@ -414,6 +427,25 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
           className="absolute right-0 z-30 mt-2 w-72 rounded-2xl p-3"
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
         >
+          <Group title="Patients">
+            {statusOptions.map((o) => (
+              <label
+                key={o.key}
+                className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-slate-50"
+                style={{ color: "var(--color-foreground)" }}
+              >
+                <input
+                  type="radio"
+                  name="patient-status-filter"
+                  checked={value.status === o.key}
+                  onChange={() => onChange({ ...value, status: o.key })}
+                  className="accent-blue-600"
+                />
+                {o.label}
+              </label>
+            ))}
+          </Group>
+          <hr className="my-2" style={{ borderColor: "var(--color-border)" }} />
           <Group title="Appointment">
             {appointmentOptions.map((o) => (
               <label

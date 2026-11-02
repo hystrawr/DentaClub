@@ -45,6 +45,8 @@ export const CAN_CANCEL: AppointmentStatus[] = ["scheduled", "confirmed", "arriv
 export const CAN_NO_SHOW: AppointmentStatus[] = ["scheduled", "confirmed"];
 /** Only a visit still to come can move; the API refuses the rest too. */
 export const CAN_RESCHEDULE: AppointmentStatus[] = ["scheduled", "confirmed"];
+/** Not over yet: while a patient has one of these ahead, the API won't delete them. */
+export const OPEN_STATUSES: AppointmentStatus[] = ["scheduled", "confirmed", "arrived", "in_chair"];
 
 /** The appointment a 409 (double-booking) names, if the error is one. */
 export function conflictOf(error: unknown) {

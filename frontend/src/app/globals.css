@@ -186,6 +186,12 @@ body {
   border-color: var(--color-border);
 }
 .btn-secondary:hover { background: var(--color-surface-subtle); border-color: var(--color-border-strong); }
+/* Filter button and its menu share one olive-grey tint for hover and pressed. */
+.btn-filter:hover, .btn-filter[aria-expanded="true"] { background: #EAEBDF; border-color: #D2D4BF; }
+.filter-option:hover { background: #F1F2E8; }
+.filter-action { padding: 5px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600; transition: background 150ms ease; }
+.filter-action:hover:not(:disabled) { background: #EAEBDF; }
+.filter-action:disabled { opacity: 0.4; cursor: default; }
 
 .btn-ghost { background: transparent; color: var(--color-muted-foreground); }
 .btn-ghost:hover { background: var(--color-surface-subtle); color: var(--color-foreground); }

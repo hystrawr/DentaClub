@@ -8,6 +8,7 @@ import { usePatients } from "@/lib/api/patients";
 import { useProviders } from "@/lib/api/appointments";
 import { initials } from "@/lib/utils/alphabet";
 import { addDays, clock, dateOf, fullDate, manilaToday, timeOf } from "@/lib/utils/manila";
+import { Group, Option } from "@/components/schedule/AppointmentFilter";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Skeleton } from "@/components/shared/Skeleton";
 import type { PatientListItem, PatientVisit } from "@/types/api";
@@ -15,18 +16,33 @@ import type { PatientListItem, PatientVisit } from "@/types/api";
 const PAGE_SIZE = 20;
 
 type SortKey = "last" | "first" | "visit" | "appointment";
-type AppointmentFilter = "all" | "has" | "none";
+type AppointmentKey = "has" | "none";
 /** Current patients, or the ones removed from the directory (to look up or restore). */
 type StatusFilter = "active" | "inactive";
 
+/**
+ * What the list shows. Like the schedule's filter, appointments and dentists are
+ * stored as exclusions, so a dentist added later shows up without anyone ticking them.
+ */
 export interface PatientFilter {
   status: StatusFilter;
-  appointment: AppointmentFilter;
-  /** Dentist ids to show; empty means every dentist. */
-  providers: string[];
+  hiddenAppointment: AppointmentKey[];
+  hiddenProviders: string[];
 }
 
-const DEFAULT_FILTER: PatientFilter = { status: "active", appointment: "all", providers: [] };
+const DEFAULT_FILTER: PatientFilter = { status: "active", hiddenAppointment: [], hiddenProviders: [] };
+
+const STATUS_OPTIONS: Array<{ key: StatusFilter; label: string }> = [
+  { key: "active", label: "Current patients" },
+  { key: "inactive", label: "Removed patients" },
+];
+
+const APPOINTMENT_OPTIONS: Array<{ key: AppointmentKey; label: string }> = [
+  { key: "has", label: "Has an upcoming appointment" },
+  { key: "none", label: "No upcoming appointment" },
+];
+
+const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
 /** The dentist a patient is seeing next, or saw last. */
 const doctorOf = (p: PatientListItem) => (p.next_appointment ?? p.last_visit)?.provider ?? null;
@@ -66,11 +82,11 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
     const value = sortValue[sort.key];
     return (data ?? [])
       .filter((p) => {
-        if (filter.appointment === "has" && !p.next_appointment) return false;
-        if (filter.appointment === "none" && p.next_appointment) return false;
-        if (filter.providers.length > 0) {
+        if (filter.hiddenAppointment.includes(p.next_appointment ? "has" : "none")) return false;
+        // Once any dentist is unticked, patients with no dentist drop out too.
+        if (filter.hiddenProviders.length > 0) {
           const doctor = doctorOf(p);
-          if (!doctor || !filter.providers.includes(doctor.id)) return false;
+          if (!doctor || filter.hiddenProviders.includes(doctor.id)) return false;
         }
         return true;
       })
@@ -88,7 +104,8 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
   // A refetch can shrink the list under the current page; show the last one that exists.
   const current = Math.min(page, pages - 1);
   const shown = rows.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE);
-  const filtered = Boolean(search) || filter.status !== "active" || filter.appointment !== "all" || filter.providers.length > 0;
+  const filtered =
+    Boolean(search) || filter.status !== "active" || filter.hiddenAppointment.length > 0 || filter.hiddenProviders.length > 0;
   const weekEnd = addDays(manilaToday(), 7);
 
   // Any change to what is shown starts back on the first page.
@@ -115,40 +132,42 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
           </p>
         </div>
 
-        <div
-          className="flex items-center gap-2 px-3 rounded-full w-full sm:w-64"
-          style={{ height: 36, background: "var(--color-surface)", border: "1px solid var(--color-border-strong)" }}
-        >
-          <Search size={14} style={{ color: "var(--color-subtle-foreground)" }} className="shrink-0" aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search for patient…"
-            className="flex-1 bg-transparent text-sm outline-none min-w-0"
-            aria-label="Search for patient"
-          />
-          {isFetching && !isLoading ? (
-            <div
-              className="w-3 h-3 rounded-full border-2 animate-spin shrink-0"
-              style={{ borderColor: "var(--color-primary)", borderTopColor: "transparent" }}
-              aria-hidden="true"
+        <div className="flex w-full sm:w-auto items-center gap-2 sm:gap-3">
+          <div
+            className="flex items-center gap-2 px-3 rounded-full flex-1 min-w-0 sm:flex-none sm:w-64"
+            style={{ height: 36, background: "var(--color-surface)", border: "1px solid var(--color-border-strong)" }}
+          >
+            <Search size={14} style={{ color: "var(--color-subtle-foreground)" }} className="shrink-0" aria-hidden="true" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search for patient…"
+              className="flex-1 bg-transparent text-sm outline-none min-w-0"
+              aria-label="Search for patient"
             />
-          ) : (
-            query && (
-              <button onClick={() => setQuery("")} aria-label="Clear search" className="rounded-full p-0.5 hover:bg-[var(--color-surface-subtle)]">
-                <X size={12} style={{ color: "var(--color-subtle-foreground)" }} />
-              </button>
-            )
-          )}
+            {isFetching && !isLoading ? (
+              <div
+                className="w-3 h-3 rounded-full border-2 animate-spin shrink-0"
+                style={{ borderColor: "var(--color-primary)", borderTopColor: "transparent" }}
+                aria-hidden="true"
+              />
+            ) : (
+              query && (
+                <button onClick={() => setQuery("")} aria-label="Clear search" className="rounded-full p-0.5 hover:bg-[var(--color-surface-subtle)]">
+                  <X size={12} style={{ color: "var(--color-subtle-foreground)" }} />
+                </button>
+              )
+            )}
+          </div>
+
+          <PatientFilterMenu value={filter} onChange={applyFilter} />
+
+          <button className="btn btn-primary shrink-0" onClick={onAddPatient} aria-label="New Patient">
+            <UserPlus size={15} aria-hidden="true" />
+            <span className="hidden sm:inline">New Patient</span>
+          </button>
         </div>
-
-        <PatientFilterMenu value={filter} onChange={applyFilter} />
-
-        <button className="btn btn-primary" onClick={onAddPatient}>
-          <UserPlus size={15} aria-hidden="true" />
-          New Patient
-        </button>
       </div>
 
       {/* Table */}
@@ -185,7 +204,52 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
           )
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Phones: one card per patient instead of the wide table. */}
+            <ul className="md:hidden">
+              {shown.map((p) => {
+                const doctor = doctorOf(p);
+                const soon = p.next_appointment !== null && dateOf(p.next_appointment.start) <= weekEnd;
+                return (
+                  <li key={p.id} className="patient-row" style={{ borderBottom: "1px solid var(--color-border)" }}>
+                    <Link
+                      href={`/patients/${p.id}/info` as Route}
+                      className="flex items-center gap-3 px-4 py-3"
+                      aria-label={`View patient record of ${p.first_name} ${p.last_name}`}
+                    >
+                      <div
+                        className="flex items-center justify-center rounded-full font-bold shrink-0"
+                        style={{ width: 36, height: 36, background: "var(--color-primary-light)", color: "var(--color-primary)", fontSize: "0.75rem" }}
+                        aria-hidden="true"
+                      >
+                        {initials(`${p.first_name} ${p.last_name}`)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate" style={{ color: "var(--color-foreground)" }}>
+                          {p.last_name}, {p.first_name}
+                          {filter.status === "inactive" && (
+                            <span className="chip ml-1.5 !py-0 !text-[11px]" style={{ background: "var(--color-warning-light)", color: "var(--color-warning)" }}>
+                              Inactive
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs truncate" style={{ color: "var(--color-muted-foreground)" }}>
+                          {p.next_appointment
+                            ? `Next: ${fullDate(dateOf(p.next_appointment.start))}, ${clock(timeOf(p.next_appointment.start))}`
+                            : p.last_visit
+                              ? `Last visit: ${fullDate(dateOf(p.last_visit.start))}`
+                              : "No visits yet"}
+                          {doctor && ` · ${doctor.name}`}
+                        </p>
+                      </div>
+                      {soon && <span className="chip chip-scheduled !py-0 !text-[11px] shrink-0">This week</span>}
+                      <ChevronRight size={16} className="shrink-0" style={{ color: "var(--color-subtle-foreground)" }} aria-hidden="true" />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full min-w-[900px] border-collapse text-sm">
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
@@ -277,7 +341,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
             </div>
 
             <div
-              className="flex items-center justify-between px-4 py-3 text-[13px]"
+              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-[13px]"
               style={{ background: "var(--color-surface-raised)", color: "var(--color-muted-foreground)" }}
             >
               <span>
@@ -372,7 +436,10 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const providers = useProviders();
-  const active = (value.status !== "active" ? 1 : 0) + (value.appointment !== "all" ? 1 : 0) + value.providers.length;
+  const listed = (providers.data ?? []).filter((p) => p.is_active).map((p) => p.id);
+  const anyHidden = value.hiddenAppointment.length + value.hiddenProviders.length > 0;
+  const anyShown =
+    APPOINTMENT_OPTIONS.some((o) => !value.hiddenAppointment.includes(o.key)) || listed.some((id) => !value.hiddenProviders.includes(id));
 
   useEffect(() => {
     if (!open) return;
@@ -390,83 +457,48 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
     };
   }, [open]);
 
-  const statusOptions: Array<{ key: StatusFilter; label: string }> = [
-    { key: "active", label: "Current patients" },
-    { key: "inactive", label: "Removed patients" },
-  ];
-
-  const appointmentOptions: Array<{ key: AppointmentFilter; label: string }> = [
-    { key: "all", label: "All patients" },
-    { key: "has", label: "Has an upcoming appointment" },
-    { key: "none", label: "No upcoming appointment" },
-  ];
-
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
-        className="btn btn-secondary"
+        className="btn btn-secondary btn-filter"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="true"
       >
         <SlidersHorizontal size={14} aria-hidden="true" />
         Filter
-        {active > 0 && (
-          <span
-            className="rounded-full px-1.5 text-[10px] font-bold leading-4"
-            style={{ background: "var(--color-primary)", color: "#fff" }}
-            aria-label={`${active} active`}
-          >
-            {active}
-          </span>
-        )}
       </button>
 
       {open && (
         <div
-          className="absolute right-0 z-30 mt-2 w-72 rounded-2xl p-3"
+          className="absolute right-0 z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-2xl p-3"
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
         >
           <Group title="Patients">
-            {statusOptions.map((o) => (
-              <label
+            {STATUS_OPTIONS.map((o) => (
+              <Option
                 key={o.key}
-                className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-surface-raised)]"
-                style={{ color: "var(--color-foreground)" }}
-              >
-                <input
-                  type="radio"
-                  name="patient-status-filter"
-                  checked={value.status === o.key}
-                  onChange={() => onChange({ ...value, status: o.key })}
-                  className="accent-[var(--color-primary)]"
-                />
-                {o.label}
-              </label>
+                name="patient-status-filter"
+                label={o.label}
+                checked={value.status === o.key}
+                onChange={() => onChange({ ...value, status: o.key })}
+              />
             ))}
           </Group>
           <hr className="my-2" style={{ borderColor: "var(--color-border)" }} />
           <Group title="Appointment">
-            {appointmentOptions.map((o) => (
-              <label
+            {APPOINTMENT_OPTIONS.map((o) => (
+              <Option
                 key={o.key}
-                className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-surface-raised)]"
-                style={{ color: "var(--color-foreground)" }}
-              >
-                <input
-                  type="radio"
-                  name="patient-appointment-filter"
-                  checked={value.appointment === o.key}
-                  onChange={() => onChange({ ...value, appointment: o.key })}
-                  className="accent-[var(--color-primary)]"
-                />
-                {o.label}
-              </label>
+                label={o.label}
+                checked={!value.hiddenAppointment.includes(o.key)}
+                onChange={() => onChange({ ...value, hiddenAppointment: toggle(value.hiddenAppointment, o.key) })}
+              />
             ))}
           </Group>
           <hr className="my-2" style={{ borderColor: "var(--color-border)" }} />
-          <Group title="Doctor">
+          <Group title="Dentist">
             {providers.isLoading && (
               <p className="px-1 py-1.5 text-xs" style={{ color: "var(--color-muted-foreground)" }}>
                 Loading…
@@ -475,55 +507,37 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
             {providers.data
               ?.filter((p) => p.is_active)
               .map((p) => (
-                <label
+                <Option
                   key={p.id}
-                  className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-surface-raised)]"
-                  style={{ color: "var(--color-foreground)" }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={value.providers.includes(p.id)}
-                    onChange={() =>
-                      onChange({
-                        ...value,
-                        providers: value.providers.includes(p.id)
-                          ? value.providers.filter((id) => id !== p.id)
-                          : [...value.providers, p.id],
-                      })
-                    }
-                    className="accent-[var(--color-primary)]"
-                  />
-                  <span className="rounded-full shrink-0" style={{ width: 8, height: 8, background: p.color_hex }} aria-hidden="true" />
-                  <span className="truncate">{p.name}</span>
-                </label>
+                  label={p.name}
+                  swatch={p.color_hex}
+                  checked={!value.hiddenProviders.includes(p.id)}
+                  onChange={() => onChange({ ...value, hiddenProviders: toggle(value.hiddenProviders, p.id) })}
+                />
               ))}
           </Group>
-          {active > 0 && (
+          <div className="mt-2 pt-2 flex items-center justify-between gap-2" style={{ borderTop: "1px solid var(--color-border)" }}>
             <button
               type="button"
-              className="mt-2 w-full text-xs font-semibold hover:underline"
-              style={{ color: "var(--color-primary)" }}
-              onClick={() => onChange(DEFAULT_FILTER)}
+              className="filter-action"
+              style={{ color: "var(--color-muted-foreground)" }}
+              disabled={!anyShown}
+              onClick={() => onChange({ ...value, hiddenAppointment: APPOINTMENT_OPTIONS.map((o) => o.key), hiddenProviders: listed })}
             >
-              Clear filters
+              Clear all
             </button>
-          )}
+            <button
+              type="button"
+              className="filter-action"
+              style={{ color: "var(--color-primary)" }}
+              disabled={!anyHidden}
+              onClick={() => onChange({ ...value, hiddenAppointment: [], hiddenProviders: [] })}
+            >
+              Show everything
+            </button>
+          </div>
         </div>
       )}
     </div>
-  );
-}
-
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <fieldset>
-      <legend
-        className="px-1 mb-1 text-xs font-medium"
-        style={{ color: "var(--color-subtle-foreground)" }}
-      >
-        {title}
-      </legend>
-      {children}
-    </fieldset>
   );
 }

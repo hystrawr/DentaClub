@@ -258,7 +258,8 @@ model Consent {
   @@map("consents")
 }
 
-/// A patient document. A signed consent is written with `immutableFlag`: it is
+/// A patient document. Documents are written once and never edited, so there
+/// is no `updated_at`. A signed consent is written with `immutableFlag`: it is
 /// a legal artifact and must not be editable afterwards.
 ///
 /// DentalOS stores the file in Cloudflare R2 via an `attachments` table; here
@@ -274,7 +275,6 @@ model Document {
   sizeBytes     Int?         @map("size_bytes")
   immutableFlag Boolean      @default(false) @map("immutable_flag")
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   patient Patient  @relation(fields: [patientId], references: [id], onDelete: Restrict)
   consent Consent?

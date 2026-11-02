@@ -204,7 +204,6 @@ export interface PatientConsent {
     signer_name: string;
     /** Set when a parent or guardian signed for the patient. */
     signer_relationship: string | null;
-    signature_image: string;
     document_id: string;
     signed_at: ISODateTimeString;
   } | null;
@@ -266,7 +265,7 @@ export interface Provider {
   id: string;
   name: string;
   prc_number: string | null;
-  specializations: string[] | null;
+  specializations: string[];
   color_hex: string;
   is_active: boolean;
 }

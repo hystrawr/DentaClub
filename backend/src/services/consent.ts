@@ -128,7 +128,12 @@ export async function sign(patientId: string, input: SignInput): Promise<Consent
  */
 export async function forPatient(patientId: string) {
   const [current, documents] = await Promise.all([
-    prisma.consent.findFirst({ where: { patientId }, orderBy: [{ signedAt: "desc" }, { id: "desc" }] }),
+    // The signature image is fetched on its own (signatureImage below), so it isn't sent on every load.
+    prisma.consent.findFirst({
+      where: { patientId },
+      orderBy: [{ signedAt: "desc" }, { id: "desc" }],
+      omit: { signatureImage: true },
+    }),
     prisma.document.findMany({
       where: { patientId, type: "signed_consent" },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
@@ -142,7 +147,6 @@ export async function forPatient(patientId: string) {
       form_text: current.formText,
       signer_name: current.signerName,
       signer_relationship: current.signerRelationship,
-      signature_image: current.signatureImage,
       document_id: current.documentId,
       signed_at: isoOffset(current.signedAt),
     },
@@ -150,6 +154,14 @@ export async function forPatient(patientId: string) {
       .filter((d) => d.id !== current?.documentId)
       .map((d) => ({ document_id: d.id, title: d.title, size_bytes: d.sizeBytes, signed_at: isoOffset(d.createdAt) })),
   };
+}
+
+/** One signing's signature, decoded from its stored `data:` URI. */
+export async function signatureImage(consentId: string) {
+  const row = await prisma.consent.findUnique({ where: { id: consentId }, select: { signatureImage: true } });
+  const match = row?.signatureImage.match(/^data:(image\/(?:png|jpeg));base64,(.*)$/);
+  if (!match) throw notFound("Signature not found.");
+  return { mimeType: match[1], bytes: Buffer.from(match[2], "base64") };
 }
 
 /* ── PDF ───────────────────────────────────────────────────────────────── */

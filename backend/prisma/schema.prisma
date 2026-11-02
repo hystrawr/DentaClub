@@ -260,7 +260,8 @@ model Consent {
 
 /// A patient document. Documents are written once and never edited, so there
 /// is no `updated_at`. A signed consent is written with `immutableFlag`: it is
-/// a legal artifact and must not be editable afterwards.
+/// a legal artifact and must not be editable afterwards. A DB trigger refuses
+/// any UPDATE or DELETE of an immutable row (migration 17_documents_immutable).
 ///
 /// DentalOS stores the file in Cloudflare R2 via an `attachments` table; here
 /// the PDF bytes live in the row itself.
@@ -327,7 +328,7 @@ model ProviderProfile {
   id              String   @id @default(cuid())
   name            String
   prcNumber       String?  @map("prc_number")
-  specializations Json?    @db.JsonB
+  specializations String[] @default([])
   colorHex        String   @default("#3B82F6") @map("color_hex") @db.VarChar(7)
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

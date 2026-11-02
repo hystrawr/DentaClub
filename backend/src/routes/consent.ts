@@ -25,6 +25,12 @@ consentRouter.get("/patients/:id/consent", async (req, res) => {
   res.json({ data: await consent.forPatient(req.params.id) });
 });
 
+/** GET /api/consents/:id/signature — the signature image. A signing never changes, so it caches for good. */
+consentRouter.get("/consents/:id/signature", async (req, res) => {
+  const { mimeType, bytes } = await consent.signatureImage(req.params.id);
+  res.type(mimeType).set("Cache-Control", "private, max-age=31536000, immutable").send(bytes);
+});
+
 /** POST /api/patients/:id/consent — sign. Signing again keeps the earlier copy. */
 consentRouter.post("/patients/:id/consent", async (req, res) => {
   const dto = signConsent.parse(req.body);

@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 import { requireAdmin } from "../lib/auth.js";
 import { invalidField, notFound, ruleViolation } from "../lib/http-error.js";
@@ -80,7 +79,7 @@ providersRouter.post("/providers", requireAdmin, async (req, res) => {
     data: {
       name: dto.name,
       prcNumber: dto.prc_number ?? null,
-      specializations: (dto.specializations ?? undefined) as Prisma.InputJsonArray | undefined,
+      specializations: dto.specializations ?? [],
       ...(dto.color_hex ? { colorHex: dto.color_hex } : {}),
       ...(dto.is_active != null ? { isActive: dto.is_active } : {}),
     },
@@ -100,9 +99,8 @@ providersRouter.patch("/providers/:id", requireAdmin, async (req, res) => {
     data: {
       ...(dto.name !== undefined ? { name: dto.name } : {}),
       ...(dto.prc_number !== undefined ? { prcNumber: dto.prc_number } : {}),
-      ...(dto.specializations !== undefined
-        ? { specializations: (dto.specializations ?? undefined) as Prisma.InputJsonArray | undefined }
-        : {}),
+      // null clears the list.
+      ...(dto.specializations !== undefined ? { specializations: dto.specializations ?? [] } : {}),
       ...(dto.color_hex != null ? { colorHex: dto.color_hex } : {}),
       ...(dto.is_active != null ? { isActive: dto.is_active } : {}),
     },

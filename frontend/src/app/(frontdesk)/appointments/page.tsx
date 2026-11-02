@@ -44,15 +44,18 @@ export default function AppointmentsPage() {
             {longDate(manilaToday())}
           </p>
         </div>
-        <PatientSearch className="w-60" placeholder="Search patients…" />
-        <AppointmentFilter value={filter} onChange={setFilter} />
-        <button
-          className="btn btn-primary"
-          onClick={() => openCreate({ date: manilaToday(), startTime: "09:00", endTime: "09:30" })}
-        >
-          <Plus size={15} strokeWidth={2.5} aria-hidden="true" />
-          New Appointment
-        </button>
+        <div className="flex w-full sm:w-auto items-center gap-2 sm:gap-3">
+          <PatientSearch className="flex-1 min-w-0 sm:flex-none sm:w-60" placeholder="Search patients…" />
+          <AppointmentFilter value={filter} onChange={setFilter} />
+          <button
+            className="btn btn-primary shrink-0"
+            onClick={() => openCreate({ date: manilaToday(), startTime: "09:00", endTime: "09:30" })}
+            aria-label="New Appointment"
+          >
+            <Plus size={15} strokeWidth={2.5} aria-hidden="true" />
+            <span className="hidden sm:inline">New Appointment</span>
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 min-h-[480px]">

@@ -31,18 +31,6 @@ export function matchesFilter(filter: ScheduleFilter, apt: Appointment): boolean
   return !group || !filter.hiddenGroups.includes(group.key);
 }
 
-/**
- * How many dentists and statuses are ticked, for the Filter badge — or null when
- * every box is ticked, since then nothing is filtered and no badge shows.
- * `providerIds` are the dentists listed in the menu.
- */
-export function selectedCount(filter: ScheduleFilter, providerIds: string[]): number | null {
-  const dentists = providerIds.filter((id) => !filter.hiddenProviders.includes(id)).length;
-  const groups = STATUS_GROUPS.filter((g) => !filter.hiddenGroups.includes(g.key)).length;
-  const total = dentists + groups;
-  return total === providerIds.length + STATUS_GROUPS.length ? null : total;
-}
-
 const toggle = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
 /** The Filter button and its menu: which dentists and which statuses the calendar shows. */
@@ -51,8 +39,9 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
   const ref = useRef<HTMLDivElement>(null);
   const providers = useProviders();
   const listed = (providers.data ?? []).filter((p) => p.is_active).map((p) => p.id);
-  const selected = selectedCount(value, listed);
-  const active = value.hiddenProviders.length + value.hiddenGroups.length;
+  const anyHidden = value.hiddenProviders.length + value.hiddenGroups.length > 0;
+  const anyShown =
+    listed.some((id) => !value.hiddenProviders.includes(id)) || STATUS_GROUPS.some((g) => !value.hiddenGroups.includes(g.key));
 
   useEffect(() => {
     if (!open) return;
@@ -81,20 +70,11 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
       >
         <SlidersHorizontal size={14} aria-hidden="true" />
         Filter
-        {selected !== null && (
-          <span
-            className="rounded-full px-1.5 text-[10px] font-bold leading-4"
-            style={{ background: "var(--color-primary)", color: "#fff" }}
-            aria-label={`${selected} selected`}
-          >
-            {selected}
-          </span>
-        )}
       </button>
 
       {open && (
         <div
-          className="absolute right-0 z-30 mt-2 w-64 rounded-2xl p-3"
+          className="absolute right-0 z-30 mt-2 w-64 max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-2xl p-3"
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
         >
           <Group title="Dentist">
@@ -120,16 +100,26 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
               />
             ))}
           </Group>
-          {active > 0 && (
+          <div className="mt-2 flex items-center justify-between gap-2 px-1">
             <button
               type="button"
-              className="mt-2 w-full text-xs font-semibold hover:underline"
+              className="text-xs font-semibold hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-default"
+              style={{ color: "var(--color-muted-foreground)" }}
+              disabled={!anyShown}
+              onClick={() => onChange({ hiddenProviders: listed, hiddenGroups: STATUS_GROUPS.map((g) => g.key) })}
+            >
+              Clear all
+            </button>
+            <button
+              type="button"
+              className="text-xs font-semibold hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-default"
               style={{ color: "var(--color-primary)" }}
+              disabled={!anyHidden}
               onClick={() => onChange({ hiddenProviders: [], hiddenGroups: [] })}
             >
               Show everything
             </button>
-          )}
+          </div>
         </div>
       )}
     </div>

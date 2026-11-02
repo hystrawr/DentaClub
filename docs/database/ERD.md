@@ -14,7 +14,7 @@ The full relational schema, with types, keys and constraints, is in [relational-
 | document is the signed PDF of a consent | 1 : 0..1 |
 | patient books appointments (none for block time) | 0..1 : 0..* |
 | dentist attends appointments | 1 : 0..* |
-| appointment type, chair or location of an appointment | 0..1 : 0..* |
+| appointment type or chair of an appointment (its location is the chair's) | 0..1 : 0..* |
 | location contains chairs | 1 : 0..* |
 | dentist works weekly availability windows at a location | 1 : 0..* each |
 | users | stands alone (sign-in and roles: admin or staff) |
@@ -22,5 +22,5 @@ The full relational schema, with types, keys and constraints, is in [relational-
 The diagram's source is [erd.mmd](erd.mmd). To regenerate the image after a schema change:
 
 ```bash
-npx -y @mermaid-js/mermaid-cli -i docs/database/erd.mmd -o docs/database/erd.png -b white -w 2400 -s 2
+npx -y @mermaid-js/mermaid-cli@11.4.2 -i docs/database/erd.mmd -o docs/database/erd.png -b white -w 2400 -s 2
 ```

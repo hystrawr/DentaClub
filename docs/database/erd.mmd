@@ -10,7 +10,6 @@ erDiagram
     provider_profiles ||--o{ appointments : "attends"
     appointment_types |o--o{ appointments : "classifies"
     operatories |o--o{ appointments : "seats"
-    locations |o--o{ appointments : "hosts"
     locations ||--o{ operatories : "contains"
     locations ||--o{ provider_availabilities : "hosts"
     provider_profiles ||--o{ provider_availabilities : "works"
@@ -39,6 +38,7 @@ erDiagram
         text guardian_occupation
         varchar guardian_contact
         text notes
+        boolean is_active
         timestamptz created_at
         timestamptz updated_at
     }
@@ -149,7 +149,6 @@ erDiagram
         integer size_bytes
         boolean immutable_flag
         timestamptz created_at
-        timestamptz updated_at
     }
 
     locations {
@@ -178,7 +177,7 @@ erDiagram
         text id PK
         text name
         text prc_number
-        jsonb specializations
+        text_array specializations
         varchar color_hex
         boolean is_active
         timestamptz created_at
@@ -202,7 +201,6 @@ erDiagram
         smallint duration_minutes
         varchar color_hex
         boolean is_block_time
-        smallint recall_interval_months
         decimal price
         boolean is_active
         timestamptz created_at
@@ -215,7 +213,6 @@ erDiagram
         text provider_profile_id FK
         text appointment_type_id FK
         text operatory_id FK
-        text location_id FK
         AppointmentStatus status
         timestamptz scheduled_start
         timestamptz scheduled_end

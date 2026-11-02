@@ -231,11 +231,6 @@ model OdontogramEvent {
 // consent, and the older ones stay on file.
 
 enum DocumentType {
-  id_scan
-  referral
-  lab_result
-  consent
-  treatment_plan_signature
   signed_consent
   other
 }

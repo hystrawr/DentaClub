@@ -7,7 +7,7 @@ import { peso } from "@/lib/utils/money";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Skeleton } from "@/components/shared/Skeleton";
 import { FormError } from "@/components/ui/form";
-import { ServiceModal } from "@/components/settings/ServiceModal";
+import { ServiceModal } from "@/components/services/ServiceModal";
 import type { AppointmentType } from "@/types/api";
 
 /** Which service the modal is open for: "new", one to edit, or none. */
@@ -18,7 +18,7 @@ type Editing = { service: AppointmentType | null; key: number } | null;
  * their prices. A service is deactivated, never deleted: past appointments
  * still point at it.
  */
-export default function ServicesSettingsPage() {
+export default function ServicesPage() {
   const { data: types = [], isLoading, isError } = useAppointmentTypes();
   const toggle = useSaveAppointmentType();
   const [editing, setEditing] = useState<Editing>(null);

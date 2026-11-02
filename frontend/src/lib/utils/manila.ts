@@ -1,13 +1,3 @@
-/**
- * Calendar maths in clinic time (Asia/Manila, UTC+8, no daylight saving).
- *
- * DentalOS's calendar used the browser's local clock and `toISOString()` (UTC)
- * for date keys, so before 08:00 in Manila "today" was yesterday and a laptop
- * set to another timezone drew every appointment at the wrong hour. Here every
- * date is a `YYYY-MM-DD` string in Manila, and appointment times are read
- * straight off the API's `+08:00` timestamps.
- */
-
 const DAY_MS = 86_400_000;
 const MANILA_OFFSET_MS = 8 * 3_600_000;
 
@@ -30,6 +20,22 @@ export function weekdayOf(date: string): number {
 export function weekOf(date: string): string[] {
   const monday = addDays(date, -((weekdayOf(date) + 6) % 7));
   return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+}
+
+/** The first of the month `months` away from `date`'s month. */
+export function addMonths(date: string, months: number): string {
+  const [y, m] = date.split("-").map(Number);
+  return new Date(Date.UTC(y!, m! - 1 + months, 1)).toISOString().slice(0, 10);
+}
+
+/** Whole Monday–Sunday weeks covering `date`'s month, for a month grid. */
+export function monthGridOf(date: string): string[] {
+  const first = `${date.slice(0, 7)}-01`;
+  const last = addDays(addMonths(date, 1), -1);
+  const start = weekOf(first)[0]!;
+  const end = weekOf(last)[6]!;
+  const days = Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / DAY_MS) + 1;
+  return Array.from({ length: days }, (_, i) => addDays(start, i));
 }
 
 /** The date part of an API timestamp (already Manila-local). */
@@ -65,7 +71,6 @@ export function longDate(date: string): string {
   });
 }
 
-/** "Oct 5" */
 export function shortDate(date: string, withYear = false): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-PH", {
     month: "short",
@@ -75,7 +80,6 @@ export function shortDate(date: string, withYear = false): string {
   });
 }
 
-/** "October 5, 2026" */
 export function fullDate(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
     month: "long",
@@ -102,7 +106,6 @@ export function manilaMinutes(): number {
   return now.getUTCHours() * 60 + now.getUTCMinutes();
 }
 
-/** "October 2026" */
 export function monthYear(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-PH", { month: "long", year: "numeric", timeZone: "UTC" });
 }

@@ -142,7 +142,7 @@ export function Group({ title, children }: { title: string; children: React.Reac
 export function Option({ label, swatch, checked, onChange, name }: { label: string; swatch?: string; checked: boolean; onChange: () => void; name?: string }) {
   return (
     <label className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer filter-option" style={{ color: "var(--color-foreground)" }}>
-      <input type={name ? "radio" : "checkbox"} name={name} checked={checked} onChange={onChange} className="accent-[var(--color-primary)]" />
+      <input type={name ? "radio" : "checkbox"} name={name} checked={checked} onChange={onChange} className="accent-primary" />
       {swatch && <span className="rounded-full shrink-0" style={{ width: 8, height: 8, background: swatch }} aria-hidden="true" />}
       <span className="truncate">{label}</span>
     </label>

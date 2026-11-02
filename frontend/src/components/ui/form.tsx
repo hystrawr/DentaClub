@@ -1,16 +1,18 @@
 "use client";
 
-import { X } from "lucide-react";
-import { type ReactNode, useEffect, useEffectEvent, useRef } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from "react";
 import { errorMessages } from "@/lib/api/client";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 // Form primitives, ported from DentalOS components/frontdesk/settings/primitives.tsx.
 
 /* ─── Dialog ────────────────────────────────────────────────────── */
 
 /**
- * A modal form. Escape and the backdrop close it; the first field is focused
- * on open; server errors are listed above the buttons.
+ * A modal form. The first field is focused on open; server errors are listed
+ * above the buttons. The backdrop does not close it, so a misclick loses
+ * nothing: Cancel and Escape do, asking first in an in-app dialog when the
+ * form is `dirty`.
  */
 export function FormDialog({
   open,
@@ -21,6 +23,8 @@ export function FormDialog({
   submitting,
   disabled,
   error,
+  dirty,
+  discardTitle = "Discard your changes?",
   children,
 }: {
   open: boolean;
@@ -31,13 +35,23 @@ export function FormDialog({
   submitting?: boolean;
   disabled?: boolean;
   error?: unknown;
+  /** Something was typed that closing would lose. */
+  dirty?: boolean;
+  discardTitle?: string;
   children: ReactNode;
 }) {
   const firstField = useRef<HTMLDivElement>(null);
-  // Always the latest onClose, without making the effect below re-run. Callers
-  // usually pass a new function every render — with `onClose` as a dependency,
-  // each keystroke re-ran the effect and yanked focus back to the first field.
-  const close = useEffectEvent(onClose);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+
+  function cancel() {
+    if (dirty) setConfirmingDiscard(true);
+    else onClose();
+  }
+
+  // Always the latest cancel, without making the effect below re-run. Callers
+  // usually pass a new onClose every render — with it as a dependency, each
+  // keystroke re-ran the effect and yanked focus back to the first field.
+  const close = useEffectEvent(cancel);
 
   useEffect(() => {
     if (!open) return;
@@ -53,19 +67,16 @@ export function FormDialog({
 
   return (
     <>
-      <div className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose} aria-hidden="true" />
+      <div className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.35)" }} aria-hidden="true" />
       <div role="dialog" aria-modal="true" aria-label={title} className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
         <div
           className="card-premium w-full max-w-md pointer-events-auto"
           style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}
         >
-          <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--color-border)" }}>
+          <div className="px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--color-border)" }}>
             <h2 className="text-sm font-semibold" style={{ color: "var(--color-foreground)" }}>
               {title}
             </h2>
-            <button onClick={onClose} className="btn-ghost p-1 rounded-md" aria-label="Close" type="button">
-              <X size={16} />
-            </button>
           </div>
 
           <form
@@ -80,16 +91,30 @@ export function FormDialog({
               <FormError error={error} />
             </div>
             <div className="flex justify-end gap-2 px-5 py-3 shrink-0" style={{ borderTop: "1px solid var(--color-border)" }}>
-              <button type="button" onClick={onClose} className="btn-ghost px-3 py-2 text-sm rounded-lg">
+              <button type="button" onClick={cancel} disabled={submitting} className="btn btn-secondary">
                 Cancel
               </button>
-              <button type="submit" disabled={submitting || disabled} className="btn-gradient px-4 py-2 text-sm font-semibold">
+              <button type="submit" disabled={submitting || disabled} className="btn btn-primary">
                 {submitting ? "Saving…" : submitLabel}
               </button>
             </div>
           </form>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmingDiscard}
+        title={discardTitle}
+        message="Nothing has been saved. Everything typed so far will be lost."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        danger
+        onConfirm={() => {
+          setConfirmingDiscard(false);
+          onClose();
+        }}
+        onCancel={() => setConfirmingDiscard(false)}
+      />
     </>
   );
 }

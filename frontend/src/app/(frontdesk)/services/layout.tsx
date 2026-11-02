@@ -16,12 +16,5 @@ export default function ServicesLayout({ children }: { children: React.ReactNode
 
   if (!isAdmin) return null;
 
-  return (
-    <div className="px-5 sm:px-10 lg:px-12 py-6 space-y-5">
-      <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--color-foreground)" }}>
-        Services
-      </h1>
-      {children}
-    </div>
-  );
+  return <div className="px-5 sm:px-10 lg:px-12 py-6 space-y-5">{children}</div>;
 }

@@ -1,5 +1,8 @@
 erDiagram
     patients ||--o| medical_histories : "has"
+    medical_histories ||--o{ medical_history_conditions : "ticks"
+    medical_conditions ||--o{ medical_history_conditions : "is ticked in"
+    provider_profiles ||--o{ provider_specializations : "has"
     patients ||--o{ treatment_records : "has"
     patients ||--o{ odontogram_events : "has"
     odontogram_events |o--o{ odontogram_events : "replaces"
@@ -58,15 +61,6 @@ erDiagram
         boolean uses_tobacco
         boolean uses_drugs
         text drugs_detail
-        boolean rheumatic_fever
-        boolean heart_condition
-        boolean diabetes
-        boolean kidney_disease
-        boolean high_blood_pressure
-        boolean anemia
-        boolean hepatitis
-        boolean asthma
-        boolean epilepsy
         boolean has_allergies
         boolean allergic_to_local_anesthetic
         boolean allergic_to_penicillin
@@ -82,7 +76,6 @@ erDiagram
         varchar blood_type
         smallint bp_systolic
         smallint bp_diastolic
-        text_array conditions
         text other_conditions
         text previous_dentist
         varchar last_dental_visit
@@ -95,6 +88,16 @@ erDiagram
         varchar physician_phone
         timestamptz created_at
         timestamptz updated_at
+    }
+
+    medical_conditions {
+        varchar code PK
+        text label
+    }
+
+    medical_history_conditions {
+        text medical_history_id PK, FK
+        varchar condition_code PK, FK
     }
 
     treatment_records {
@@ -177,11 +180,15 @@ erDiagram
         text id PK
         text name
         text prc_number
-        text_array specializations
         varchar color_hex
         boolean is_active
         timestamptz created_at
         timestamptz updated_at
+    }
+
+    provider_specializations {
+        text provider_profile_id PK, FK
+        text name PK
     }
 
     provider_availabilities {

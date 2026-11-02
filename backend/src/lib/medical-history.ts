@@ -15,7 +15,6 @@ const YES_NO = {
   taking_medicine: "takingMedicine",
   uses_tobacco: "usesTobacco",
   uses_drugs: "usesDrugs",
-  has_allergies: "hasAllergies",
   allergic_to_local_anesthetic: "allergicToLocalAnesthetic",
   allergic_to_penicillin: "allergicToPenicillin",
   allergic_to_sulfa: "allergicToSulfa",
@@ -46,27 +45,30 @@ const TEXT = {
   other_conditions: "otherConditions",
 } as const satisfies Record<string, keyof MedicalHistory>;
 
-/**
- * Section 13, "Do you have or have you had any of the following?".
- *
- * Nine of these were Yes/No questions on the old form and keep their columns,
- * so nothing already recorded moves. The rest are stored by code in
- * `conditions`. The API shows both as one list of codes.
- */
-const CONDITION_COLUMNS = {
-  high_blood_pressure: "highBloodPressure",
-  epilepsy: "epilepsy",
-  heart_disease: "heartCondition",
-  hepatitis_liver: "hepatitis",
-  rheumatic_fever: "rheumaticFever",
-  kidney_disease: "kidneyDisease",
-  diabetes: "diabetes",
-  anemia: "anemia",
-  asthma: "asthma",
-} as const satisfies Record<string, keyof MedicalHistory>;
+/** Item 8, the allergy cards. Any of them ticked, or one written in, sets `has_allergies`. */
+const ALLERGENS = [
+  "allergicToLocalAnesthetic",
+  "allergicToPenicillin",
+  "allergicToSulfa",
+  "allergicToAspirin",
+  "allergicToLatex",
+] as const satisfies ReadonlyArray<keyof MedicalHistory>;
 
+/**
+ * Section 13, "Do you have or have you had any of the following?". Each code
+ * is a row of `medical_conditions`; a ticked box is a row of
+ * `medical_history_conditions`.
+ */
 const CONDITION_CODES = [
-  ...(Object.keys(CONDITION_COLUMNS) as Array<keyof typeof CONDITION_COLUMNS>),
+  "high_blood_pressure",
+  "epilepsy",
+  "heart_disease",
+  "hepatitis_liver",
+  "rheumatic_fever",
+  "kidney_disease",
+  "diabetes",
+  "anemia",
+  "asthma",
   "low_blood_pressure",
   "aids_hiv",
   "std",
@@ -101,7 +103,11 @@ const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 const text = z.string().trim().max(1000).transform((s) => (s === "" ? null : s)).nullable();
 const pressure = z.number().int().min(40).max(300).nullable();
 
-/** Every answer is required in the body, as `null` when not asked — a save writes the whole form. */
+/**
+ * Every answer is required in the body, as `null` when not asked — a save
+ * writes the whole form. `has_allergies` is not an answer: the server works it
+ * out, and ignores one sent in.
+ */
 export const saveHistory = z.object({
   ...(Object.fromEntries(Object.keys(YES_NO).map((k) => [k, z.boolean().nullable()])) as {
     [K in keyof typeof YES_NO]: z.ZodNullable<z.ZodBoolean>;
@@ -117,21 +123,24 @@ export const saveHistory = z.object({
 
 export type HistoryInput = z.infer<typeof saveHistory>;
 
+/** Read a history with this, so `historyResource` has its ticked conditions. */
+export const withConditions = { conditions: { select: { conditionCode: true } } } as const;
+
+type HistoryWithConditions = MedicalHistory & { conditions: Array<{ conditionCode: string }> };
+
 /** The wire form of a saved history; every answer null when there is none yet. */
-export function historyResource(history: MedicalHistory | null) {
+export function historyResource(history: HistoryWithConditions | null) {
   const answers: Record<string, unknown> = {};
   for (const [wire, column] of Object.entries(YES_NO)) answers[wire] = history?.[column] ?? null;
   for (const [wire, column] of Object.entries(TEXT)) answers[wire] = history?.[column] ?? null;
 
-  const conditions = [
-    ...Object.entries(CONDITION_COLUMNS)
-      .filter(([, column]) => history?.[column] === true)
-      .map(([code]) => code),
-    ...(history?.conditions ?? []),
-  ];
+  // Checklist order, not the order the rows happen to come back in.
+  const ticked = new Set(history?.conditions.map((c) => c.conditionCode));
+  const conditions = CONDITION_CODES.filter((code) => ticked.has(code));
 
   return {
     ...(answers as Omit<HistoryInput, "last_dental_visit" | "dental_anxiety" | "blood_type" | "bp_systolic" | "bp_diastolic" | "conditions">),
+    has_allergies: history?.hasAllergies ?? null,
     last_dental_visit: history?.lastDentalVisit ?? null,
     dental_anxiety: history?.dentalAnxiety ?? null,
     blood_type: history?.bloodType ?? null,
@@ -142,23 +151,27 @@ export function historyResource(history: MedicalHistory | null) {
   };
 }
 
-/** Answers on the wire → columns, for a create or an update. */
+/**
+ * Answers on the wire → columns, for a create. For an update, clear the
+ * ticked conditions first (`conditions: { deleteMany: {}, ...data.conditions }`):
+ * a save replaces the whole checklist.
+ */
 export function historyData(dto: HistoryInput) {
   const data: Record<string, unknown> = {};
   for (const [wire, column] of Object.entries(YES_NO)) data[column] = dto[wire as keyof typeof YES_NO];
   for (const [wire, column] of Object.entries(TEXT)) data[column] = dto[wire as keyof typeof TEXT];
 
-  // A saved checklist is an answered one: an unticked box is a "No".
-  const ticked = new Set<string>(dto.conditions);
-  for (const [code, column] of Object.entries(CONDITION_COLUMNS)) data[column] = ticked.has(code);
+  const hasAllergies = ALLERGENS.some((column) => data[column] === true) || dto.other_allergies !== null;
 
   return {
     ...data,
+    hasAllergies,
     lastDentalVisit: dto.last_dental_visit,
     dentalAnxiety: dto.dental_anxiety,
     bloodType: dto.blood_type,
     bpSystolic: dto.bp_systolic,
     bpDiastolic: dto.bp_diastolic,
-    conditions: [...ticked].filter((code) => !(code in CONDITION_COLUMNS)),
+    // A saved checklist is an answered one: a box with no row is a "No".
+    conditions: { create: [...new Set(dto.conditions)].map((conditionCode) => ({ conditionCode })) },
   };
 }

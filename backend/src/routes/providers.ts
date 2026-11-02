@@ -5,7 +5,7 @@ import { requireAdmin } from "../lib/auth.js";
 import { invalidField, notFound, ruleViolation } from "../lib/http-error.js";
 import { isDateString } from "../lib/dates.js";
 import { getAvailableSlots } from "../services/scheduling/availability.js";
-import { providerAvailabilityModel, providerProfileResource } from "../services/scheduling/mapper.js";
+import { providerAvailabilityModel, providerProfileResource, withSpecializations } from "../services/scheduling/mapper.js";
 
 // Dentists and their weekly availability. Ported from DentalOS
 // apps/api/src/scheduling/provider.controller.ts. Mounted at /api.
@@ -13,11 +13,22 @@ export const providersRouter = Router();
 
 const hexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "The color hex field must be like #3B82F6.");
 
+// One row each in provider_specializations, so blanks go and repeats collapse.
+const specializations = z
+  .array(z.string().trim().max(255))
+  .transform((names) => [...new Set(names.filter((name) => name !== ""))])
+  .nullish();
+
+/** The specialization rows for a create; null or absent is none. */
+const specializationRows = (names: string[] | null | undefined) => ({
+  create: (names ?? []).map((name) => ({ name })),
+});
+
 const createProvider = z.object({
   // DentalOS takes a `user_id` and reads the name from the staff account.
   name: z.string().trim().min(1, "The name field is required.").max(255),
   prc_number: z.string().nullish(),
-  specializations: z.array(z.string()).nullish(),
+  specializations,
   color_hex: hexColor.nullish(),
   is_active: z.boolean().nullish(),
 });
@@ -25,7 +36,7 @@ const createProvider = z.object({
 const updateProvider = z.object({
   name: z.string().trim().min(1).max(255).optional(),
   prc_number: z.string().nullish(),
-  specializations: z.array(z.string()).nullish(),
+  specializations,
   color_hex: hexColor.nullish(),
   is_active: z.boolean().nullish(),
 });
@@ -63,13 +74,16 @@ function readSlotMinutes(raw: unknown): number {
 }
 
 async function findOrFail(id: string) {
-  const profile = await prisma.providerProfile.findUnique({ where: { id } });
+  const profile = await prisma.providerProfile.findUnique({ where: { id }, include: withSpecializations });
   if (!profile) throw notFound(`No provider ${id}`);
   return profile;
 }
 
 providersRouter.get("/providers", async (_req, res) => {
-  const rows = await prisma.providerProfile.findMany({ orderBy: [{ name: "asc" }, { id: "asc" }] });
+  const rows = await prisma.providerProfile.findMany({
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    include: withSpecializations,
+  });
   res.json({ data: rows.map(providerProfileResource) });
 });
 
@@ -79,10 +93,11 @@ providersRouter.post("/providers", requireAdmin, async (req, res) => {
     data: {
       name: dto.name,
       prcNumber: dto.prc_number ?? null,
-      specializations: dto.specializations ?? [],
+      specializations: specializationRows(dto.specializations),
       ...(dto.color_hex ? { colorHex: dto.color_hex } : {}),
       ...(dto.is_active != null ? { isActive: dto.is_active } : {}),
     },
+    include: withSpecializations,
   });
   res.status(201).json(providerProfileResource(created));
 });
@@ -99,11 +114,14 @@ providersRouter.patch("/providers/:id", requireAdmin, async (req, res) => {
     data: {
       ...(dto.name !== undefined ? { name: dto.name } : {}),
       ...(dto.prc_number !== undefined ? { prcNumber: dto.prc_number } : {}),
-      // null clears the list.
-      ...(dto.specializations !== undefined ? { specializations: dto.specializations ?? [] } : {}),
+      // A list replaces the old one; null clears it.
+      ...(dto.specializations !== undefined
+        ? { specializations: { deleteMany: {}, ...specializationRows(dto.specializations) } }
+        : {}),
       ...(dto.color_hex != null ? { colorHex: dto.color_hex } : {}),
       ...(dto.is_active != null ? { isActive: dto.is_active } : {}),
     },
+    include: withSpecializations,
   });
   res.json(providerProfileResource(updated));
 });

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { Calendar, LayoutDashboard, Settings, Users } from "lucide-react";
+import { Calendar, LayoutDashboard, ClipboardList, Users } from "lucide-react";
 import { useIsAdmin } from "@/lib/api/auth";
 import { cn } from "@/lib/utils/cn";
 
@@ -20,7 +20,7 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Appointments", href: "/appointments", icon: Calendar },
   { label: "Patients", href: "/patients", icon: Users },
-  { label: "Settings", href: "/settings", icon: Settings, adminOnly: true },
+  { label: "Services", href: "/services", icon: ClipboardList, adminOnly: true },
 ];
 
 /**
@@ -39,9 +39,13 @@ export function Sidebar() {
       <aside
         className="hidden md:flex fixed z-30 flex-col"
         style={{
-          left: 24,
+          left: 16,
           top: "calc(var(--header-height) + 16px)",
           bottom: 16,
+          // Capped and centred in the space below the header, so on a tall
+          // screen the rail does not stretch far past its four links.
+          maxHeight: 520,
+          marginBlock: "auto",
           width: "var(--rail-width)",
           background: "var(--color-surface)",
           border: "1px solid var(--color-border-strong)",

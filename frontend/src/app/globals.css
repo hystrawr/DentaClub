@@ -65,7 +65,7 @@
   --shadow-dropdown:   0 8px 24px -4px rgb(30 34 16 / 0.14), 0 1px 3px 0 rgb(30 34 16 / 0.08);
 
   /* --- Layout --- */
-  --rail-width: 84px;
+  --rail-width: 90px;
   --header-height: 64px;
   --bottom-nav-height: 64px;
 }
@@ -243,10 +243,10 @@ body {
 .patient-row:hover { background: var(--color-surface-raised); }
 
 /* The front-desk main area: room for the bottom bar on a phone, and for the
-   floating rail (24px in from the edge, plus its width) from 768px up. */
+   floating rail (16px in from the edge, plus its width) from 768px up. */
 .app-main { padding-bottom: var(--bottom-nav-height); }
 @media (min-width: 768px) {
-  .app-main { padding-bottom: 0; padding-left: calc(24px + var(--rail-width)); }
+  .app-main { padding-bottom: 0; padding-left: calc(16px + var(--rail-width)); }
 }
 
 /* Search inputs draw their own clear (×) button; hide the browser's, or there are two. */

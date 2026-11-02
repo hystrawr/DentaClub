@@ -40,6 +40,7 @@ export interface PatientListItem extends PatientSummary {
 }
 
 export interface Patient extends PatientSummary {
+  is_active: boolean;
   middle_name: string | null;
   address: string | null;
   occupation: string | null;
@@ -203,7 +204,6 @@ export interface PatientConsent {
     signer_name: string;
     /** Set when a parent or guardian signed for the patient. */
     signer_relationship: string | null;
-    signature_image: string;
     document_id: string;
     signed_at: ISODateTimeString;
   } | null;
@@ -265,7 +265,7 @@ export interface Provider {
   id: string;
   name: string;
   prc_number: string | null;
-  specializations: string[] | null;
+  specializations: string[];
   color_hex: string;
   is_active: boolean;
 }
@@ -276,7 +276,6 @@ export interface AppointmentType {
   duration_minutes: number;
   color_hex: string;
   is_block_time: boolean;
-  recall_interval_months: number | null;
   /** Pesos; null when the service has no set price. */
   price: number | null;
   is_active: boolean;

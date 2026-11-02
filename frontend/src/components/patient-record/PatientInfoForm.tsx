@@ -1,12 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Users, X } from "lucide-react";
 import { FormError } from "@/components/ui/form";
+import { useAppointments } from "@/lib/api/appointments";
+import { ApiError } from "@/lib/api/client";
 import { checkPatientName, useCreatePatient, useDeletePatient, useSaveMedicalHistory, useUpdatePatient } from "@/lib/api/patients";
+import { OPEN_STATUSES } from "@/lib/utils/appointment-status";
 import { emptyAnswers, FLOSSING, SCREENING, showWomenOnly, toSave, WOMEN_ONLY } from "@/lib/utils/medical-history";
-import { manilaToday } from "@/lib/utils/manila";
+import { clock, dateOf, manilaToday, shortDate, timeOf } from "@/lib/utils/manila";
 import {
   BLOOD_TYPES,
   CIVIL_STATUSES,
@@ -106,6 +110,27 @@ export function PatientInfoForm(
   const updatePatient = useUpdatePatient(patient?.id ?? "");
   const saveHistory = useSaveMedicalHistory(patient?.id ?? "");
   const deletePatient = useDeletePatient(patient?.id ?? "");
+
+  // A patient with an appointment still ahead can't be deleted (the API refuses
+  // with a 409), so say so up front, in place of Delete.
+  const appointments = useAppointments({ patient_id: patient?.id }, { enabled: !creating });
+  const upcoming = (appointments.data ?? [])
+    .filter((a) => OPEN_STATUSES.includes(a.status) && Date.parse(a.scheduled_end) >= Date.now())
+    .sort((a, b) => Date.parse(a.scheduled_start) - Date.parse(b.scheduled_start));
+  const refused = deletePatient.error instanceof ApiError && deletePatient.error.status === 409;
+  const deleteBlocked =
+    !creating && (upcoming.length > 0 || refused) ? (
+      <>
+        {upcoming[0]
+          ? upcoming.length === 1
+            ? `Has an appointment on ${shortDate(dateOf(upcoming[0].scheduled_start))} at ${clock(timeOf(upcoming[0].scheduled_start))}. Cancel it before deleting.`
+            : `Has ${upcoming.length} upcoming appointments, the next on ${shortDate(dateOf(upcoming[0].scheduled_start))} at ${clock(timeOf(upcoming[0].scheduled_start))}. Cancel them before deleting.`
+          : deletePatient.error?.message}{" "}
+        <Link href={`/patients/${patient.id}/appointments`} className="underline font-semibold">
+          View appointments
+        </Link>
+      </>
+    ) : undefined;
 
   const [saved, setSaved] = useState(() => ({
     details: detailsFrom(patient),
@@ -586,7 +611,7 @@ export function PatientInfoForm(
         {shows(3) && (
           <Block title="Do you have or have you had any of the following?" tag="Check all that apply">
             <ConditionsChecklist value={answers.conditions} onChange={(conditions) => answer({ conditions })} />
-            <F label="Other conditions" className="mt-3 max-w-[420px]">
+            <F label="Other conditions" className="mt-3 max-w-105">
               <input
                 className="record-input"
                 value={answers.other_conditions ?? ""}
@@ -624,8 +649,9 @@ export function PatientInfoForm(
               onReset={reset}
               resetDisabled={!detailsDirty && !answersDirty}
               onDelete={() => deletePatient.mutate(undefined, { onSuccess: () => router.replace("/patients") })}
-              confirmText="Delete this patient and every record?"
+              confirmText="Remove this patient from the directory? Their records are kept."
               deleting={deletePatient.isPending}
+              blocked={deleteBlocked}
             />
           )
         }
@@ -640,7 +666,7 @@ export function PatientInfoForm(
               {nameError}
             </span>
           ) : (
-            <FormError error={createPatient.error ?? updatePatient.error ?? saveHistory.error ?? deletePatient.error} />
+            <FormError error={createPatient.error ?? updatePatient.error ?? saveHistory.error ?? (refused ? null : deletePatient.error)} />
           )
         }
       />

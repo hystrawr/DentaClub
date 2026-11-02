@@ -12,6 +12,7 @@ export function ResetDelete({
   onDelete,
   confirmText,
   deleting,
+  blocked,
 }: {
   onReset: () => void;
   resetDisabled?: boolean;
@@ -19,6 +20,8 @@ export function ResetDelete({
   /** The question asked before deleting, e.g. "Delete this patient and every record?" */
   confirmText: string;
   deleting?: boolean;
+  /** Why the record can't be deleted yet. Shown in place of Delete; Reset stays. */
+  blocked?: React.ReactNode;
 }) {
   const [confirming, setConfirming] = useState(false);
 
@@ -51,9 +54,15 @@ export function ResetDelete({
       <button type="button" className="btn btn-secondary btn-sm" onClick={onReset} disabled={resetDisabled}>
         Reset
       </button>
-      <button type="button" className="btn btn-ghost btn-sm" style={{ color: "var(--color-destructive)" }} onClick={() => setConfirming(true)}>
-        Delete
-      </button>
+      {blocked ? (
+        <span className="text-xs font-medium" role="status" style={{ color: "var(--color-destructive)" }}>
+          {blocked}
+        </span>
+      ) : (
+        <button type="button" className="btn btn-ghost btn-sm" style={{ color: "var(--color-destructive)" }} onClick={() => setConfirming(true)}>
+          Delete
+        </button>
+      )}
     </>
   );
 }

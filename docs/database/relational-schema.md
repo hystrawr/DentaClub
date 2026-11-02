@@ -12,7 +12,7 @@ PostgreSQL database `dentaclub`. The schema is defined in [`backend/prisma/schem
 
 ### Patients and clinical records
 
-**patients**(<ins>id</ins>, first_name, last_name, middle_name, suffix, date_of_birth, sex, civil_status, mobile, home_office_phone, email, address, occupation, religion, nationality, insurance_carrier, insurance_effective, referred_by, chief_complaint, guardian_name, guardian_occupation, guardian_contact, notes, created_at, updated_at)
+**patients**(<ins>id</ins>, first_name, last_name, middle_name, suffix, date_of_birth, sex, civil_status, mobile, home_office_phone, email, address, occupation, religion, nationality, insurance_carrier, insurance_effective, referred_by, chief_complaint, guardian_name, guardian_occupation, guardian_contact, notes, is_active, created_at, updated_at)
 
 | Attribute | Type | Notes |
 |---|---|---|
@@ -31,9 +31,10 @@ PostgreSQL database `dentaclub`. The schema is defined in [`backend/prisma/schem
 | guardian_name, guardian_occupation | text? | for minors |
 | guardian_contact | varchar(30)? | |
 | notes | text? | |
+| is_active | boolean | default true; false = removed from the directory (soft delete), restorable by an admin |
 | created_at, updated_at | timestamptz | |
 
-Index: (last_name, first_name), for the A–Z patient directory.
+Index: (last_name, first_name), for the A–Z patient directory. Patients are never deleted: "Delete" sets `is_active` to false, so their chart, consents and appointments stay on file.
 
 ---
 
@@ -96,21 +97,21 @@ Indexes: (patient_id, tooth_number), (patient_id, observed_at). The table is **a
 
 ---
 
-**documents**(<ins>id</ins>, *patient_id* → patients, type, title, file_data, mime_type, file_name, size_bytes, immutable_flag, created_at, updated_at)
+**documents**(<ins>id</ins>, *patient_id* → patients, type, title, file_data, mime_type, file_name, size_bytes, immutable_flag, created_at)
 
 | Attribute | Type | Notes |
 |---|---|---|
 | id | text | PK |
 | patient_id | text | FK → patients.id |
-| type | DocumentType | enum: id_scan, referral, lab_result, consent, treatment_plan_signature, signed_consent, other |
+| type | DocumentType | enum: signed_consent, other |
 | title | text | |
 | file_data | bytea? | the file itself (e.g. the signed consent PDF) |
 | mime_type, file_name | text? | |
 | size_bytes | integer? | |
 | immutable_flag | boolean | default false; true for signed consents |
-| created_at, updated_at | timestamptz | |
+| created_at | timestamptz | |
 
-Index: (patient_id).
+Index: (patient_id). Documents are written once and never edited, so there is no `updated_at`. The trigger `documents_immutable` refuses any UPDATE or DELETE of a row whose `immutable_flag` is true.
 
 ---
 
@@ -166,7 +167,7 @@ Index: (location_id).
 | id | text | PK |
 | name | text | the dentist's name |
 | prc_number | text? | PRC licence number |
-| specializations | jsonb? | e.g. `["General Dentistry"]` |
+| specializations | text[] | e.g. `{"General Dentistry"}`; default empty |
 | color_hex | varchar(7) | default `#3B82F6` |
 | is_active | boolean | default true |
 | created_at, updated_at | timestamptz | |
@@ -188,7 +189,7 @@ Index: (provider_profile_id, day_of_week). One row is one weekly working window.
 
 ---
 
-**appointment_types**(<ins>id</ins>, name, duration_minutes, color_hex, is_block_time, recall_interval_months, price, is_active, created_at, updated_at)
+**appointment_types**(<ins>id</ins>, name, duration_minutes, color_hex, is_block_time, price, is_active, created_at, updated_at)
 
 | Attribute | Type | Notes |
 |---|---|---|
@@ -197,23 +198,21 @@ Index: (provider_profile_id, day_of_week). One row is one weekly working window.
 | duration_minutes | smallint | default 30 |
 | color_hex | varchar(7) | default `#6B7280` |
 | is_block_time | boolean | default false; true for lunch or meetings (no patient) |
-| recall_interval_months | smallint? | |
 | price | decimal(10,2)? | pesos; NULL = no set price |
 | is_active | boolean | default true |
 | created_at, updated_at | timestamptz | |
 
 ---
 
-**appointments**(<ins>id</ins>, *patient_id* → patients, *provider_profile_id* → provider_profiles, *appointment_type_id* → appointment_types, *operatory_id* → operatories, *location_id* → locations, status, scheduled_start, scheduled_end, actual_start, actual_end, cancellation_reason, notes, created_at, updated_at)
+**appointments**(<ins>id</ins>, *patient_id* → patients, *provider_profile_id* → provider_profiles, *appointment_type_id* → appointment_types, *operatory_id* → operatories, status, scheduled_start, scheduled_end, actual_start, actual_end, cancellation_reason, notes, created_at, updated_at)
 
 | Attribute | Type | Notes |
 |---|---|---|
 | id | text | PK |
-| patient_id | text? | FK → patients.id; NULL for block time |
+| patient_id | text? | FK → patients.id; NULL only for block time |
 | provider_profile_id | text | FK → provider_profiles.id |
 | appointment_type_id | text? | FK → appointment_types.id |
-| operatory_id | text? | FK → operatories.id |
-| location_id | text? | FK → locations.id |
+| operatory_id | text? | FK → operatories.id; the clinic location is read through the chair |
 | status | AppointmentStatus | enum, default `scheduled` (see below) |
 | scheduled_start, scheduled_end | timestamptz | |
 | actual_start | timestamptz? | set when the patient is seated |
@@ -246,19 +245,18 @@ Indexes: (scheduled_start), (operatory_id, scheduled_start), (provider_profile_i
 | treatment_records.patient_id | patients.id | CASCADE | patient 1 : 0..* rows |
 | odontogram_events.patient_id | patients.id | CASCADE | patient 1 : 0..* events |
 | odontogram_events.replaces_event_id | odontogram_events.id | RESTRICT | event 0..1 : 0..* corrections |
-| documents.patient_id | patients.id | CASCADE | patient 1 : 0..* documents |
-| consents.patient_id | patients.id | CASCADE | patient 1 : 0..* consents |
+| documents.patient_id | patients.id | RESTRICT | patient 1 : 0..* documents |
+| consents.patient_id | patients.id | RESTRICT | patient 1 : 0..* consents |
 | consents.document_id | documents.id | NO ACTION | document 1 : 0..1 consent |
-| appointments.patient_id | patients.id | SET NULL | patient 0..1 : 0..* appointments |
-| appointments.provider_profile_id | provider_profiles.id | CASCADE | dentist 1 : 0..* appointments |
+| appointments.patient_id | patients.id | RESTRICT | patient 0..1 : 0..* appointments |
+| appointments.provider_profile_id | provider_profiles.id | RESTRICT | dentist 1 : 0..* appointments |
 | appointments.appointment_type_id | appointment_types.id | SET NULL | type 0..1 : 0..* appointments |
 | appointments.operatory_id | operatories.id | SET NULL | chair 0..1 : 0..* appointments |
-| appointments.location_id | locations.id | SET NULL | location 0..1 : 0..* appointments |
 | operatories.location_id | locations.id | CASCADE | location 1 : 0..* chairs |
 | provider_availabilities.provider_profile_id | provider_profiles.id | CASCADE | dentist 1 : 0..* windows |
 | provider_availabilities.location_id | locations.id | CASCADE | location 1 : 0..* windows |
 
-All foreign keys are `ON UPDATE CASCADE`. Deleting a patient removes their clinical records, but keeps their appointments with the patient set to NULL, so the clinic's schedule history stays intact.
+All foreign keys are `ON UPDATE CASCADE`. Patients are deactivated (`is_active = false`) rather than deleted, and RESTRICT means the database itself refuses to delete a patient who has appointments, consents or documents, or a dentist who has appointments. CASCADE is kept only for rows that belong entirely to their parent: a patient's medical history, treatment sheet and chart; a location's chairs; a dentist's weekly windows.
 
 ## CHECK constraints
 
@@ -273,13 +271,19 @@ All foreign keys are `ON UPDATE CASCADE`. Deleting a patient removes their clini
 | odontogram_events | odontogram_retraction_states_reason | an entered-in-error event has a supersession_reason |
 | odontogram_events | odontogram_no_self_supersession | an event cannot replace itself |
 
+## Triggers
+
+| Table | Trigger | Rule |
+|---|---|---|
+| documents | documents_immutable | BEFORE UPDATE OR DELETE: refuses the change when `immutable_flag` is true, so a signed consent PDF can never be altered or removed |
+
 ## Enumerated types
 
 | Type | Values |
 |---|---|
 | Sex | male, female, other |
 | AppointmentStatus | scheduled, confirmed, arrived, in_chair, completed, cancelled, no_show |
-| DocumentType | id_scan, referral, lab_result, consent, treatment_plan_signature, signed_consent, other |
+| DocumentType | signed_consent, other |
 | UserRole | admin, staff |
 
 Allowed status changes, enforced by the API: scheduled → confirmed → arrived → in_chair → completed. `cancelled` and `no_show` are final. Confirming an appointment checks that the dentist and the chair are free at that time.
@@ -287,6 +291,6 @@ Allowed status changes, enforced by the API: scheduled → confirmed → arrived
 ## Deliberate design choices
 
 - **Copied values (snapshots).** `consents.form_text` stores the consent wording as it was signed, and `treatment_records.amount_charged` stores the price at the time of the visit. Both are copied on purpose: editing the consent form or changing a service price must never change what a patient already signed or was charged.
-- **History is kept, not overwritten.** Dental chart findings are append-only (`odontogram_events`), consents gain a new row for each signing, and locations, chairs, dentists and appointment types are deactivated (`is_active`) rather than deleted.
+- **History is kept, not overwritten.** Dental chart findings are append-only (`odontogram_events`), consents gain a new row for each signing, and patients, locations, chairs, dentists and appointment types are deactivated (`is_active`) rather than deleted.
 - **One-to-one split.** The medical history is a separate table from `patients` (1 : 0..1, enforced by the UNIQUE `patient_id`), because it is a separate form, filled in and saved separately, and empty for some patients.
-- **Derived data is not stored.** A patient's age and the treatment sheet's running balance are computed when read.
+- **Derived data is not stored.** A patient's age and the treatment sheet's running balance are computed when read, and an appointment's location is read through its chair (`operatories.location_id`) rather than copied onto the appointment.

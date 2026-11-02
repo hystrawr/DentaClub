@@ -60,6 +60,7 @@ model Patient {
   guardianOccupation String? @map("guardian_occupation")
   guardianContact    String? @map("guardian_contact") @db.VarChar(30)
 
+  isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -230,11 +231,6 @@ model OdontogramEvent {
 // consent, and the older ones stay on file.
 
 enum DocumentType {
-  id_scan
-  referral
-  lab_result
-  consent
-  treatment_plan_signature
   signed_consent
   other
 }
@@ -255,15 +251,17 @@ model Consent {
   documentId         String   @unique @map("document_id")
   signedAt           DateTime @default(now()) @map("signed_at") @db.Timestamptz(6)
 
-  patient  Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient  Patient  @relation(fields: [patientId], references: [id], onDelete: Restrict)
   document Document @relation(fields: [documentId], references: [id], onDelete: NoAction)
 
   @@index([patientId, signedAt])
   @@map("consents")
 }
 
-/// A patient document. A signed consent is written with `immutableFlag`: it is
-/// a legal artifact and must not be editable afterwards.
+/// A patient document. Documents are written once and never edited, so there
+/// is no `updated_at`. A signed consent is written with `immutableFlag`: it is
+/// a legal artifact and must not be editable afterwards. A DB trigger refuses
+/// any UPDATE or DELETE of an immutable row (migration 17_documents_immutable).
 ///
 /// DentalOS stores the file in Cloudflare R2 via an `attachments` table; here
 /// the PDF bytes live in the row itself.
@@ -278,9 +276,8 @@ model Document {
   sizeBytes     Int?         @map("size_bytes")
   immutableFlag Boolean      @default(false) @map("immutable_flag")
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  patient Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient Patient  @relation(fields: [patientId], references: [id], onDelete: Restrict)
   consent Consent?
 
   @@index([patientId])
@@ -302,7 +299,6 @@ model Location {
 
   operatories    Operatory[]
   availabilities ProviderAvailability[]
-  appointments   Appointment[]
 
   @@map("locations")
 }
@@ -332,7 +328,7 @@ model ProviderProfile {
   id              String   @id @default(cuid())
   name            String
   prcNumber       String?  @map("prc_number")
-  specializations Json?    @db.JsonB
+  specializations String[] @default([])
   colorHex        String   @default("#3B82F6") @map("color_hex") @db.VarChar(7)
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -369,7 +365,6 @@ model AppointmentType {
   colorHex             String   @default("#6B7280") @map("color_hex") @db.VarChar(7)
   /// Lunch, meetings — time blocked out with no patient.
   isBlockTime          Boolean  @default(false) @map("is_block_time")
-  recallIntervalMonths Int?     @map("recall_interval_months") @db.SmallInt
   /// The service's price in pesos; null when it has none (block time, or not yet set).
   /// Treatment rows copy it when charged, so changing it never rewrites past charges.
   price                Decimal? @db.Decimal(10, 2)
@@ -389,7 +384,6 @@ model Appointment {
   providerProfileId String            @map("provider_profile_id")
   appointmentTypeId String?           @map("appointment_type_id")
   operatoryId       String?           @map("operatory_id")
-  locationId        String?           @map("location_id")
   status            AppointmentStatus @default(scheduled)
 
   scheduledStart DateTime  @map("scheduled_start") @db.Timestamptz(6)
@@ -405,11 +399,10 @@ model Appointment {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  patient         Patient?         @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  provider        ProviderProfile  @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  patient         Patient?         @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  provider        ProviderProfile  @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
   appointmentType AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
   operatory       Operatory?       @relation(fields: [operatoryId], references: [id], onDelete: SetNull)
-  location        Location?        @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   // Drives the day/week calendar and the chairside board.
   @@index([scheduledStart])

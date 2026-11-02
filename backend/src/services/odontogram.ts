@@ -2,6 +2,7 @@ import type { OdontogramEvent } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 import { isValidFdi } from "../lib/chart.js";
 import { notFound, ruleViolation } from "../lib/http-error.js";
+import { assertActivePatient } from "../lib/patients.js";
 
 /**
  * The odontogram — the tooth chart — is **append-only**. (Ported from DentalOS.)
@@ -36,8 +37,7 @@ export async function append(patientId: string, dto: AppendEventInput) {
     throw ruleViolation(`Invalid FDI tooth number: ${dto.tooth_number}`);
   }
 
-  const patient = await prisma.patient.findUnique({ where: { id: patientId }, select: { id: true } });
-  if (!patient) throw notFound("Patient not found");
+  await assertActivePatient(patientId);
 
   const replacesEventId = dto.replaces_event_id != null ? BigInt(dto.replaces_event_id) : null;
 

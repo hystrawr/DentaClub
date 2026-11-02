@@ -303,7 +303,6 @@ model Location {
 
   operatories    Operatory[]
   availabilities ProviderAvailability[]
-  appointments   Appointment[]
 
   @@map("locations")
 }
@@ -390,7 +389,6 @@ model Appointment {
   providerProfileId String            @map("provider_profile_id")
   appointmentTypeId String?           @map("appointment_type_id")
   operatoryId       String?           @map("operatory_id")
-  locationId        String?           @map("location_id")
   status            AppointmentStatus @default(scheduled)
 
   scheduledStart DateTime  @map("scheduled_start") @db.Timestamptz(6)
@@ -410,7 +408,6 @@ model Appointment {
   provider        ProviderProfile  @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
   appointmentType AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
   operatory       Operatory?       @relation(fields: [operatoryId], references: [id], onDelete: SetNull)
-  location        Location?        @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   // Drives the day/week calendar and the chairside board.
   @@index([scheduledStart])

@@ -60,6 +60,7 @@ model Patient {
   guardianOccupation String? @map("guardian_occupation")
   guardianContact    String? @map("guardian_contact") @db.VarChar(30)
 
+  isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -255,7 +256,7 @@ model Consent {
   documentId         String   @unique @map("document_id")
   signedAt           DateTime @default(now()) @map("signed_at") @db.Timestamptz(6)
 
-  patient  Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient  Patient  @relation(fields: [patientId], references: [id], onDelete: Restrict)
   document Document @relation(fields: [documentId], references: [id], onDelete: NoAction)
 
   @@index([patientId, signedAt])
@@ -280,7 +281,7 @@ model Document {
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  patient Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient Patient  @relation(fields: [patientId], references: [id], onDelete: Restrict)
   consent Consent?
 
   @@index([patientId])
@@ -405,8 +406,8 @@ model Appointment {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  patient         Patient?         @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  provider        ProviderProfile  @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  patient         Patient?         @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  provider        ProviderProfile  @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
   appointmentType AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
   operatory       Operatory?       @relation(fields: [operatoryId], references: [id], onDelete: SetNull)
   location        Location?        @relation(fields: [locationId], references: [id], onDelete: SetNull)

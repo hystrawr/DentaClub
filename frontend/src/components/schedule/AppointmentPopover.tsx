@@ -145,7 +145,7 @@ export function AppointmentPopover({
             <button
               type="button"
               onClick={onClose}
-              className="flex items-center justify-center rounded-lg shrink-0 hover:bg-slate-100"
+              className="flex items-center justify-center rounded-lg shrink-0 hover:bg-[var(--color-surface-subtle)]"
               style={{ width: 28, height: 28 }}
               aria-label="Close"
             >

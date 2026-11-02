@@ -21,7 +21,7 @@ export function FindingsSummary({
   return (
     <div className="odontogram">
       <p
-        className="text-[10px] font-semibold uppercase tracking-wider mb-2"
+        className="text-xs font-medium mb-2"
         style={{ color: 'var(--color-subtle-foreground)' }}
       >
         Findings

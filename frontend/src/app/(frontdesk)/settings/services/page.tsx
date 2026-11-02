@@ -56,7 +56,7 @@ export default function ServicesSettingsPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse text-sm">
               <thead>
-                <tr style={{ background: "var(--color-surface-subtle)", borderBottom: "1px solid var(--color-border)" }}>
+                <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <Th>Service</Th>
                   <Th>Length</Th>
                   <Th align="right">Price</Th>
@@ -128,7 +128,7 @@ export default function ServicesSettingsPage() {
 function Th({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" }) {
   return (
     <th
-      className="px-4 py-3.5 text-xs font-bold uppercase tracking-wide whitespace-nowrap"
+      className="px-4 py-3 text-xs font-medium whitespace-nowrap"
       style={{ color: "var(--color-muted-foreground)", textAlign: align }}
     >
       {children}

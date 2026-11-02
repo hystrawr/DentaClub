@@ -44,7 +44,7 @@ export function AppointmentSheet({ appointmentId, onClose }: { appointmentId: st
           </div>
           <button
             onClick={onClose}
-            className="flex items-center justify-center rounded-full transition-colors hover:bg-slate-100"
+            className="flex items-center justify-center rounded-full transition-colors hover:bg-[var(--color-surface-subtle)]"
             style={{ width: 44, height: 44, border: "1px solid var(--color-border)" }}
             aria-label="Close"
           >
@@ -69,7 +69,7 @@ export function AppointmentSheet({ appointmentId, onClose }: { appointmentId: st
                   { label: "Chair", value: apt.operatory?.name ?? "Unassigned" },
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-2xl p-3" style={{ background: "var(--color-surface-subtle)", border: "1px solid var(--color-border)" }}>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--color-subtle-foreground)" }}>
+                    <p className="text-xs font-medium mb-1" style={{ color: "var(--color-subtle-foreground)" }}>
                       {label}
                     </p>
                     <p className="text-sm font-medium" style={{ color: "var(--color-foreground)" }}>
@@ -101,7 +101,7 @@ export function AppointmentSheet({ appointmentId, onClose }: { appointmentId: st
 
           <button
             onClick={onClose}
-            className="w-full flex items-center justify-center rounded-2xl font-semibold transition-colors hover:bg-slate-100"
+            className="w-full flex items-center justify-center rounded-2xl font-semibold transition-colors hover:bg-[var(--color-surface-subtle)]"
             style={{ minHeight: 48, background: "var(--color-surface-subtle)", color: "var(--color-muted-foreground)", border: "1px solid var(--color-border)" }}
           >
             Dismiss

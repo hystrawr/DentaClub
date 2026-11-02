@@ -176,7 +176,7 @@ export function Odontogram({
       </div>
 
       <div
-        className="flex items-center justify-between px-1 pt-1 text-[10px] font-semibold uppercase tracking-wider"
+        className="flex items-center justify-between px-1 pt-1 text-xs font-medium"
         style={{ color: 'var(--od-label)' }}
         aria-hidden="true"
       >

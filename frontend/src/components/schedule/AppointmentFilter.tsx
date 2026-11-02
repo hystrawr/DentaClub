@@ -139,7 +139,7 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <fieldset>
-      <legend className="px-1 mb-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-subtle-foreground)" }}>
+      <legend className="px-1 mb-1 text-xs font-medium" style={{ color: "var(--color-subtle-foreground)" }}>
         {title}
       </legend>
       {children}
@@ -149,8 +149,8 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 
 function Option({ label, swatch, checked, onChange }: { label: string; swatch?: string; checked: boolean; onChange: () => void }) {
   return (
-    <label className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-slate-50" style={{ color: "var(--color-foreground)" }}>
-      <input type="checkbox" checked={checked} onChange={onChange} className="accent-blue-600" />
+    <label className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-surface-raised)]" style={{ color: "var(--color-foreground)" }}>
+      <input type="checkbox" checked={checked} onChange={onChange} className="accent-[var(--color-primary)]" />
       {swatch && <span className="rounded-full shrink-0" style={{ width: 8, height: 8, background: swatch }} aria-hidden="true" />}
       <span className="truncate">{label}</span>
     </label>

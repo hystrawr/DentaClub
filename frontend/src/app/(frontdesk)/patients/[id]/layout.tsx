@@ -32,12 +32,12 @@ export default function PatientRecordLayout({ children, params }: LayoutProps<"/
   });
 
   return (
-    <div className="px-4 sm:px-8 py-6 w-full h-full flex flex-col">
+    <div className="px-5 sm:px-10 lg:px-12 py-6 w-full h-full flex flex-col">
       {isError && (
         <div
           role="alert"
           className="mb-4 rounded-lg px-4 py-2 text-xs font-medium"
-          style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FCA5A5" }}
+          style={{ background: "var(--color-destructive-light)", color: "var(--color-destructive)", border: "1px solid #F2AEA5" }}
         >
           This patient&apos;s record could not be loaded. Nothing below is complete — reload before relying on it.
         </div>
@@ -46,7 +46,7 @@ export default function PatientRecordLayout({ children, params }: LayoutProps<"/
         <div
           role="status"
           className="mb-4 rounded-lg px-4 py-2 text-xs font-medium flex items-center gap-3 flex-wrap"
-          style={{ background: "#FEF3C7", color: "#92400E", border: "1px solid #FCD34D" }}
+          style={{ background: "var(--color-warning-light)", color: "var(--color-warning)", border: "1px solid #EBC48C" }}
           data-print="hide"
         >
           <span className="mr-auto">
@@ -63,7 +63,7 @@ export default function PatientRecordLayout({ children, params }: LayoutProps<"/
 
       <Link
         href={"/patients" as Route}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold mb-4 hover:text-blue-600"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold mb-4 hover:text-[var(--color-primary)]"
         style={{ color: "var(--color-subtle-foreground)" }}
         data-print="hide"
       >

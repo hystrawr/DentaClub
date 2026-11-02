@@ -496,7 +496,7 @@ export function PatientInfoForm(
               </F>
             </div>
 
-            <p className="text-[11px] font-semibold uppercase tracking-wider mt-6 mb-1" style={{ color: "var(--color-subtle-foreground)" }}>
+            <p className="text-xs font-medium mt-6 mb-1" style={{ color: "var(--color-subtle-foreground)" }}>
               Screening (questions 1 – 7)
             </p>
             <div className="flex flex-col">
@@ -759,7 +759,7 @@ function Vital({ label, muted, children }: { label: string; muted?: boolean; chi
       className="flex flex-col gap-2 min-w-0"
       style={{ opacity: muted ? 0.6 : 1 }}
     >
-      <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-muted-foreground)" }}>
+      <span className="text-xs font-medium" style={{ color: "var(--color-muted-foreground)" }}>
         {label}
       </span>
       {children}

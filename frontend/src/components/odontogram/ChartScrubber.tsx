@@ -43,7 +43,7 @@ export function ChartScrubber({
     <div className="odontogram pt-4" style={{ borderTop: '1px solid var(--color-border)' }} data-print="hide">
       <div className="flex items-center justify-between gap-3 mb-2">
         <span
-          className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider"
+          className="flex items-center gap-1.5 text-xs font-medium"
           style={{ color: 'var(--color-subtle-foreground)' }}
         >
           <CalendarClock size={11} /> Chart history

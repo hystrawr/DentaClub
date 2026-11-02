@@ -29,7 +29,7 @@ export function ChartLegend({ defaultOpen = false }: { defaultOpen?: boolean }) 
         aria-expanded={open}
       >
         <span
-          className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider"
+          className="flex items-center gap-1.5 text-xs font-medium"
           style={{ color: 'var(--color-subtle-foreground)' }}
         >
           <Info size={12} /> Legend
@@ -53,7 +53,7 @@ export function ChartLegend({ defaultOpen = false }: { defaultOpen?: boolean }) 
           {(['condition', 'restoration', 'surgery'] as ConditionGroup[]).map((group) => (
             <div key={group}>
               <p
-                className="text-[10px] font-semibold uppercase tracking-wider mb-1.5"
+                className="text-xs font-medium mb-1.5"
                 style={{ color: 'var(--color-subtle-foreground)' }}
               >
                 {GROUP_LABELS[group]}
@@ -90,7 +90,7 @@ export function ChartLegend({ defaultOpen = false }: { defaultOpen?: boolean }) 
 
         <div style={{ borderTop: '1px solid var(--color-border)' }} className="pt-3">
           <p
-            className="text-[10px] font-semibold uppercase tracking-wider mb-1.5"
+            className="text-xs font-medium mb-1.5"
             style={{ color: 'var(--color-subtle-foreground)' }}
           >
             Status — the outline, not the colour

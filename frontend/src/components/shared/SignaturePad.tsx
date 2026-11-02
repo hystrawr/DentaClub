@@ -102,7 +102,7 @@ export function SignaturePad({ onChange, disabled = false }: SignaturePadProps) 
           type="button"
           onClick={handleClear}
           disabled={isEmpty || disabled}
-          className="flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 transition-colors hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none"
+          className="flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 transition-colors hover:bg-[var(--color-surface-subtle)] disabled:opacity-40 disabled:pointer-events-none"
           style={{ color: 'var(--color-muted-foreground)', border: '1px solid var(--color-border)' }}
           aria-label="Clear signature"
         >

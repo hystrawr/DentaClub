@@ -47,7 +47,7 @@ export function DatePickerPopover({
   const lead = weekdayOf(month);
 
   const step = (n: number) => setMonth((m) => monthStart(m, mode === "days" ? n : n * 12));
-  const navBtn = "flex items-center justify-center rounded-lg hover:bg-slate-100";
+  const navBtn = "flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-subtle)]";
 
   return (
     <div
@@ -60,7 +60,7 @@ export function DatePickerPopover({
         <button
           type="button"
           onClick={() => setMode(mode === "days" ? "months" : "days")}
-          className="rounded-lg px-2 py-1 text-sm font-bold hover:bg-slate-100"
+          className="rounded-lg px-2 py-1 text-sm font-bold hover:bg-[var(--color-surface-subtle)]"
           style={{ color: "var(--color-foreground)" }}
           aria-live="polite"
           aria-label={mode === "days" ? `${monthYear(month)} — choose month and year` : `${year} — back to days`}
@@ -90,7 +90,7 @@ export function DatePickerPopover({
                   setMonth(first);
                   setMode("days");
                 }}
-                className={cn("h-10 rounded-[10px] text-sm font-semibold transition-colors", !isCurrent && "hover:bg-slate-50")}
+                className={cn("h-10 rounded-[10px] text-sm font-semibold transition-colors", !isCurrent && "hover:bg-[var(--color-surface-raised)]")}
                 style={{
                   background: isCurrent ? "var(--color-primary)" : undefined,
                   color: isCurrent ? "#fff" : first === monthStart(today) ? "var(--color-primary)" : "var(--color-foreground)",
@@ -127,7 +127,7 @@ export function DatePickerPopover({
                   aria-label={`${d}${isToday ? ", today" : ""}${booked.has(d) ? ", has appointments" : ""}`}
                   className={cn(
                     "relative h-9 flex items-center justify-center rounded-[10px] text-[13px] transition-colors",
-                    !isValue && "hover:bg-slate-100",
+                    !isValue && "hover:bg-[var(--color-surface-subtle)]",
                     (isValue || isToday) && "font-bold",
                   )}
                   style={{
@@ -155,7 +155,7 @@ export function DatePickerPopover({
         <button
           type="button"
           onClick={() => onPick(today)}
-          className="rounded-lg px-2 py-1 text-xs font-semibold hover:bg-slate-100"
+          className="rounded-lg px-2 py-1 text-xs font-semibold hover:bg-[var(--color-surface-subtle)]"
           style={{ color: "var(--color-primary)" }}
         >
           Go to today

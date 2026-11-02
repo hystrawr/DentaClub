@@ -34,10 +34,10 @@ export default function AppointmentsPage() {
   const visible = useCallback((apt: Appointment) => matchesFilter(filter, apt), [filter]);
 
   return (
-    <div className="flex flex-col gap-4 h-full px-4 sm:px-8 py-6">
+    <div className="flex flex-col gap-4 h-full px-5 sm:px-10 lg:px-12 py-6">
       <div className="flex flex-wrap items-end gap-3 shrink-0">
         <div className="flex-1 min-w-48">
-          <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: "var(--color-foreground)" }}>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--color-foreground)" }}>
             Appointments
           </h1>
           <p className="mt-1 text-sm" style={{ color: "var(--color-muted-foreground)" }}>

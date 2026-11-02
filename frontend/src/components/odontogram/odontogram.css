@@ -32,14 +32,14 @@
   /* chrome */
   --od-bg: var(--color-surface);
   --od-tooth: #FFFFFF;
-  --od-tooth-edge: #94A3B8;
-  --od-divider: #334155;
-  --od-label: #64748B;
-  --od-label-strong: #0F172A;
-  --od-accent: #2563EB;
-  --od-accent-soft: rgba(37, 99, 235, 0.10);
-  --od-root: #E8EDF4;
-  --od-root-edge: #B8C4D4;
+  --od-tooth-edge: #A3A78C;
+  --od-divider: #4A4F38;
+  --od-label: var(--color-subtle-foreground);
+  --od-label-strong: var(--color-foreground);
+  --od-accent: var(--color-primary);
+  --od-accent-soft: rgba(66, 74, 31, 0.08);
+  --od-root: #EEF0DA;
+  --od-root-edge: #C9CEA4;
 
   /* the six condition hues */
   --od-caries: #B42318;
@@ -314,7 +314,7 @@
   gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border);
-  background: linear-gradient(180deg, var(--od-accent-soft), transparent);
+  background: var(--od-accent-soft);
 }
 
 .od-dock-badge {

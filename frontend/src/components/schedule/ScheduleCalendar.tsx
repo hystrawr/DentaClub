@@ -156,8 +156,8 @@ function ApptBlock({
         width: `calc(${100 / lanes}% - 8px)`,
         background: apt.patient
           ? tint(color, 9)
-          : "repeating-linear-gradient(45deg,#F1F5F9,#F1F5F9 6px,#E2E8F0 6px,#E2E8F0 12px)",
-        border: `1px solid ${apt.patient ? tint(color, 30) : "#CBD5E1"}`,
+          : "repeating-linear-gradient(45deg,#F2F4DC,#F2F4DC 6px,#E4E6CF 6px,#E4E6CF 12px)",
+        border: `1px solid ${apt.patient ? tint(color, 30) : "var(--color-border-strong)"}`,
         outline: selected ? "2px solid var(--color-primary)" : undefined,
         outlineOffset: 1,
         opacity: released ? 0.5 : 1,
@@ -238,7 +238,7 @@ function DayColumn({
       style={{
         borderLeft: "1px solid var(--color-border)",
         minWidth: 0,
-        background: isToday ? "#F8FAFF" : undefined,
+        background: isToday ? "rgb(66 74 31 / 0.04)" : undefined,
         backgroundImage: "linear-gradient(var(--color-border) 1px, transparent 1px)",
         backgroundSize: `100% ${SLOT_H * 2}px`,
       }}
@@ -350,7 +350,7 @@ export function ScheduleCalendar({
   }, []);
 
   const step = view === "week" ? 7 : 1;
-  const iconBtn = "flex items-center justify-center rounded-lg transition-colors hover:bg-slate-100";
+  const iconBtn = "flex items-center justify-center rounded-lg transition-colors hover:bg-[var(--color-surface-subtle)]";
 
   return (
     <div className="card-premium flex flex-col" style={{ height: "100%", overflow: "hidden", borderRadius: 20 }}>
@@ -364,7 +364,7 @@ export function ScheduleCalendar({
           <button
             type="button"
             onClick={() => setPicking((p) => !p)}
-            className="flex items-center gap-2 rounded-lg pl-2 pr-2.5 py-1 hover:bg-slate-100"
+            className="flex items-center gap-2 rounded-lg pl-2 pr-2.5 py-1 hover:bg-[var(--color-surface-subtle)]"
             aria-haspopup="dialog"
             aria-expanded={picking}
             title="Choose a date"
@@ -451,12 +451,12 @@ export function ScheduleCalendar({
                 setAnchor(date);
                 setView("day");
               }}
-              className="flex-1 flex flex-col items-center pt-2.5 pb-3 hover:bg-slate-50"
+              className="flex-1 flex flex-col items-center pt-2.5 pb-3 hover:bg-[var(--color-surface-raised)]"
               style={{ borderLeft: "1px solid var(--color-border)" }}
               aria-label={`Open ${longDate(date)}`}
             >
               <span
-                className="text-[11px] font-semibold uppercase tracking-wider"
+                className="text-xs font-medium"
                 style={{ color: isToday ? "var(--color-primary)" : "var(--color-subtle-foreground)" }}
               >
                 {DOW[weekdayOf(date)]}

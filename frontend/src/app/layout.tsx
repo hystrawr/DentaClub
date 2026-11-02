@@ -11,14 +11,14 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "DentaClub",
-    template: "%s — DentaClub",
+    default: "The DentaClub",
+    template: "%s — The DentaClub",
   },
   description: "Patient records, dental charting, consent and the appointment queue for a dental clinic.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2563EB",
+  themeColor: "#F9FAE0",
   width: "device-width",
   initialScale: 1,
 };

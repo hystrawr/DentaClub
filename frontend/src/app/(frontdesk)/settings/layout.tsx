@@ -24,9 +24,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   if (!isAdmin) return null;
 
   return (
-    <div className="px-4 sm:px-8 py-6 space-y-5">
+    <div className="px-5 sm:px-10 lg:px-12 py-6 space-y-5">
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: "var(--color-foreground)" }}>
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--color-foreground)" }}>
           Settings
         </h1>
         <nav className="mt-4 flex gap-1" style={{ borderBottom: "1px solid var(--color-border)" }}>

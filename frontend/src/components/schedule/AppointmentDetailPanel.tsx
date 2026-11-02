@@ -57,7 +57,7 @@ export function AppointmentDetailPanel({ appointmentId, onClose }: { appointment
           </h2>
           <button
             onClick={onClose}
-            className="flex items-center justify-center rounded-full transition-colors hover:bg-slate-100"
+            className="flex items-center justify-center rounded-full transition-colors hover:bg-[var(--color-surface-subtle)]"
             style={{ width: 30, height: 30, border: "1px solid var(--color-border)" }}
             aria-label="Close panel"
           >

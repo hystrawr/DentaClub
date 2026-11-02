@@ -25,8 +25,8 @@ export function PatientHero({ patient, loading, actions }: { patient?: Patient; 
   return (
     <section className="card-premium flex items-center gap-4 px-5 py-4">
       <div
-        className="flex items-center justify-center shrink-0 text-white font-bold w-14 h-14 text-lg rounded-xl"
-        style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-mint))" }}
+        className="flex items-center justify-center shrink-0 font-bold w-14 h-14 text-lg rounded-full"
+        style={{ background: "var(--color-primary-light)", color: "var(--color-primary)" }}
         aria-hidden="true"
       >
         {initials(patient?.full_name)}

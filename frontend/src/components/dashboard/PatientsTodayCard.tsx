@@ -14,19 +14,17 @@ export function PatientsTodayCard({ appointments, isLoading }: { appointments: A
   const toCome = booked.length - done;
 
   return (
+    // The dashboard's one field of brand colour: flat olive, cream type.
     <section
-      className="flex flex-col justify-between gap-3 rounded-[20px] p-5 text-white"
-      style={{
-        background: "linear-gradient(140deg, #2563EB 0%, #1D4ED8 60%, #0D9488 140%)",
-        boxShadow: "var(--shadow-card)",
-      }}
+      className="flex flex-col justify-between gap-3 rounded-[var(--radius-xl)] p-5"
+      style={{ background: "var(--color-primary)", color: "var(--color-primary-foreground)" }}
       aria-busy={isLoading}
     >
-      <h2 className="text-sm font-semibold opacity-85">Patients Today</h2>
-      <p className="text-6xl font-extrabold leading-none tracking-tight">{isLoading ? "–" : patients}</p>
+      <h2 className="text-sm font-semibold">Patients today</h2>
+      <p className="text-[40px] font-bold leading-none tracking-tight tabular-nums">{isLoading ? "–" : patients}</p>
       <div className="flex flex-wrap gap-2">
         {[`${done} done`, `${toCome} still to come`].map((label) => (
-          <span key={label} className="rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ background: "rgb(255 255 255 / 0.18)" }}>
+          <span key={label} className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: "rgb(249 250 224 / 0.16)" }}>
             {isLoading ? "…" : label}
           </span>
         ))}

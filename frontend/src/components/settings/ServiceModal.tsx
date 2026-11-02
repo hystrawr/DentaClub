@@ -10,7 +10,7 @@ const formFrom = (t: AppointmentType | null) => ({
   name: t?.name ?? "",
   price: t?.price == null ? "" : String(t.price),
   duration_minutes: String(t?.duration_minutes ?? 30),
-  color_hex: t?.color_hex ?? "#3B82F6",
+  color_hex: t?.color_hex ?? "#6B7530",
   is_block_time: t?.is_block_time ?? false,
 });
 

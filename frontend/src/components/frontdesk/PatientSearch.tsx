@@ -133,7 +133,7 @@ export function PatientSearch({ onSelect, placeholder = "Search by name or phone
           <button
             onClick={() => setQuery("")}
             aria-label="Clear search"
-            className="rounded-full transition-colors hover:bg-slate-100 p-0.5"
+            className="rounded-full transition-colors hover:bg-[var(--color-surface-subtle)] p-0.5"
           >
             <X size={13} style={{ color: "var(--color-subtle-foreground)" }} />
           </button>

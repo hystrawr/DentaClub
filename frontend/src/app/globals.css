@@ -1,72 +1,73 @@
 @import "tailwindcss";
 
 /* =========================================================
-   DentaClub — design tokens, ported from DentalOS.
-   Premium healthcare palette. Light surfaces only.
-
-   (DentalOS also layers shadcn/ui's variables on top of
-   these; that alias block is left out here, so each token
-   below is the one value that reaches the components.)
+   The DentaClub — design tokens.
+   Brand: olive #424A1F on cream #F9FAE0 (from the logo files).
+   Every text colour below reads at 4.5:1 or more on white and on
+   the cream ground; the brand olive is the one accent, on actions,
+   the active place and today's date.
    ========================================================= */
 
 @theme {
   /* --- Font --- */
   --font-sans: var(--font-inter), "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  /* No monospace in the app: figures use the text face with tabular digits (see .font-mono below). */
+  --font-mono: var(--font-sans);
 
   /* --- Canvas & Surfaces --- */
-  --color-canvas:         #F0F3F7; /* page background — cool blue-gray tint */
-  --color-surface:        #FFFFFF; /* card / panel background */
-  --color-surface-raised: #FAFBFC; /* slightly lifted surface */
-  --color-surface-subtle: #F5F7FA; /* sidebar, inline sections */
+  --color-canvas:         #F9FAE0; /* page ground — the brand cream */
+  --color-surface:        #FFFFFF; /* cards and panels */
+  --color-surface-raised: #FCFCF2; /* a row on hover, a table footer */
+  --color-surface-subtle: #F2F4DC; /* inline sections, idle tabs, segmented tracks */
 
-  /* --- Brand (Medical Blue) --- */
-  --color-primary:            #2563EB; /* CTA buttons, active states, links */
-  --color-primary-light:      #DBEAFE; /* soft tint for chips, backgrounds */
-  --color-primary-hover:      #1D4ED8;
-  --color-primary-foreground: #FFFFFF;
+  /* --- Brand (olive) --- */
+  --color-primary:            #424A1F; /* the one action on a screen, the active place, links */
+  --color-primary-light:      #E9ECCF; /* pale olive: chips, the active nav item */
+  --color-primary-hover:      #353B18;
+  --color-primary-foreground: #F9FAE0; /* cream on olive, 8.9:1 */
 
-  /* --- Accents --- */
-  --color-success:           #059669; /* completed, paid, confirmed */
-  --color-success-light:     #D1FAE5;
-  --color-warning:           #D97706; /* pending, waitlist */
-  --color-warning-light:     #FEF3C7;
-  --color-destructive:       #DC2626; /* cancelled, void, critical */
-  --color-destructive-light: #FEE2E2;
-  --color-mint:              #0D9488; /* fresh teal for secondary data */
-  --color-mint-light:        #CCFBF1;
-  --color-purple:            #7C3AED; /* specialty / minor status */
-  --color-purple-light:      #EDE9FE;
-  --color-amber:             #F59E0B; /* highlight / overdue */
-  --color-amber-light:       #FEF3C7;
+  /* --- Status (meaning, toned to sit beside the olive) --- */
+  --color-success:           #2F6B2A; /* completed, paid, confirmed */
+  --color-success-light:     #DCEBD3;
+  --color-warning:           #9A4A06; /* pending, in the chair */
+  --color-warning-light:     #FBEBD3;
+  --color-destructive:       #B42318; /* cancelled, void, critical */
+  --color-destructive-light: #FDE7E4;
+  --color-mint:              #4E6B45; /* sage: secondary data */
+  --color-mint-light:        #DFE8D6;
+  --color-purple:            #5A5F8A; /* dusk blue: minors, specialty */
+  --color-purple-light:      #E5E6F0;
+  --color-amber:             #9A6B06; /* overdue, highlight */
+  --color-amber-light:       #FBF0CF;
 
   /* --- Text --- */
-  --color-foreground:        #0F172A; /* primary text — dark slate, not pure black */
-  --color-muted-foreground:  #64748B; /* secondary text */
-  --color-subtle-foreground: #94A3B8; /* tertiary / metadata */
-  --color-placeholder:       #CBD5E1;
+  --color-foreground:        #1E2210; /* olive-tinted ink */
+  --color-muted-foreground:  #585D45; /* secondary text, 6.4:1 on cream */
+  --color-subtle-foreground: #6B7057; /* meta, 4.8:1 on cream */
+  --color-placeholder:       #8C907A;
 
   /* --- Borders --- */
-  --color-border:        #E2E8F0;
-  --color-border-strong: #CBD5E1;
+  --color-border:        #E4E6CF;
+  --color-border-strong: #CDD0B3;
 
-  /* --- Radius --- */
+  /* --- Radius: one card radius, smaller steps inside --- */
   --radius-xs:   4px;
   --radius-sm:   8px;
-  --radius-md:   12px;
-  --radius-lg:   16px;
-  --radius-xl:   20px;
-  --radius-2xl:  24px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   16px;
+  --radius-2xl:  20px;
   --radius-full: 9999px;
 
-  /* --- Shadow (soft, low-elevation) --- */
-  --shadow-card:       0 1px 3px 0 rgb(0 0 0 / 0.04), 0 4px 16px -2px rgb(0 0 0 / 0.06);
-  --shadow-card-hover: 0 4px 12px 0 rgb(0 0 0 / 0.06), 0 8px 32px -4px rgb(0 0 0 / 0.10);
-  --shadow-dropdown:   0 4px 16px -2px rgb(0 0 0 / 0.10), 0 1px 4px 0 rgb(0 0 0 / 0.06);
+  /* --- Shadow: only for what floats (menus, dialogs). Cards rest flat on a border. --- */
+  --shadow-card:       none;
+  --shadow-card-hover: none;
+  --shadow-dropdown:   0 8px 24px -4px rgb(30 34 16 / 0.14), 0 1px 3px 0 rgb(30 34 16 / 0.08);
 
   /* --- Layout --- */
-  --rail-width: 96px;
+  --rail-width: 84px;
   --header-height: 64px;
+  --bottom-nav-height: 64px;
 }
 
 /* =========================================================
@@ -95,10 +96,10 @@ body {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
-  transition: box-shadow 200ms ease, transform 200ms ease;
 }
-.card-premium:hover { box-shadow: var(--shadow-card-hover); }
+
+/* Figures line up digit for digit in the text face. */
+.font-mono { font-variant-numeric: tabular-nums; }
 
 /* Status chips */
 .chip {
@@ -115,23 +116,23 @@ body {
 .chip-scheduled   { background: var(--color-primary-light);     color: var(--color-primary); }
 .chip-confirmed   { background: var(--color-success-light);     color: var(--color-success); }
 .chip-in-progress { background: var(--color-warning-light);     color: var(--color-warning); }
-.chip-completed   { background: #F1F5F9;                        color: #475569; }
+.chip-completed   { background: var(--color-surface-subtle);    color: var(--color-muted-foreground); }
 .chip-cancelled   { background: var(--color-destructive-light); color: var(--color-destructive); }
 .chip-pending     { background: var(--color-amber-light);       color: var(--color-amber); }
 
-/* Gradient CTA button */
+/* The filled action button (kept under its old name, used by forms and dialogs). Flat olive. */
 .btn-gradient {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
   border: none;
   border-radius: var(--radius-full);
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 150ms ease, box-shadow 150ms ease;
-  box-shadow: 0 2px 8px rgb(37 99 235 / 0.25);
+  transition: background 150ms ease, opacity 150ms ease;
 }
-.btn-gradient:hover { opacity: 0.92; box-shadow: 0 4px 16px rgb(37 99 235 / 0.35); }
-.btn-gradient:disabled { opacity: 0.6; pointer-events: none; }
+.btn-gradient:hover { background: var(--color-primary-hover); }
+.btn-gradient:active { transform: translateY(1px); }
+.btn-gradient:disabled { opacity: 0.5; pointer-events: none; }
 
 /* ─── Buttons: one vocabulary, four weights ─────────────────
    primary = the one action a screen is for, secondary = everything
@@ -173,11 +174,11 @@ body {
 .btn-lg { height: 44px; padding: 0 18px; font-size: 0.875rem; }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
-  color: #fff;
-  box-shadow: 0 2px 8px rgb(37 99 235 / 0.25);
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
 }
-.btn-primary:hover { opacity: 0.92; box-shadow: 0 4px 16px rgb(37 99 235 / 0.35); }
+.btn-primary:hover { background: var(--color-primary-hover); }
+.btn-primary:active, .btn-secondary:active { transform: translateY(1px); }
 
 .btn-secondary {
   background: var(--color-surface);
@@ -194,7 +195,7 @@ body {
 
 /* Form controls */
 .field-focus:focus {
-  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15);
+  box-shadow: 0 0 0 3px rgb(66 74 31 / 0.18);
   border-color: var(--color-primary) !important;
 }
 
@@ -213,7 +214,7 @@ body {
   *, ::before, ::after { border-color: var(--color-border); }
 
   :focus-visible {
-    outline: 2px solid var(--color-border-strong);
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
 }
@@ -224,24 +225,29 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-muted-foreground); }
 
-/* Skeleton shimmer */
-@keyframes shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
+/* Loading placeholder: a flat bar at the real size, gently pulsing. */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
 }
 .skeleton {
   border-radius: var(--radius-md);
-  background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
-  background-size: 800px 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  background: var(--color-surface-subtle);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 
 .table-row-hover:hover { background: var(--color-surface-raised); }
 
-/* Patient list rows: a soft mint stripe on every other row, blue on hover. */
-.patient-row:nth-child(even) { background: #F3FBF9; }
+/* Patient list rows: rules between rows, a light step on hover. No stripes. */
 .patient-row:last-child { border-bottom: 0 !important; }
-.patient-row:hover { background: #EEF4FF; }
+.patient-row:hover { background: var(--color-surface-raised); }
+
+/* The front-desk main area: room for the bottom bar on a phone, and for the
+   floating rail (24px in from the edge, plus its width) from 768px up. */
+.app-main { padding-bottom: var(--bottom-nav-height); }
+@media (min-width: 768px) {
+  .app-main { padding-bottom: 0; padding-left: calc(24px + var(--rail-width)); }
+}
 
 /* Search inputs draw their own clear (×) button; hide the browser's, or there are two. */
 input[type="search"]::-webkit-search-cancel-button { appearance: none; }
@@ -297,7 +303,6 @@ input[type="search"]::-webkit-search-cancel-button { appearance: none; }
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 0 var(--radius-xl) var(--radius-xl) var(--radius-xl);
-  box-shadow: var(--shadow-card);
   margin-top: -1px;
   position: relative;
   flex: 1 1 0;
@@ -337,7 +342,7 @@ input[type="search"]::-webkit-search-cancel-button { appearance: none; }
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 .record-input:hover { border-color: var(--color-border-strong); }
-.record-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15); }
+.record-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgb(66 74 31 / 0.18); }
 .record-input[readonly] { background: var(--color-surface-subtle); border-color: var(--color-border); color: var(--color-muted-foreground); }
 .record-input[aria-invalid="true"] { border-color: var(--color-destructive); }
 .record-input::placeholder { color: var(--color-placeholder); }
@@ -346,7 +351,7 @@ input[type="search"]::-webkit-search-cancel-button { appearance: none; }
 .record-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--color-surface-subtle); border: 1px solid var(--color-border); flex: none; }
 .record-seg button { padding: 5px 12px; min-width: 50px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; color: var(--color-muted-foreground); transition: background 150ms ease, color 150ms ease; }
 .record-seg button:hover { color: var(--color-foreground); }
-.record-seg button[aria-pressed="true"] { background: var(--color-surface); color: var(--color-primary); box-shadow: 0 1px 2px rgb(15 23 42 / 0.12); }
+.record-seg button[aria-pressed="true"] { background: var(--color-surface); color: var(--color-primary); box-shadow: 0 1px 2px rgb(30 34 16 / 0.12); }
 .record-seg button[aria-pressed="true"][data-severe] { color: var(--color-destructive); }
 
 .record-allergen {
@@ -371,7 +376,7 @@ input[type="search"]::-webkit-search-cancel-button { appearance: none; }
 
 /* Appointments tab: a read-only list; a row opens the appointment. */
 .appt-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; color: var(--color-foreground); }
-.appt-table th { text-align: left; padding: 8px 12px; font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted-foreground); background: var(--color-surface-raised); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.appt-table th { text-align: left; padding: 10px 12px; font-size: 0.75rem; font-weight: 500; color: var(--color-muted-foreground); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
 .appt-table td { padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
 .appt-table tbody tr { cursor: pointer; transition: background 150ms ease; }
 .appt-table tbody tr:hover { background: var(--color-surface-raised); }
@@ -380,15 +385,15 @@ input[type="search"]::-webkit-search-cancel-button { appearance: none; }
 
 /* Treatment Record: an editable grid. */
 .sheet { border-collapse: collapse; width: 100%; min-width: 980px; font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
-.sheet th { background: var(--color-surface-raised); color: var(--color-muted-foreground); font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 8px; border: 1px solid var(--color-border); border-top: none; white-space: nowrap; }
+.sheet th { color: var(--color-muted-foreground); font-weight: 500; font-size: 0.75rem; padding: 10px 8px; border: 1px solid var(--color-border); border-top: none; white-space: nowrap; }
 .sheet td { border: 1px solid var(--color-border); padding: 0; height: 42px; }
 .sheet th:first-child, .sheet td:first-child { border-left: none; }
 .sheet th:last-child, .sheet td:last-child { border-right: none; }
 .sheet tbody tr:hover td { background: var(--color-surface-raised); }
 .sheet td input { width: 100%; height: 42px; border: none; background: transparent; padding: 0 10px; text-align: center; outline: none; }
-.sheet td input.money { text-align: right; font-family: var(--font-mono); font-size: 0.75rem; }
+.sheet td input.money { text-align: right; font-variant-numeric: tabular-nums; }
 .sheet td input:focus { outline: 2px solid var(--color-primary); outline-offset: -2px; background: var(--color-surface); }
-.sheet tfoot td { background: var(--color-surface-raised); border-bottom: none; font-weight: 700; padding: 0 10px; font-family: var(--font-mono); font-size: 0.75rem; text-align: right; }
+.sheet tfoot td { background: var(--color-surface-raised); border-bottom: none; font-weight: 700; padding: 0 10px; font-variant-numeric: tabular-nums; text-align: right; }
 
 /* The whole record, for printing: hidden on screen, one section per page. */
 .print-record { display: none; }
@@ -438,7 +443,7 @@ input[type="search"]::-webkit-search-cancel-button { appearance: none; }
   .print-record li, .print-record tr, .record-check, .record-allergen { break-inside: avoid; }
   .record-block-head, .print-record h2, .print-record h3 { break-after: avoid; }
   header, aside, nav, [data-print="hide"] { display: none !important; }
-  .h-screen { height: auto !important; overflow: visible !important; }
+  .h-screen, .h-dvh { height: auto !important; overflow: visible !important; }
   main { padding: 0 !important; overflow: visible !important; }
   body { background: #fff !important; }
   .record-panel { border: none; box-shadow: none; overflow: visible; min-height: 0; }

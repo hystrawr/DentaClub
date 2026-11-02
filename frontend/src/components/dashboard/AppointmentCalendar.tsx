@@ -47,7 +47,7 @@ export function AppointmentCalendar({
     <div className="flex flex-col h-full min-h-0">
       <div
         className="flex items-center justify-between pb-3 mb-2 shrink-0"
-        style={{ borderBottom: "1px dashed var(--color-border-strong)" }}
+        style={{ borderBottom: "1px solid var(--color-border)" }}
       >
         <p className="text-[15px] font-bold" style={{ color: "var(--color-foreground)" }} aria-live="polite">
           {monthLabel(month)}
@@ -62,7 +62,7 @@ export function AppointmentCalendar({
               type="button"
               onClick={() => setMonth((m) => monthStart(m, step))}
               aria-label={label}
-              className="flex items-center justify-center rounded-lg hover:bg-slate-50"
+              className="flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-raised)]"
               style={{ width: 28, height: 28, border: "1px solid var(--color-border)", color: "var(--color-muted-foreground)" }}
             >
               <Icon size={14} aria-hidden="true" />
@@ -102,7 +102,7 @@ export function AppointmentCalendar({
               aria-label={`${d}${isToday ? ", today" : ""}${booked.has(d) ? ", has appointments" : ""}`}
               className={cn(
                 "relative flex items-center justify-center rounded-[10px] text-[13px] transition-colors",
-                !isSelected && "hover:bg-slate-50",
+                !isSelected && "hover:bg-[var(--color-surface-raised)]",
                 (isSelected || isToday) && "font-bold",
               )}
               style={{

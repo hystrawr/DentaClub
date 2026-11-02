@@ -107,7 +107,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
       {/* Title and toolbar */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-48">
-          <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: "var(--color-foreground)" }}>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--color-foreground)" }}>
             Patient List
           </h1>
           <p className="mt-1 text-sm" style={{ color: "var(--color-muted-foreground)" }}>
@@ -136,7 +136,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
             />
           ) : (
             query && (
-              <button onClick={() => setQuery("")} aria-label="Clear search" className="rounded-full p-0.5 hover:bg-slate-100">
+              <button onClick={() => setQuery("")} aria-label="Clear search" className="rounded-full p-0.5 hover:bg-[var(--color-surface-subtle)]">
                 <X size={12} style={{ color: "var(--color-subtle-foreground)" }} />
               </button>
             )
@@ -188,7 +188,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] border-collapse text-sm">
                 <thead>
-                  <tr style={{ background: "var(--color-surface-subtle)", borderBottom: "1px solid var(--color-border)" }}>
+                  <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
                     <th className="w-16" aria-label="Photo" />
                     <SortHeader label="Last Name" active={sort.key === "last"} dir={sort.dir} onClick={() => sortBy("last")} />
                     <SortHeader label="First Name" active={sort.key === "first"} dir={sort.dir} onClick={() => sortBy("first")} />
@@ -211,11 +211,12 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
                       <tr key={p.id} className="patient-row" style={{ borderBottom: "1px solid var(--color-border)" }}>
                         <td className="pl-4 py-3">
                           <div
-                            className="flex items-center justify-center rounded-full text-white font-bold"
+                            className="flex items-center justify-center rounded-full font-bold"
                             style={{
-                              width: 40,
-                              height: 40,
-                              background: "linear-gradient(135deg, var(--color-primary), var(--color-mint))",
+                              width: 36,
+                              height: 36,
+                              background: "var(--color-primary-light)",
+                              color: "var(--color-primary)",
                               fontSize: "0.75rem",
                             }}
                             aria-hidden="true"
@@ -226,7 +227,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
                         <td className="px-4 py-3 font-semibold" style={{ color: "var(--color-foreground)" }}>
                           {p.last_name}
                           {filter.status === "inactive" && (
-                            <span className="chip ml-1.5 !py-0 !text-[11px]" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                            <span className="chip ml-1.5 !py-0 !text-[11px]" style={{ background: "var(--color-warning-light)", color: "var(--color-warning)" }}>
                               Inactive
                             </span>
                           )}
@@ -258,10 +259,10 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap" style={{ borderLeft: "1px solid var(--color-border)" }}>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
                           <Link
                             href={`/patients/${p.id}/info` as Route}
-                            className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-semibold hover:bg-blue-50"
+                            className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-semibold hover:bg-[var(--color-primary-light)]"
                             style={{ color: "var(--color-primary)" }}
                             aria-label={`View patient record of ${p.first_name} ${p.last_name}`}
                           >
@@ -316,7 +317,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
 function Th({ children }: { children: React.ReactNode }) {
   return (
     <th
-      className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide whitespace-nowrap"
+      className="px-4 py-3 text-left text-xs font-medium whitespace-nowrap"
       style={{ color: "var(--color-muted-foreground)" }}
     >
       {children}
@@ -328,13 +329,13 @@ function SortHeader({ label, active, dir, onClick }: { label: string; active: bo
   const Icon = !active ? ArrowUpDown : dir === 1 ? ArrowUp : ArrowDown;
   return (
     <th
-      className="px-4 py-3.5 text-left whitespace-nowrap"
+      className="px-4 py-3 text-left whitespace-nowrap"
       aria-sort={active ? (dir === 1 ? "ascending" : "descending") : "none"}
     >
       <button
         type="button"
         onClick={onClick}
-        className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide hover:text-slate-900"
+        className="inline-flex items-center gap-1 text-xs font-medium hover:text-[var(--color-foreground)]"
         style={{ color: active ? "var(--color-primary)" : "var(--color-muted-foreground)" }}
       >
         {label}
@@ -344,12 +345,12 @@ function SortHeader({ label, active, dir, onClick }: { label: string; active: bo
   );
 }
 
-/** A visit's date with the time beneath, or a muted "None". */
+/** A visit's date with the time beneath, or a grey dash when there is none. */
 function When({ visit, soon = false }: { visit: PatientVisit | null; soon?: boolean }) {
   if (!visit) {
     return (
-      <span className="text-[13px]" style={{ color: "var(--color-subtle-foreground)" }}>
-        None
+      <span style={{ color: "var(--color-subtle-foreground)" }} aria-label="None">
+        —
       </span>
     );
   }
@@ -431,7 +432,7 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
             {statusOptions.map((o) => (
               <label
                 key={o.key}
-                className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-slate-50"
+                className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-surface-raised)]"
                 style={{ color: "var(--color-foreground)" }}
               >
                 <input
@@ -439,7 +440,7 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
                   name="patient-status-filter"
                   checked={value.status === o.key}
                   onChange={() => onChange({ ...value, status: o.key })}
-                  className="accent-blue-600"
+                  className="accent-[var(--color-primary)]"
                 />
                 {o.label}
               </label>
@@ -450,7 +451,7 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
             {appointmentOptions.map((o) => (
               <label
                 key={o.key}
-                className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-slate-50"
+                className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-surface-raised)]"
                 style={{ color: "var(--color-foreground)" }}
               >
                 <input
@@ -458,7 +459,7 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
                   name="patient-appointment-filter"
                   checked={value.appointment === o.key}
                   onChange={() => onChange({ ...value, appointment: o.key })}
-                  className="accent-blue-600"
+                  className="accent-[var(--color-primary)]"
                 />
                 {o.label}
               </label>
@@ -476,7 +477,7 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
               .map((p) => (
                 <label
                   key={p.id}
-                  className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-slate-50"
+                  className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-surface-raised)]"
                   style={{ color: "var(--color-foreground)" }}
                 >
                   <input
@@ -490,7 +491,7 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
                           : [...value.providers, p.id],
                       })
                     }
-                    className="accent-blue-600"
+                    className="accent-[var(--color-primary)]"
                   />
                   <span className="rounded-full shrink-0" style={{ width: 8, height: 8, background: p.color_hex }} aria-hidden="true" />
                   <span className="truncate">{p.name}</span>
@@ -517,7 +518,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   return (
     <fieldset>
       <legend
-        className="px-1 mb-1 text-[11px] font-semibold uppercase tracking-wider"
+        className="px-1 mb-1 text-xs font-medium"
         style={{ color: "var(--color-subtle-foreground)" }}
       >
         {title}

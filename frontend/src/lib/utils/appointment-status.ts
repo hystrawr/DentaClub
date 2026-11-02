@@ -15,17 +15,18 @@ export interface StatusStyle {
  * fails the build here instead of crashing a screen (from DentalOS PatientCard).
  */
 const STATUS_STYLE: Record<AppointmentStatus, StatusStyle> = {
-  scheduled: { label: "Scheduled", bg: "#DBEAFE", border: "#93C5FD", text: "#1D4ED8", dot: "#2563EB" },
-  confirmed: { label: "Confirmed", bg: "#D1FAE5", border: "#6EE7B7", text: "#065F46", dot: "#059669" },
-  arrived: { label: "Arrived", bg: "#E0E7FF", border: "#A5B4FC", text: "#3730A3", dot: "#4F46E5" },
-  in_chair: { label: "In Chair", bg: "#FEF3C7", border: "#FCD34D", text: "#92400E", dot: "#D97706" },
-  completed: { label: "Completed", bg: "#F1F5F9", border: "#CBD5E1", text: "#475569", dot: "#64748B" },
-  cancelled: { label: "Cancelled", bg: "#FEE2E2", border: "#FCA5A5", text: "#991B1B", dot: "#DC2626" },
-  no_show: { label: "No Show", bg: "#FEE2E2", border: "#FCA5A5", text: "#991B1B", dot: "#DC2626" },
+  // Pale tint, a border one step darker, and dark text of the same hue. Olive is the brand's own state (booked).
+  scheduled: { label: "Scheduled", bg: "#EEF0DA", border: "#C9CEA4", text: "#424A1F", dot: "#6B7530" },
+  confirmed: { label: "Confirmed", bg: "#DCEBD3", border: "#A9CA97", text: "#24521F", dot: "#3D7A33" },
+  arrived: { label: "Arrived", bg: "#E5E6F0", border: "#B4B8D3", text: "#3D4170", dot: "#5A5F8A" },
+  in_chair: { label: "In Chair", bg: "#FBEBD3", border: "#EBC48C", text: "#7A3B05", dot: "#B8650F" },
+  completed: { label: "Completed", bg: "#F0F1E6", border: "#CDD0B3", text: "#4A4F38", dot: "#7A7F66" },
+  cancelled: { label: "Cancelled", bg: "#FDE7E4", border: "#F2AEA5", text: "#8A1C12", dot: "#B42318" },
+  no_show: { label: "No Show", bg: "#FDE7E4", border: "#F2AEA5", text: "#8A1C12", dot: "#B42318" },
 };
 
 /** A status from the wire this build does not know must not take a screen down. */
-const UNKNOWN_STATUS: StatusStyle = { label: "Unknown", bg: "#F1F5F9", border: "#CBD5E1", text: "#475569", dot: "#94A3B8" };
+const UNKNOWN_STATUS: StatusStyle = { label: "Unknown", bg: "#F0F1E6", border: "#CDD0B3", text: "#4A4F38", dot: "#8C907A" };
 
 export const styleFor = (status: string): StatusStyle => STATUS_STYLE[status as AppointmentStatus] ?? UNKNOWN_STATUS;
 

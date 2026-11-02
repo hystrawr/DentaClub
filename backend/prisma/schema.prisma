@@ -85,17 +85,7 @@ model MedicalHistory {
 
   inGoodHealth Boolean? @map("in_good_health")
 
-  // "Have you ever had any of the following?"
-  rheumaticFever    Boolean? @map("rheumatic_fever")
-  heartCondition    Boolean? @map("heart_condition")
-  diabetes          Boolean?
-  kidneyDisease     Boolean? @map("kidney_disease")
-  highBloodPressure Boolean? @map("high_blood_pressure")
-  anemia            Boolean?
-  hepatitis         Boolean?
-  asthma            Boolean?
-  epilepsy          Boolean?
-
+  /// Derived on save: true when any allergy below is ticked or written in.
   hasAllergies         Boolean? @map("has_allergies")
   allergicToPenicillin Boolean? @map("allergic_to_penicillin")
   otherAllergies       String?  @map("other_allergies")
@@ -148,16 +138,40 @@ model MedicalHistory {
   bpSystolic        Int?     @map("bp_systolic") @db.SmallInt
   bpDiastolic       Int?     @map("bp_diastolic") @db.SmallInt
 
-  /// Section 13 items that have no column above, by code (see routes/medical-history.ts).
-  conditions      String[] @default([])
-  otherConditions String?  @map("other_conditions")
+  /// Anything not on the Section 13 checklist, as written.
+  otherConditions String? @map("other_conditions")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient    Patient                   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  /// Section 13 boxes ticked. A saved checklist is an answered one: no row is a "No".
+  conditions MedicalHistoryCondition[]
 
   @@map("medical_histories")
+}
+
+/// The Section 13 checklist, "Do you have or have you had any of the following?".
+/// Filled by migration 18; the form shows them in this order by label.
+model MedicalCondition {
+  code  String @id @db.VarChar(30)
+  label String
+
+  histories MedicalHistoryCondition[]
+
+  @@map("medical_conditions")
+}
+
+/// One ticked Section 13 box on a patient's medical history.
+model MedicalHistoryCondition {
+  medicalHistoryId String @map("medical_history_id")
+  conditionCode    String @map("condition_code") @db.VarChar(30)
+
+  history   MedicalHistory   @relation(fields: [medicalHistoryId], references: [id], onDelete: Cascade)
+  condition MedicalCondition @relation(fields: [conditionCode], references: [code], onDelete: Restrict)
+
+  @@id([medicalHistoryId, conditionCode])
+  @@map("medical_history_conditions")
 }
 
 /// One row of the Treatment Record sheet. The sheet is saved whole, so rows
@@ -327,17 +341,28 @@ model Operatory {
 model ProviderProfile {
   id              String   @id @default(cuid())
   name            String
-  prcNumber       String?  @map("prc_number")
-  specializations String[] @default([])
-  colorHex        String   @default("#3B82F6") @map("color_hex") @db.VarChar(7)
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  prcNumber String?  @map("prc_number")
+  colorHex  String   @default("#3B82F6") @map("color_hex") @db.VarChar(7)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  availabilities ProviderAvailability[]
-  appointments   Appointment[]
+  specializations ProviderSpecialization[]
+  availabilities  ProviderAvailability[]
+  appointments    Appointment[]
 
   @@map("provider_profiles")
+}
+
+/// One of a dentist's specializations, e.g. "Orthodontics".
+model ProviderSpecialization {
+  providerProfileId String @map("provider_profile_id")
+  name              String
+
+  provider ProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+
+  @@id([providerProfileId, name])
+  @@map("provider_specializations")
 }
 
 /// One weekly working window for a dentist at a location (Manila wall-clock).

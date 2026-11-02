@@ -49,8 +49,8 @@ async function seedScheduling() {
   });
 
   const dentists = [
-    { name: "Dr. Alex Reyes", colorHex: "#3B82F6", specializations: ["General Dentistry"] },
-    { name: "Dr. Sam Cruz", colorHex: "#EC4899", specializations: ["Orthodontics"] },
+    { name: "Dr. Alex Reyes", colorHex: "#3B82F6", specializations: { create: [{ name: "General Dentistry" }] } },
+    { name: "Dr. Sam Cruz", colorHex: "#EC4899", specializations: { create: [{ name: "Orthodontics" }] } },
   ];
 
   for (const dentist of dentists) {

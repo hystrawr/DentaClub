@@ -9,6 +9,8 @@ The full relational schema, with types, keys and constraints, is in [relational-
 | Relationship | Cardinality |
 |---|---|
 | patient has medical history | 1 : 0..1 |
+| medical history ticks Section 13 conditions (through `medical_history_conditions`) | M : N |
+| dentist has specializations | 1 : 0..* |
 | patient has treatment records, chart events, documents, consents | 1 : 0..* |
 | chart event replaces an earlier chart event (self-reference) | 0..1 : 0..* |
 | document is the signed PDF of a consent | 1 : 0..1 |

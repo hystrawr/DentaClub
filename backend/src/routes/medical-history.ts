@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { notFound } from "../lib/http-error.js";
-import { historyData, historyResource, saveHistory } from "../lib/medical-history.js";
+import { historyData, historyResource, saveHistory, withConditions } from "../lib/medical-history.js";
 import { assertActivePatient } from "../lib/patients.js";
 
 // The medical history from the clinic's paper dental record, one per patient:
@@ -17,7 +17,7 @@ async function assertPatient(id: string) {
 /** GET /api/patients/:id/medical-history — every answer null until first saved. */
 medicalHistoryRouter.get("/patients/:id/medical-history", async (req, res) => {
   await assertPatient(req.params.id);
-  const history = await prisma.medicalHistory.findUnique({ where: { patientId: req.params.id } });
+  const history = await prisma.medicalHistory.findUnique({ where: { patientId: req.params.id }, include: withConditions });
   res.json({ data: historyResource(history) });
 });
 
@@ -29,7 +29,8 @@ medicalHistoryRouter.put("/patients/:id/medical-history", async (req, res) => {
   const history = await prisma.medicalHistory.upsert({
     where: { patientId: req.params.id },
     create: { patientId: req.params.id, ...data },
-    update: data,
+    update: { ...data, conditions: { deleteMany: {}, ...data.conditions } },
+    include: withConditions,
   });
   res.json({ data: historyResource(history) });
 });

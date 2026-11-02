@@ -60,13 +60,16 @@ export function appointmentResource(a: AppointmentWithRelations, withRelations =
   };
 }
 
+/** Read a dentist with this, so `providerProfileResource` has the specializations. */
+export const withSpecializations = { specializations: { select: { name: true }, orderBy: { name: "asc" } } } as const;
+
 /** `ProviderProfileResource`. */
-export function providerProfileResource(p: ProviderProfile) {
+export function providerProfileResource(p: ProviderProfile & { specializations: Array<{ name: string }> }) {
   return {
     id: p.id,
     name: p.name,
     prc_number: p.prcNumber,
-    specializations: p.specializations,
+    specializations: p.specializations.map((s) => s.name),
     color_hex: p.colorHex,
     is_active: p.isActive,
   };

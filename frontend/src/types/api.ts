@@ -277,7 +277,6 @@ export interface AppointmentType {
   duration_minutes: number;
   color_hex: string;
   is_block_time: boolean;
-  recall_interval_months: number | null;
   /** Pesos; null when the service has no set price. */
   price: number | null;
   is_active: boolean;

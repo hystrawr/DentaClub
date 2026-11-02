@@ -364,7 +364,6 @@ model AppointmentType {
   colorHex             String   @default("#6B7280") @map("color_hex") @db.VarChar(7)
   /// Lunch, meetings — time blocked out with no patient.
   isBlockTime          Boolean  @default(false) @map("is_block_time")
-  recallIntervalMonths Int?     @map("recall_interval_months") @db.SmallInt
   /// The service's price in pesos; null when it has none (block time, or not yet set).
   /// Treatment rows copy it when charged, so changing it never rewrites past charges.
   price                Decimal? @db.Decimal(10, 2)

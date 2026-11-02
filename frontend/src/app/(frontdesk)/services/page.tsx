@@ -54,7 +54,7 @@ export default function ServicesPage() {
           <EmptyState icon={Stethoscope} title="No services yet" description="Add the services your clinic offers and their prices." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
+            <table className="w-full min-w-160 border-collapse text-sm">
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <Th>Service</Th>

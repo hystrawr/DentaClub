@@ -89,7 +89,7 @@ function RailLink({ item, active }: { item: NavItem; active: boolean }) {
       <span
         className={cn(
           "flex items-center justify-center rounded-full transition-colors duration-150",
-          !active && "group-hover:bg-[var(--color-surface-subtle)]",
+          !active && "group-hover:bg-surface-subtle",
         )}
         style={{
           width: 44,
@@ -124,7 +124,7 @@ function BarLink({ item, active }: { item: NavItem; active: boolean }) {
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex-1 my-1.5 flex flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-150",
-        !active && "hover:bg-[var(--color-surface-subtle)]",
+        !active && "hover:bg-surface-subtle",
       )}
       style={{ background: active ? "var(--color-primary-light)" : undefined }}
     >

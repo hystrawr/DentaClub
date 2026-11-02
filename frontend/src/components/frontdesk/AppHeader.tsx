@@ -38,7 +38,7 @@ export function AppHeader() {
       </Link>
 
       <div
-        className="flex items-center gap-2.5 rounded-full p-1 sm:pr-1.5"
+        className="flex items-center gap-2.5 rounded-full p-1 sm:pr-1.5 sm:min-w-45"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
         <div
@@ -64,7 +64,7 @@ export function AppHeader() {
           disabled={signOut.isPending}
           aria-label={`Sign out ${username}`}
           title="Sign out"
-          className="flex items-center justify-center rounded-full transition-colors hover:bg-[var(--color-surface-subtle)]"
+          className="ml-auto flex items-center justify-center rounded-full transition-colors hover:bg-surface-subtle"
           style={{ width: 30, height: 30, color: "var(--color-muted-foreground)" }}
         >
           <LogOut size={15} aria-hidden="true" />

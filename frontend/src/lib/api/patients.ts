@@ -11,13 +11,19 @@ import type {
 
 /* ─── List / search ─────────────────────────────────────────────── */
 
-/** Every patient, A–Z by last name, with their last visit and next appointment. `search` narrows by name or mobile. */
-export function usePatients(params?: { search?: string }, options?: { enabled?: boolean }) {
+/**
+ * Every patient, A–Z by last name, with their last visit and next appointment.
+ * `search` narrows by name or mobile; `status: "inactive"` lists removed patients instead.
+ */
+export function usePatients(params?: { search?: string; status?: "active" | "inactive" }, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: ["patients", "list", params?.search ?? ""],
+    queryKey: ["patients", "list", params?.search ?? "", params?.status ?? "active"],
     queryFn: async () => {
-      const qs = params?.search ? `?search=${encodeURIComponent(params.search)}` : "";
-      return (await get<{ data: PatientListItem[] }>(`/api/patients${qs}`)).data;
+      const qs = new URLSearchParams();
+      if (params?.search) qs.set("search", params.search);
+      if (params?.status === "inactive") qs.set("status", "inactive");
+      const query = qs.size > 0 ? `?${qs}` : "";
+      return (await get<{ data: PatientListItem[] }>(`/api/patients${query}`)).data;
     },
     enabled: options?.enabled ?? true,
     // Keep the previous results on screen while the next search loads.
@@ -66,13 +72,24 @@ export function useUpdatePatient(id: string) {
   });
 }
 
-/** Deletes the patient with their chart, consents, documents and treatment record. Appointments are kept. */
+/** Takes the patient out of the directory; their chart, consents, documents and appointments are kept. */
 export function useDeletePatient(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => del<void>(`/api/patients/${id}`),
     onSuccess: () => {
       qc.removeQueries({ queryKey: ["patients", id] });
+      void qc.invalidateQueries({ queryKey: ["patients", "list"] });
+    },
+  });
+}
+/** Puts a removed patient back in the directory (admins only). */
+export function useRestorePatient(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await post<{ data: Patient }>(`/api/patients/${id}/restore`)).data,
+    onSuccess: (patient) => {
+      qc.setQueryData(["patients", id], patient);
       void qc.invalidateQueries({ queryKey: ["patients", "list"] });
     },
   });

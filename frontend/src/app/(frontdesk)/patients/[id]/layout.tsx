@@ -7,7 +7,8 @@ import { use, useState } from "react";
 import { PatientHero } from "@/components/patient-record/PatientHero";
 import { PrintButton, PrintRecord } from "@/components/patient-record/PrintRecord";
 import { RECORD_TABS, RecordTabs } from "@/components/patient-record/RecordTabs";
-import { usePatient } from "@/lib/api/patients";
+import { useCurrentUser } from "@/lib/api/auth";
+import { usePatient, useRestorePatient } from "@/lib/api/patients";
 
 /**
  * The patient record: photo and name, folder tabs, and the panel the active
@@ -20,6 +21,9 @@ export default function PatientRecordLayout({ children, params }: LayoutProps<"/
   const { id } = use(params);
   const pathname = usePathname();
   const { data: patient, isLoading, isError } = usePatient(id);
+  const user = useCurrentUser();
+  const restore = useRestorePatient(id);
+  const inactive = patient?.is_active === false;
   const [printing, setPrinting] = useState(false);
 
   const active = RECORD_TABS.find((tab) => {
@@ -36,6 +40,24 @@ export default function PatientRecordLayout({ children, params }: LayoutProps<"/
           style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FCA5A5" }}
         >
           This patient&apos;s record could not be loaded. Nothing below is complete — reload before relying on it.
+        </div>
+      )}
+      {inactive && (
+        <div
+          role="status"
+          className="mb-4 rounded-lg px-4 py-2 text-xs font-medium flex items-center gap-3 flex-wrap"
+          style={{ background: "#FEF3C7", color: "#92400E", border: "1px solid #FCD34D" }}
+          data-print="hide"
+        >
+          <span className="mr-auto">
+            This patient was removed from the directory. Their records are kept for reference and can&apos;t be changed.
+          </span>
+          {restore.error && <span>{restore.error.message}</span>}
+          {user.data?.role === "admin" && (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => restore.mutate()} disabled={restore.isPending}>
+              {restore.isPending ? "Restoring…" : "Restore patient"}
+            </button>
+          )}
         </div>
       )}
 
@@ -60,7 +82,10 @@ export default function PatientRecordLayout({ children, params }: LayoutProps<"/
 
       {/* While printing, the open tab gives way to the whole record below. */}
       <section className="record-panel" aria-label={active?.title} data-print={printing ? "hide" : undefined}>
-        {children}
+        {/* An inactive patient's record is for reading: every input and button inside is switched off. */}
+        <fieldset disabled={inactive} className="contents">
+          {children}
+        </fieldset>
       </section>
 
       {printing && <PrintRecord patientId={id} onDone={() => setPrinting(false)} />}

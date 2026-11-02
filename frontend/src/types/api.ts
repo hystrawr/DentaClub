@@ -40,6 +40,7 @@ export interface PatientListItem extends PatientSummary {
 }
 
 export interface Patient extends PatientSummary {
+  is_active: boolean;
   middle_name: string | null;
   address: string | null;
   occupation: string | null;

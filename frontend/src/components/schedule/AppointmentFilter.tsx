@@ -31,18 +31,6 @@ export function matchesFilter(filter: ScheduleFilter, apt: Appointment): boolean
   return !group || !filter.hiddenGroups.includes(group.key);
 }
 
-/**
- * How many dentists and statuses are ticked, for the Filter badge — or null when
- * every box is ticked, since then nothing is filtered and no badge shows.
- * `providerIds` are the dentists listed in the menu.
- */
-export function selectedCount(filter: ScheduleFilter, providerIds: string[]): number | null {
-  const dentists = providerIds.filter((id) => !filter.hiddenProviders.includes(id)).length;
-  const groups = STATUS_GROUPS.filter((g) => !filter.hiddenGroups.includes(g.key)).length;
-  const total = dentists + groups;
-  return total === providerIds.length + STATUS_GROUPS.length ? null : total;
-}
-
 const toggle = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
 /** The Filter button and its menu: which dentists and which statuses the calendar shows. */
@@ -51,8 +39,9 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
   const ref = useRef<HTMLDivElement>(null);
   const providers = useProviders();
   const listed = (providers.data ?? []).filter((p) => p.is_active).map((p) => p.id);
-  const selected = selectedCount(value, listed);
-  const active = value.hiddenProviders.length + value.hiddenGroups.length;
+  const anyHidden = value.hiddenProviders.length + value.hiddenGroups.length > 0;
+  const anyShown =
+    listed.some((id) => !value.hiddenProviders.includes(id)) || STATUS_GROUPS.some((g) => !value.hiddenGroups.includes(g.key));
 
   useEffect(() => {
     if (!open) return;
@@ -74,27 +63,18 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
     <div ref={ref} className="relative">
       <button
         type="button"
-        className="btn btn-secondary"
+        className="btn btn-secondary btn-filter"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="true"
       >
         <SlidersHorizontal size={14} aria-hidden="true" />
         Filter
-        {selected !== null && (
-          <span
-            className="rounded-full px-1.5 text-[10px] font-bold leading-4"
-            style={{ background: "var(--color-primary)", color: "#fff" }}
-            aria-label={`${selected} selected`}
-          >
-            {selected}
-          </span>
-        )}
       </button>
 
       {open && (
         <div
-          className="absolute right-0 z-30 mt-2 w-64 rounded-2xl p-3"
+          className="absolute right-0 z-30 mt-2 w-64 max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-2xl p-3"
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
         >
           <Group title="Dentist">
@@ -120,23 +100,34 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
               />
             ))}
           </Group>
-          {active > 0 && (
+          <div className="mt-2 pt-2 flex items-center justify-between gap-2" style={{ borderTop: "1px solid var(--color-border)" }}>
             <button
               type="button"
-              className="mt-2 w-full text-xs font-semibold hover:underline"
+              className="filter-action"
+              style={{ color: "var(--color-muted-foreground)" }}
+              disabled={!anyShown}
+              onClick={() => onChange({ hiddenProviders: listed, hiddenGroups: STATUS_GROUPS.map((g) => g.key) })}
+            >
+              Clear all
+            </button>
+            <button
+              type="button"
+              className="filter-action"
               style={{ color: "var(--color-primary)" }}
+              disabled={!anyHidden}
               onClick={() => onChange({ hiddenProviders: [], hiddenGroups: [] })}
             >
               Show everything
             </button>
-          )}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+/** A titled section of a Filter menu. Shared with the patient list's filter. */
+export function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <fieldset>
       <legend className="px-1 mb-1 text-xs font-medium" style={{ color: "var(--color-subtle-foreground)" }}>
@@ -147,10 +138,11 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function Option({ label, swatch, checked, onChange }: { label: string; swatch?: string; checked: boolean; onChange: () => void }) {
+/** One row of a Filter menu; a radio when `name` is given, otherwise a checkbox. */
+export function Option({ label, swatch, checked, onChange, name }: { label: string; swatch?: string; checked: boolean; onChange: () => void; name?: string }) {
   return (
-    <label className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-surface-raised)]" style={{ color: "var(--color-foreground)" }}>
-      <input type="checkbox" checked={checked} onChange={onChange} className="accent-[var(--color-primary)]" />
+    <label className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-sm cursor-pointer filter-option" style={{ color: "var(--color-foreground)" }}>
+      <input type={name ? "radio" : "checkbox"} name={name} checked={checked} onChange={onChange} className="accent-primary" />
       {swatch && <span className="rounded-full shrink-0" style={{ width: 8, height: 8, background: swatch }} aria-hidden="true" />}
       <span className="truncate">{label}</span>
     </label>

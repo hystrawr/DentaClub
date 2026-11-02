@@ -63,7 +63,7 @@ export default function PatientRecordLayout({ children, params }: LayoutProps<"/
 
       <Link
         href={"/patients" as Route}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold mb-4 hover:text-[var(--color-primary)]"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold mb-4 hover:text-primary"
         style={{ color: "var(--color-subtle-foreground)" }}
         data-print="hide"
       >

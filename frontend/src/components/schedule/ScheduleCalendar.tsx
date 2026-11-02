@@ -7,12 +7,14 @@ import { useAppointments } from "@/lib/api/appointments";
 import { appointmentColor, initialsOf, styleFor, tint } from "@/lib/utils/appointment-status";
 import {
   addDays,
+  addMonths,
   clock,
   dateOf,
   longDate,
   manilaMinutes,
   manilaToday,
   minutesOf,
+  monthGridOf,
   monthYear,
   timeOf,
   weekOf,
@@ -21,21 +23,7 @@ import {
 import type { Appointment } from "@/types/api";
 import { DatePickerPopover } from "./DatePickerPopover";
 
-/**
- * The schedule calendar, ported from DentalOS's ScheduleCalendar: day and week
- * views and appointment cards.
- *
- * Changed from DentalOS:
- *  - **Clinic time throughout.** Blocks are placed from the API's `+08:00`
- *    timestamps and dates are Manila dates. DentalOS used the browser clock and
- *    `toISOString()` (UTC), so before 08:00 Manila "today" was yesterday.
- *  - **Minute-accurate placement.** DentalOS rounded every start to :00/:30, so
- *    a 9:15 cleaning drew at 9:00 and overlapped whatever was there.
- *  - Cards are tinted by procedure; the status is the dot in the corner.
- *  - Online booking requests are left out (not ported).
- */
-
-type CalendarView = "day" | "week";
+type CalendarView = "day" | "week" | "month";
 
 const HOUR_START = 7;
 const HOUR_END = 19;
@@ -43,6 +31,8 @@ const SLOT_H = 48; // px per 30 minutes
 const PX_PER_MIN = SLOT_H / 30;
 const TIME_COL_W = 72;
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const MONTH_CHIPS = 3; // appointments listed per month cell before "+N more"
 
 /** The statuses shown in the toolbar key — the ones a receptionist acts on. */
 const LEGEND = (["scheduled", "confirmed", "in_chair", "completed"] as const).map(styleFor);
@@ -65,7 +55,7 @@ function useNowOffset(): number | null {
 /**
  * Side-by-side lanes for overlapping appointments.
  *
- * DentalOS drew every block at full width, so two dentists working at the same
+ * two dentists working at the same
  * hour put one appointment on top of the other and the lower one could not be
  * clicked. Overlapping appointments form a cluster; each takes the first free
  * lane, and every block in the cluster gets `1 / lanes` of the width.
@@ -286,6 +276,115 @@ function TimeGutter({ nowOffset, showNow }: { nowOffset: number | null; showNow:
   );
 }
 
+/* ─── Month grid ───────────────────────────────────────────────── */
+
+function MonthGrid({
+  dates,
+  month,
+  today,
+  byDate,
+  selectedId,
+  onSelect,
+  onOpenDay,
+}: {
+  dates: string[];
+  /** `YYYY-MM` of the month shown; days outside it are dimmed. */
+  month: string;
+  today: string;
+  byDate: Map<string, Appointment[]>;
+  selectedId: string | null;
+  onSelect: (id: string, anchor: DOMRect) => void;
+  onOpenDay: (date: string) => void;
+}) {
+  return (
+    <>
+      <div className="grid grid-cols-7 shrink-0" style={{ borderTop: "1px solid var(--color-border)", borderBottom: "1px solid var(--color-border)" }}>
+        {MONTH_DOW.map((d) => (
+          <span key={d} className="py-2 text-center text-xs font-medium" style={{ color: "var(--color-subtle-foreground)" }}>
+            {d}
+          </span>
+        ))}
+      </div>
+
+      <div className="flex-1 grid grid-cols-7 overflow-y-auto" style={{ gridAutoRows: "minmax(112px, 1fr)" }}>
+        {dates.map((date, i) => {
+          const isToday = date === today;
+          const inMonth = date.startsWith(month);
+          const appts = [...(byDate.get(date) ?? [])].sort((a, b) => minutesOf(a.scheduled_start) - minutesOf(b.scheduled_start));
+          const extra = appts.length - MONTH_CHIPS;
+          return (
+            <div
+              key={date}
+              className="flex flex-col gap-1 p-1.5 min-w-0"
+              style={{
+                borderLeft: i % 7 ? "1px solid var(--color-border)" : undefined,
+                borderBottom: "1px solid var(--color-border)",
+                background: isToday ? "rgb(66 74 31 / 0.04)" : undefined,
+                opacity: inMonth ? 1 : 0.45,
+              }}
+              data-date={date}
+            >
+              <button
+                type="button"
+                onClick={() => onOpenDay(date)}
+                className="self-start text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-md hover:bg-surface-subtle"
+                style={isToday ? { background: "var(--color-primary)", color: "#fff" } : { color: "var(--color-foreground)" }}
+                aria-label={`Open ${longDate(date)}`}
+              >
+                {Number(date.slice(8, 10))}
+              </button>
+
+              {appts.slice(0, MONTH_CHIPS).map((apt) => {
+                const color = appointmentColor(apt);
+                const released = apt.status === "cancelled" || apt.status === "no_show";
+                const name = apt.patient?.full_name ?? "Blocked time";
+                return (
+                  <button
+                    type="button"
+                    key={apt.id}
+                    data-appt-block="1"
+                    onClick={(e) => onSelect(apt.id, e.currentTarget.getBoundingClientRect())}
+                    className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left min-w-0"
+                    style={{
+                      background: apt.patient ? tint(color, 12) : "var(--color-surface-subtle)",
+                      outline: apt.id === selectedId ? "2px solid var(--color-primary)" : undefined,
+                      opacity: released ? 0.5 : 1,
+                    }}
+                    aria-pressed={apt.id === selectedId}
+                    aria-label={`${name}, ${clock(timeOf(apt.scheduled_start))}, ${styleFor(apt.status).label}`}
+                  >
+                    <span className="rounded-full shrink-0" style={{ width: 6, height: 6, background: styleFor(apt.status).dot }} aria-hidden="true" />
+                    <span className="text-[11px] tabular-nums shrink-0" style={{ color: "var(--color-muted-foreground)" }}>
+                      {clock(timeOf(apt.scheduled_start)).replace(/ (AM|PM)$/, "")}
+                    </span>
+                    <span
+                      className="text-[11px] font-semibold truncate"
+                      style={{ color: "var(--color-foreground)", textDecoration: released ? "line-through" : undefined }}
+                    >
+                      {name}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {extra > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onOpenDay(date)}
+                  className="self-start text-[11px] font-semibold px-1.5 hover:underline"
+                  style={{ color: "var(--color-muted-foreground)" }}
+                >
+                  +{extra} more
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 /* ─── Main export ───────────────────────────────────────────────── */
 
 export function ScheduleCalendar({
@@ -324,10 +423,11 @@ export function ScheduleCalendar({
   }, [picking]);
 
   const week = weekOf(anchor);
-  const visibleDates = view === "week" ? week : [anchor];
+  const monthDates = useMemo(() => monthGridOf(anchor), [anchor]);
+  const visibleDates = view === "month" ? monthDates : view === "week" ? week : [anchor];
 
   const { data: appointments, isLoading, isError } = useAppointments(
-    view === "week" ? { date_from: week[0], date_to: week[6] } : { date: anchor },
+    view === "day" ? { date: anchor } : { date_from: visibleDates[0], date_to: visibleDates[visibleDates.length - 1] },
   );
 
   const byDate = useMemo(() => {
@@ -349,7 +449,12 @@ export function ScheduleCalendar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const step = view === "week" ? 7 : 1;
+  const step = (direction: 1 | -1) =>
+    setAnchor(view === "month" ? addMonths(anchor, direction) : addDays(anchor, direction * (view === "week" ? 7 : 1)));
+  const openDay = (date: string) => {
+    setAnchor(date);
+    setView("day");
+  };
   const iconBtn = "flex items-center justify-center rounded-lg transition-colors hover:bg-[var(--color-surface-subtle)]";
 
   return (
@@ -364,14 +469,14 @@ export function ScheduleCalendar({
           <button
             type="button"
             onClick={() => setPicking((p) => !p)}
-            className="flex items-center gap-2 rounded-lg pl-2 pr-2.5 py-1 hover:bg-[var(--color-surface-subtle)]"
+            className="flex items-center gap-2 rounded-lg pl-2 pr-2.5 py-1 hover:bg-surface-subtle"
             aria-haspopup="dialog"
             aria-expanded={picking}
             title="Choose a date"
           >
             <CalendarDays size={16} style={{ color: "var(--color-muted-foreground)" }} aria-hidden="true" />
             <span className="text-sm font-bold min-w-28 text-left" style={{ color: "var(--color-foreground)" }} aria-live="polite">
-              {view === "week" ? monthYear(week[0]!) : longDate(anchor)}
+              {view === "month" ? monthYear(anchor) : view === "week" ? monthYear(week[0]!) : longDate(anchor)}
             </span>
           </button>
           {picking && (
@@ -385,10 +490,10 @@ export function ScheduleCalendar({
               }}
             />
           )}
-          <button onClick={() => setAnchor(addDays(anchor, -step))} className={iconBtn} style={{ width: 28, height: 28 }} aria-label={`Previous ${view}`}>
+          <button onClick={() => step(-1)} className={iconBtn} style={{ width: 28, height: 28 }} aria-label={`Previous ${view}`}>
             <ChevronLeft size={16} style={{ color: "var(--color-muted-foreground)" }} />
           </button>
-          <button onClick={() => setAnchor(addDays(anchor, step))} className={iconBtn} style={{ width: 28, height: 28 }} aria-label={`Next ${view}`}>
+          <button onClick={() => step(1)} className={iconBtn} style={{ width: 28, height: 28 }} aria-label={`Next ${view}`}>
             <ChevronRight size={16} style={{ color: "var(--color-muted-foreground)" }} />
           </button>
         </div>
@@ -418,7 +523,7 @@ export function ScheduleCalendar({
         </ul>
 
         <div className="flex rounded-xl p-0.75" style={{ background: "var(--color-surface-subtle)" }} role="group" aria-label="Calendar view">
-          {(["day", "week"] as CalendarView[]).map((v) => (
+          {(["day", "week", "month"] as CalendarView[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -436,6 +541,18 @@ export function ScheduleCalendar({
         </div>
       </div>
 
+      {view === "month" ? (
+        <MonthGrid
+          dates={monthDates}
+          month={anchor.slice(0, 7)}
+          today={today}
+          byDate={byDate}
+          selectedId={selectedId}
+          onSelect={onSelect}
+          onOpenDay={openDay}
+        />
+      ) : (
+      <>
       {/* Day header */}
       <div className="flex shrink-0" style={{ borderTop: "1px solid var(--color-border)", borderBottom: "1px solid var(--color-border)" }}>
         <div className="shrink-0 flex items-end justify-center pb-3 text-[11px]" style={{ width: TIME_COL_W, color: "var(--color-subtle-foreground)" }}>
@@ -447,11 +564,8 @@ export function ScheduleCalendar({
             <button
               type="button"
               key={date}
-              onClick={() => {
-                setAnchor(date);
-                setView("day");
-              }}
-              className="flex-1 flex flex-col items-center pt-2.5 pb-3 hover:bg-[var(--color-surface-raised)]"
+              onClick={() => openDay(date)}
+              className="flex-1 flex flex-col items-center pt-2.5 pb-3 hover:bg-surface-raised"
               style={{ borderLeft: "1px solid var(--color-border)" }}
               aria-label={`Open ${longDate(date)}`}
             >
@@ -462,7 +576,7 @@ export function ScheduleCalendar({
                 {DOW[weekdayOf(date)]}
               </span>
               <span
-                className="text-[17px] font-semibold mt-1 w-8 h-8 flex items-center justify-center rounded-[10px]"
+                className="text-[17px] font-semibold mt-1 w-8 h-8 flex items-center justify-center rounded-md"
                 style={isToday ? { background: "var(--color-primary)", color: "#fff" } : { color: "var(--color-foreground)" }}
               >
                 {Number(date.slice(8, 10))}
@@ -489,6 +603,8 @@ export function ScheduleCalendar({
           ))}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

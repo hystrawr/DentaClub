@@ -24,7 +24,7 @@ dentaclub/
 ### Sign-in and roles
 - The app opens on a sign-in page. The API refuses every request without a valid sign-in, so patient data can't be read by going around the page.
 - There are two kinds of account:
-  - **Admin:** everything, including **Settings → Services**, where services and prices are added and edited.
+  - **Admin:** everything, including **Services**, where services and prices are added and edited.
   - **Staff:** the front desk only: **Dashboard**, **Appointments** and **Patients** (with their chart, consent and treatment sheet).
 - The server checks the role on every request. A staff account that tries to change services, dentists or chairs gets **403 Forbidden**, even from outside the app.
 - The header shows who is signed in and their role.
@@ -65,7 +65,7 @@ dentaclub/
 - Each patient has an Appointments tab listing upcoming and past visits.
 
 ### Services and prices
-- **Settings → Services** lists the clinic's services with their length, calendar colour and price. Services are the same list that booking calls appointment types.
+- **Services** lists the clinic's services with their length, calendar colour and price. Services are the same list that booking calls appointment types.
 - Add or edit a service, and deactivate one you no longer offer. Services are never deleted, because past appointments still point at them.
 - On a patient's **Treatment** sheet, the Procedure cell suggests services. Picking one fills an empty Amount Charged with its price, which can still be changed for a discount.
 - The price is copied into the treatment row, so changing a price later never changes what a patient was already charged.

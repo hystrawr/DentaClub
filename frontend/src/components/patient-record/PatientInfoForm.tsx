@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Users, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FormError } from "@/components/ui/form";
 import { useAppointments } from "@/lib/api/appointments";
 import { ApiError } from "@/lib/api/client";
@@ -145,6 +146,7 @@ export function PatientInfoForm(
   const [step, setStep] = useState(0);
   const [checkingName, setCheckingName] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
 
   const age = ageOn(details.date_of_birth);
@@ -273,8 +275,8 @@ export function PatientInfoForm(
   const shows = (i: number) => !creating || step === i;
 
   function cancel() {
-    if ((detailsDirty || answersDirty) && !window.confirm("Discard this new patient? Nothing has been saved.")) return;
-    onCancel?.();
+    if (detailsDirty || answersDirty) setConfirmingDiscard(true);
+    else onCancel?.();
   }
 
   return (
@@ -285,17 +287,12 @@ export function PatientInfoForm(
           className="sticky top-0 z-10 px-4 sm:px-6 pt-4 pb-3 space-y-3"
           style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}
         >
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold" style={{ color: "var(--color-foreground)" }}>
-              New Patient
-              <span className="ml-2 text-xs font-medium" style={{ color: "var(--color-muted-foreground)" }}>
-                Step {step + 1} of {STEPS.length}
-              </span>
-            </h2>
-            <button type="button" onClick={cancel} className="btn-ghost p-1 rounded-md" aria-label="Close">
-              <X size={18} />
-            </button>
-          </div>
+          <h2 className="text-base font-semibold" style={{ color: "var(--color-foreground)" }}>
+            New Patient
+            <span className="ml-2 text-xs font-medium" style={{ color: "var(--color-muted-foreground)" }}>
+              Step {step + 1} of {STEPS.length}
+            </span>
+          </h2>
           <StepBar step={step} onSelect={(i) => void goTo(i)} disabled={checkingName || saving} />
         </div>
       )}
@@ -634,16 +631,11 @@ export function PatientInfoForm(
         disabled={checkingName}
         tools={
           creating ? (
-            <>
-              <button type="button" className="btn btn-ghost" onClick={cancel} disabled={saving}>
-                Cancel
+            step > 0 && (
+              <button type="button" className="btn btn-secondary" onClick={() => void goTo(step - 1)} disabled={saving}>
+                <ChevronLeft size={15} aria-hidden="true" /> Back
               </button>
-              {step > 0 && (
-                <button type="button" className="btn btn-secondary" onClick={() => void goTo(step - 1)} disabled={saving}>
-                  <ChevronLeft size={15} aria-hidden="true" /> Back
-                </button>
-              )}
-            </>
+            )
           ) : (
             <ResetDelete
               onReset={reset}
@@ -653,6 +645,13 @@ export function PatientInfoForm(
               deleting={deletePatient.isPending}
               blocked={deleteBlocked}
             />
+          )
+        }
+        actions={
+          creating && (
+            <button type="button" className="btn btn-secondary" onClick={cancel} disabled={saving}>
+              Cancel
+            </button>
           )
         }
         onSave={primary}
@@ -669,6 +668,20 @@ export function PatientInfoForm(
             <FormError error={createPatient.error ?? updatePatient.error ?? saveHistory.error ?? (refused ? null : deletePatient.error)} />
           )
         }
+      />
+
+      <ConfirmDialog
+        open={confirmingDiscard}
+        title="Discard this new patient?"
+        message="Nothing has been saved. Everything typed so far will be lost."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        danger
+        onConfirm={() => {
+          setConfirmingDiscard(false);
+          onCancel?.();
+        }}
+        onCancel={() => setConfirmingDiscard(false)}
       />
     </>
   );

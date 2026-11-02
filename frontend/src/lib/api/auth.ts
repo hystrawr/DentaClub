@@ -4,7 +4,7 @@ import { ApiError, get, post } from "./client";
 // Sign in and out. The session itself is an httpOnly cookie the API sets;
 // page scripts never see it.
 
-/** admin: everything, including Settings. staff: Dashboard, Appointments and Patients. */
+/** admin: everything, including Services. staff: Dashboard, Appointments and Patients. */
 export type UserRole = "admin" | "staff";
 
 export interface CurrentUser {

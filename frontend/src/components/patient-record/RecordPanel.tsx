@@ -77,6 +77,7 @@ export function SaveBar({
   disabled,
   error,
   tools,
+  actions,
   onSave,
   saveLabel,
 }: {
@@ -85,6 +86,8 @@ export function SaveBar({
   disabled?: boolean;
   error?: React.ReactNode;
   tools?: React.ReactNode;
+  /** Buttons placed right beside the save button, e.g. Cancel. */
+  actions?: React.ReactNode;
   onSave: () => void;
   /** For a form that creates rather than edits: the button's label, with no saved/unsaved status beside it. */
   saveLabel?: string;
@@ -102,6 +105,7 @@ export function SaveBar({
           {dirty ? "Unsaved changes" : "All changes saved"}
         </span>
       )}
+      {actions}
       <button type="button" className="btn btn-primary" onClick={onSave} disabled={(!dirty && !saveLabel) || saving || disabled}>
         {saving ? "Saving…" : (saveLabel ?? "Save changes")}
       </button>

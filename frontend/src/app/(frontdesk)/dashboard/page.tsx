@@ -32,9 +32,9 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col px-5 sm:px-10 lg:px-12 py-6">
-      <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--color-foreground)" }}>
+      <h1 className="text-6xl font-bold tracking-tight" style={{ color: "var(--color-foreground)" }}>
         {greeting(manilaHour())}
-        {user.data?.username ? `, ${user.data.username}` : ""}
+        {user.data?.username ? `, ${user.data.username}` : ""}!
       </h1>
       <p className="mt-1 mb-5 text-sm" style={{ color: "var(--color-muted-foreground)" }}>
         {longDate(today)}

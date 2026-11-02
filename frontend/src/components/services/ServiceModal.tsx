@@ -28,7 +28,9 @@ export function ServiceModal({
   onClose: () => void;
 }) {
   const save = useSaveAppointmentType();
-  const [form, setForm] = useState(() => formFrom(service));
+  const [initial] = useState(() => formFrom(service));
+  const [form, setForm] = useState(initial);
+  const dirty = (Object.keys(form) as Array<keyof typeof form>).some((k) => form[k] !== initial[k]);
 
   const set = (key: "name" | "price" | "duration_minutes" | "color_hex") => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -66,6 +68,8 @@ export function ServiceModal({
       submitting={save.isPending}
       disabled={incomplete}
       error={save.error}
+      dirty={dirty}
+      discardTitle={service ? "Discard your changes?" : "Discard this new service?"}
     >
       <Field label="Name">
         <TextField required value={form.name} onChange={set("name")} maxLength={255} />

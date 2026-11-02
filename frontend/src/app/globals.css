@@ -65,7 +65,7 @@
   --shadow-dropdown:   0 8px 24px -4px rgb(30 34 16 / 0.14), 0 1px 3px 0 rgb(30 34 16 / 0.08);
 
   /* --- Layout --- */
-  --rail-width: 84px;
+  --rail-width: 90px;
   --header-height: 64px;
   --bottom-nav-height: 64px;
 }
@@ -186,6 +186,12 @@ body {
   border-color: var(--color-border);
 }
 .btn-secondary:hover { background: var(--color-surface-subtle); border-color: var(--color-border-strong); }
+/* Filter button and its menu share one olive-grey tint for hover and pressed. */
+.btn-filter:hover, .btn-filter[aria-expanded="true"] { background: #EAEBDF; border-color: #D2D4BF; }
+.filter-option:hover { background: #F1F2E8; }
+.filter-action { padding: 5px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600; transition: background 150ms ease; }
+.filter-action:hover:not(:disabled) { background: #EAEBDF; }
+.filter-action:disabled { opacity: 0.4; cursor: default; }
 
 .btn-ghost { background: transparent; color: var(--color-muted-foreground); }
 .btn-ghost:hover { background: var(--color-surface-subtle); color: var(--color-foreground); }
@@ -243,10 +249,10 @@ body {
 .patient-row:hover { background: var(--color-surface-raised); }
 
 /* The front-desk main area: room for the bottom bar on a phone, and for the
-   floating rail (24px in from the edge, plus its width) from 768px up. */
+   floating rail (16px in from the edge, plus its width) from 768px up. */
 .app-main { padding-bottom: var(--bottom-nav-height); }
 @media (min-width: 768px) {
-  .app-main { padding-bottom: 0; padding-left: calc(24px + var(--rail-width)); }
+  .app-main { padding-bottom: 0; padding-left: calc(16px + var(--rail-width)); }
 }
 
 /* Search inputs draw their own clear (×) button; hide the browser's, or there are two. */
@@ -276,21 +282,22 @@ input[type="search"]::-webkit-search-cancel-button { appearance: none; }
   height: 36px;
   padding: 0 18px;
   margin-right: -6px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-primary-hover);
   border-bottom: none;
   border-radius: 12px 12px 0 0;
-  background: var(--color-surface-subtle);
-  color: var(--color-muted-foreground);
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
   font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
   position: relative;
   transition: background 150ms ease, color 150ms ease;
 }
-.record-tab:hover { background: var(--color-surface); color: var(--color-foreground); z-index: 1; }
+.record-tab:hover { background: var(--color-primary-hover); z-index: 1; }
 .record-tab[aria-current="page"] {
   height: 42px;
   padding: 0 22px;
+  border-color: var(--color-border);
   background: var(--color-surface);
   color: var(--color-primary);
   box-shadow: inset 0 2px 0 var(--color-primary);

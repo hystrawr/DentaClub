@@ -8,7 +8,7 @@ import { PatientInfoForm } from "@/components/patient-record/PatientInfoForm";
  * Information tab.
  *
  * The backdrop does not close it: a misclick would lose a whole form's
- * answers. Cancel and the close button ask first when anything was typed.
+ * answers. Cancel asks first, in an in-app dialog, when anything was typed.
  */
 export function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;

@@ -101,7 +101,7 @@ const fingerprint = (rows: Cells[]) => JSON.stringify(rows.filter((r) => !isBlan
  *
  * Procedure suggests the clinic's services; naming one fills an empty Amount
  * Charged with its price. The price is copied into the row, so changing it in
- * Settings later never rewrites what a patient was charged.
+ * Services later never rewrites what a patient was charged.
  */
 export function TreatmentSheet({ patientId, records }: { patientId: string; records: TreatmentRecord[] }) {
   const save = useSaveTreatmentRecords(patientId);

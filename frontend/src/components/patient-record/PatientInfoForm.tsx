@@ -611,7 +611,7 @@ export function PatientInfoForm(
         {shows(3) && (
           <Block title="Do you have or have you had any of the following?" tag="Check all that apply">
             <ConditionsChecklist value={answers.conditions} onChange={(conditions) => answer({ conditions })} />
-            <F label="Other conditions" className="mt-3 max-w-[420px]">
+            <F label="Other conditions" className="mt-3 max-w-105">
               <input
                 className="record-input"
                 value={answers.other_conditions ?? ""}

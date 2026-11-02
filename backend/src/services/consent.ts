@@ -6,6 +6,7 @@ import { prisma } from "../lib/prisma.js";
 import { HttpError, notFound, ruleViolation } from "../lib/http-error.js";
 import { ageFrom, dateString, isoOffset } from "../lib/dates.js";
 import { renderPdf } from "../lib/pdf.js";
+import { assertActivePatient } from "../lib/patients.js";
 
 // The clinic's one consent form, signed on the clinic's device.
 //
@@ -57,6 +58,7 @@ export interface SignInput {
 export async function sign(patientId: string, input: SignInput): Promise<Consent> {
   const patient = await prisma.patient.findUnique({ where: { id: patientId } });
   if (!patient) throw notFound(`No patient ${patientId}`);
+  await assertActivePatient(patientId);
 
   const form = await readForm();
   if (input.formVersion !== form.version) {

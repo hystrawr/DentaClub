@@ -2,9 +2,11 @@ import { Router } from "express";
 import { z } from "zod";
 import type { Patient, Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
+import { requireAdmin } from "../lib/auth.js";
 import { HttpError, notFound } from "../lib/http-error.js";
 import { ageFrom, dateString, isoOffset } from "../lib/dates.js";
 import { historyData, saveHistory } from "../lib/medical-history.js";
+import { assertActivePatient } from "../lib/patients.js";
 
 // Patients, in DentalOS's wire format (snake_case, `{ data }` envelope) so the
 // ported frontend reads them unchanged. Mounted at /api/patients.
@@ -69,6 +71,7 @@ function patientSummary(p: Patient) {
 function patientDetail(p: Patient) {
   return {
     ...patientSummary(p),
+    is_active: p.isActive,
     middle_name: p.middleName,
     address: p.address,
     occupation: p.occupation,
@@ -139,6 +142,7 @@ const sameText = (value: string) => ({ equals: value, mode: "insensitive" as con
 function findNameClash(db: Prisma.TransactionClient, name: Name, exceptId?: string) {
   return db.patient.findFirst({
     where: {
+      isActive: true,
       firstName: sameText(name.firstName),
       lastName: sameText(name.lastName),
       ...(name.middleName ? { middleName: sameText(name.middleName) } : { OR: [{ middleName: null }, { middleName: "" }] }),
@@ -182,20 +186,25 @@ function toData(dto: PatientInput) {
  * Every patient, A–Z by last name then first name, each with their last
  * completed visit and next booked appointment (and who it is with).
  * Search matches first name, last name or mobile number.
+ * `?status=inactive` lists removed patients instead, so they can be found and restored.
  */
 patientsRouter.get("/", async (req, res) => {
   const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+  const inactive = req.query.status === "inactive";
 
   const patients = await prisma.patient.findMany({
-    where: search
-      ? {
-          OR: [
-            { firstName: { contains: search, mode: "insensitive" } },
-            { lastName: { contains: search, mode: "insensitive" } },
-            { mobile: { contains: search } },
-          ],
-        }
-      : undefined,
+    where: {
+      isActive: !inactive,
+      ...(search
+        ? {
+            OR: [
+              { firstName: { contains: search, mode: "insensitive" } },
+              { lastName: { contains: search, mode: "insensitive" } },
+              { mobile: { contains: search } },
+            ],
+          }
+        : {}),
+    },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { id: "asc" }],
   });
 
@@ -282,6 +291,7 @@ patientsRouter.post("/", async (req, res) => {
 
 /** PATCH /api/patients/:id — partial update. */
 patientsRouter.patch("/:id", async (req, res) => {
+  await assertActivePatient(req.params.id);
   const dto = updatePatient.parse(req.body);
   const id = req.params.id;
   const patient = await prisma.$transaction(async (tx) => {
@@ -303,8 +313,54 @@ patientsRouter.patch("/:id", async (req, res) => {
   res.json({ data: patientDetail(patient) });
 });
 
-/** DELETE /api/patients/:id — also removes their chart, consents and documents (appointments are kept, without a patient). */
+/**
+ * DELETE /api/patients/:id — takes the patient out of the directory; their
+ * chart, consents and appointments are kept. Refused while they still have an
+ * upcoming appointment, so the front desk cancels it first.
+ */
 patientsRouter.delete("/:id", async (req, res) => {
-  await prisma.patient.delete({ where: { id: req.params.id } });
+  const id = req.params.id;
+  const upcoming = await prisma.appointment.findMany({
+    where: {
+      patientId: id,
+      status: { in: ["scheduled", "confirmed", "arrived", "in_chair"] },
+      scheduledEnd: { gte: new Date() },
+    },
+    orderBy: { scheduledStart: "asc" },
+    select: { id: true, scheduledStart: true },
+  });
+  const [next] = upcoming;
+  if (next) {
+    // "Nov 5, 10:00 AM" on the clinic's clock.
+    const when = next.scheduledStart.toLocaleString("en-PH", {
+      timeZone: "Asia/Manila",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    const message =
+      upcoming.length === 1
+        ? `This patient has an appointment on ${when}. Cancel it first.`
+        : `This patient has ${upcoming.length} upcoming appointments, the next on ${when}. Cancel them first.`;
+    throw new HttpError(409, message, undefined, {
+      upcoming_appointments: upcoming.length,
+      next_appointment: { appointment_id: next.id, start: isoOffset(next.scheduledStart) },
+    });
+  }
+  await prisma.patient.update({ where: { id }, data: { isActive: false } });
   res.status(204).end();
+});
+
+/** POST /api/patients/:id/restore — puts a removed patient back in the directory. Admins only. */
+patientsRouter.post("/:id/restore", requireAdmin, async (req, res) => {
+  const id = req.params.id;
+  const patient = await prisma.$transaction(async (tx) => {
+    const current = await tx.patient.findUnique({ where: { id } });
+    if (!current) throw notFound("Patient not found");
+    // Someone may have registered a patient with the same name since; don't make two.
+    await assertNameFree(tx, current, id);
+    return tx.patient.update({ where: { id }, data: { isActive: true } });
+  });
+  res.json({ data: patientDetail(patient) });
 });

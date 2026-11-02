@@ -2,6 +2,7 @@ import type { Appointment, AppointmentStatus, Prisma } from "../../generated/pri
 import { prisma } from "../../lib/prisma.js";
 import { HttpError, invalidField, notFound, ruleViolation } from "../../lib/http-error.js";
 import { isDateString, manilaDayEnd, manilaDayStart } from "../../lib/dates.js";
+import { assertActivePatient } from "../../lib/patients.js";
 import { appointmentResource } from "./mapper.js";
 
 // Ported from DentalOS apps/api/src/scheduling/appointment.service.ts.
@@ -120,6 +121,7 @@ export async function book(dto: BookInput) {
   if (dto.patient_id && !(await prisma.patient.findUnique({ where: { id: dto.patient_id }, select: { id: true } }))) {
     throw invalidField("patient_id");
   }
+  if (dto.patient_id) await assertActivePatient(dto.patient_id);
 
   let type = null;
   if (dto.appointment_type_id) {

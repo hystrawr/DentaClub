@@ -103,7 +103,7 @@ export default function ServicesPage() {
         ) : (
           <>
             {/* Phones: one card per service instead of the wide table. */}
-            <ul className="md:hidden flex-auto min-h-[160px] overflow-auto">
+            <ul className="md:hidden flex-auto min-h-40 overflow-auto">
               {rows.map((t) => (
                 <li
                   key={t.id}
@@ -132,8 +132,8 @@ export default function ServicesPage() {
               ))}
             </ul>
 
-            <div className="hidden md:block flex-auto min-h-[160px] overflow-auto">
-              <table className="w-full min-w-[760px] border-collapse text-sm">
+            <div className="hidden md:block flex-auto min-h-40 overflow-auto">
+              <table className="w-full min-w-190 border-collapse text-sm">
                 <thead className="sticky-head">
                   <tr>
                     <th className="w-16" aria-label="Colour" />
@@ -156,7 +156,7 @@ export default function ServicesPage() {
                       </td>
                       <td className="px-4 py-3 font-semibold" style={{ color: "var(--color-foreground)" }}>
                         {t.name}
-                        {t.is_block_time && <span className="chip chip-completed ml-1.5 !py-0 !text-[11px]">Block time</span>}
+                        {t.is_block_time && <span className="chip chip-completed ml-1.5 py-0! text-[11px]!">Block time</span>}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap" style={{ color: "var(--color-foreground)" }}>
                         {t.duration_minutes} min
@@ -176,7 +176,7 @@ export default function ServicesPage() {
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <button
                           type="button"
-                          className="inline-flex items-center rounded-full px-3 py-1.5 text-[13px] font-semibold hover:bg-[var(--color-surface-subtle)] disabled:opacity-50"
+                          className="inline-flex items-center rounded-full px-3 py-1.5 text-[13px] font-semibold hover:bg-surface-subtle disabled:opacity-50"
                           style={{ color: "var(--color-muted-foreground)" }}
                           disabled={toggle.isPending}
                           onClick={() => toggle.mutate({ id: t.id, is_active: !t.is_active })}
@@ -185,7 +185,7 @@ export default function ServicesPage() {
                         </button>
                         <button
                           type="button"
-                          className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-semibold hover:bg-[var(--color-primary-light)]"
+                          className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-semibold hover:bg-primary-light"
                           style={{ color: "var(--color-primary)" }}
                           onClick={() => edit(t)}
                           aria-label={`Edit ${t.name}`}
@@ -234,7 +234,7 @@ function ServiceBadge({ service }: { service: AppointmentType }) {
 
 function StatusChip({ active }: { active: boolean }) {
   return (
-    <span className={`chip ${active ? "chip-confirmed" : "chip-completed"} !py-0 !text-[11px] shrink-0`}>
+    <span className={`chip ${active ? "chip-confirmed" : "chip-completed"} py-0! text-[11px]! shrink-0`}>
       {active ? "Active" : "Inactive"}
     </span>
   );
@@ -261,7 +261,7 @@ function SortHeader({ label, active, dir, onClick }: { label: string; active: bo
       <button
         type="button"
         onClick={onClick}
-        className="inline-flex items-center gap-1 text-xs font-medium hover:text-[var(--color-foreground)]"
+        className="inline-flex items-center gap-1 text-xs font-medium hover:text-foreground"
         style={{ color: active ? "var(--color-primary)" : "var(--color-muted-foreground)" }}
       >
         {label}

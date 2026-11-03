@@ -8,7 +8,7 @@ import { AppointmentPopover } from "@/components/schedule/AppointmentPopover";
 import { NewAppointmentModal } from "@/components/schedule/NewAppointmentModal";
 import { PatientAppointmentsPanel } from "@/components/schedule/PatientAppointmentsPanel";
 import { ScheduleCalendar, type CalendarGoTo } from "@/components/schedule/ScheduleCalendar";
-import { dateOf, longDate, manilaToday } from "@/lib/utils/manila";
+import { addMinutes, dateOf, longDate, manilaToday, nextBookableStart } from "@/lib/utils/manila";
 import type { Appointment } from "@/types/api";
 
 interface CreateDefaults {
@@ -38,6 +38,11 @@ export default function AppointmentsPage() {
   const [goTo, setGoTo] = useState<CalendarGoTo | null>(null);
 
   const openCreate = (defaults: Omit<CreateDefaults, "key">) => setCreating({ ...defaults, key: Date.now() });
+  // The next quarter-hour still to come, not a fixed 09:00 that may already have passed.
+  const openCreateNext = (patient?: { id: string; name: string }) => {
+    const { date, time } = nextBookableStart();
+    openCreate({ date, startTime: time, endTime: addMinutes(time, 30), patient });
+  };
   const closePopover = useCallback(() => setSelected(null), []);
   const select = useCallback((id: string, anchor: DOMRect) => setSelected({ id, anchor }), []);
   const closeSearched = useCallback(() => setSearched(null), []);
@@ -74,7 +79,7 @@ export default function AppointmentsPage() {
                 }}
                 onBook={() => {
                   setSearched(null);
-                  openCreate({ date: manilaToday(), startTime: "09:00", endTime: "09:30", patient: searched });
+                  openCreateNext(searched);
                 }}
               />
             )}
@@ -82,7 +87,7 @@ export default function AppointmentsPage() {
           <AppointmentFilter value={filter} onChange={setFilter} />
           <button
             className="btn btn-primary shrink-0"
-            onClick={() => openCreate({ date: manilaToday(), startTime: "09:00", endTime: "09:30" })}
+            onClick={() => openCreateNext()}
             aria-label="New Appointment"
           >
             <Plus size={15} strokeWidth={2.5} aria-hidden="true" />

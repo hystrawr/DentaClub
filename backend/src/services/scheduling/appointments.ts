@@ -103,17 +103,25 @@ export interface BookInput {
   notes?: string | null;
 }
 
+/** How far back a booking may start: a walk-in entered a few minutes late still books. */
+const PAST_GRACE_MS = 15 * 60_000;
+
 /**
- * Book an appointment. Conflicts are **not** checked here — `confirm()` does,
- * exactly as in DentalOS: a tentative booking may overlap, a confirmed one may not.
+ * Book an appointment.
  *
  * Added here: every referenced id is checked first so a typo is a 422 naming the
- * field rather than a database error.
+ * field rather than a database error. A start already in the past is refused,
+ * and so is an overlap with the dentist's, chair's or patient's live
+ * appointments — DentalOS only checked conflicts at `confirm()`, so tentative
+ * bookings could pile up on the same time.
  */
 export async function book(dto: BookInput) {
   const start = new Date(dto.scheduled_start);
   const end = new Date(dto.scheduled_end);
   assertRange(start, end);
+  if (start.getTime() < Date.now() - PAST_GRACE_MS) {
+    throw ruleViolation("Validation failed.", { scheduled_start: ["The scheduled start must not be in the past."] });
+  }
 
   const provider = await prisma.providerProfile.findUnique({ where: { id: dto.provider_profile_id } });
   if (!provider) throw invalidField("provider_profile_id");
@@ -140,20 +148,28 @@ export async function book(dto: BookInput) {
     throw invalidField("operatory_id");
   }
 
-  const appointment = await prisma.appointment.create({
-    data: {
+  return prisma.$transaction(async (tx) => {
+    const slot = {
       patientId: dto.patient_id ?? null,
       providerProfileId: dto.provider_profile_id,
-      appointmentTypeId: dto.appointment_type_id ?? null,
       operatoryId: dto.operatory_id ?? null,
-      status: "scheduled",
       scheduledStart: start,
       scheduledEnd: end,
-      notes: dto.notes ?? null,
-    },
-  });
+    };
+    // Not saved yet, so no id of its own to exclude from the overlap search.
+    await assertNoConflicts(tx, { id: "", ...slot });
 
-  return findOrFail(appointment.id);
+    const appointment = await tx.appointment.create({
+      data: {
+        ...slot,
+        appointmentTypeId: dto.appointment_type_id ?? null,
+        status: "scheduled",
+        notes: dto.notes ?? null,
+      },
+    });
+
+    return findOrFail(appointment.id, tx);
+  });
 }
 
 export interface UpdateInput {
@@ -222,14 +238,19 @@ export async function update(id: string, dto: UpdateInput) {
  * `start < other.end && end > other.start` — so back-to-back appointments do
  * not collide.
  */
-async function conflictFor(db: Db, appointment: Appointment, scope: "provider" | "operatory") {
+type Booking = Pick<Appointment, "id" | "patientId" | "providerProfileId" | "operatoryId" | "scheduledStart" | "scheduledEnd">;
+
+async function conflictFor(db: Db, appointment: Booking, scope: "provider" | "operatory" | "patient") {
   if (scope === "operatory" && !appointment.operatoryId) return null;
+  if (scope === "patient" && !appointment.patientId) return null;
 
   return db.appointment.findFirst({
     where: {
       ...(scope === "provider"
         ? { providerProfileId: appointment.providerProfileId }
-        : { operatoryId: appointment.operatoryId }),
+        : scope === "operatory"
+          ? { operatoryId: appointment.operatoryId }
+          : { patientId: appointment.patientId }),
       id: { not: appointment.id },
       status: { notIn: RELEASES_SLOT },
       scheduledStart: { lt: appointment.scheduledEnd },
@@ -249,19 +270,23 @@ async function conflictFor(db: Db, appointment: Appointment, scope: "provider" |
  * appointments at the same moment would both pass the check (DentalOS has this
  * race).
  */
-async function assertNoConflicts(tx: Db, appointment: Appointment) {
+async function assertNoConflicts(tx: Db, appointment: Booking) {
   const keys = [`provider:${appointment.providerProfileId}`];
   if (appointment.operatoryId) keys.push(`operatory:${appointment.operatoryId}`);
+  if (appointment.patientId) keys.push(`patient:${appointment.patientId}`);
   // Always the same order, so two transactions can never wait on each other.
   for (const key of keys.sort()) {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
   }
 
   const provider = await conflictFor(tx, appointment, "provider");
-  if (provider) throw schedulingConflict(provider, "Provider has a conflicting appointment.");
+  if (provider) throw schedulingConflict(provider, "This dentist already has an appointment at this time.");
 
   const operatory = await conflictFor(tx, appointment, "operatory");
-  if (operatory) throw schedulingConflict(operatory, "Operatory has a conflicting appointment.");
+  if (operatory) throw schedulingConflict(operatory, "This chair is already in use at this time.");
+
+  const patient = await conflictFor(tx, appointment, "patient");
+  if (patient) throw schedulingConflict(patient, "This patient already has an appointment at this time.");
 }
 
 const schedulingConflict = (conflicting: Appointment, message: string) =>

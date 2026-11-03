@@ -78,7 +78,7 @@ export function AppointmentRow({
           <p className="flex items-center gap-2 min-w-0 text-sm font-semibold" style={{ color: "var(--color-foreground)" }}>
             <span className="truncate">{patientName}</span>
             {t && (
-              <span className="chip !py-0 !text-[11px] shrink-0" style={{ background: t.bg, color: t.text }}>
+              <span className="chip py-0! text-[11px]! shrink-0" style={{ background: t.bg, color: t.text }}>
                 {t.label}
               </span>
             )}

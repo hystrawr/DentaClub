@@ -112,6 +112,17 @@ export function manilaMinutes(): number {
   return now.getUTCHours() * 60 + now.getUTCMinutes();
 }
 
+/**
+ * The first quarter-hour still to come on the clinic's clock, for pre-filling a
+ * booking: 09:00 before opening, tomorrow 09:00 once it is too late for today.
+ */
+export function nextBookableStart(): { date: string; time: string } {
+  const next = Math.ceil(manilaMinutes() / 15) * 15;
+  if (next > 23 * 60 + 30) return { date: addDays(manilaToday(), 1), time: "09:00" };
+  if (next < 9 * 60) return { date: manilaToday(), time: "09:00" };
+  return { date: manilaToday(), time: `${String(Math.floor(next / 60)).padStart(2, "0")}:${String(next % 60).padStart(2, "0")}` };
+}
+
 export function monthYear(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-PH", { month: "long", year: "numeric", timeZone: "UTC" });
 }

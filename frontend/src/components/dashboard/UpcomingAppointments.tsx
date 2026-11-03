@@ -172,7 +172,7 @@ export function UpcomingAppointments({ date }: { date: string }) {
           {plan.completed.length > 0 && (
             <button
               type="button"
-              className="mt-2.5 self-start shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold hover:bg-[var(--color-surface-subtle)]"
+              className="mt-2.5 self-start shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold hover:bg-surface-subtle"
               style={{ color: "var(--color-muted-foreground)" }}
               aria-expanded={showCompleted}
               onClick={() => setShowCompleted((v) => !v)}

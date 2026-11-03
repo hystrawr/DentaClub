@@ -135,6 +135,7 @@ function ApptBlock({
   return (
     <div
       data-appt-block="1"
+      data-appt-id={apt.id}
       className={cn(
         "absolute rounded-xl cursor-pointer overflow-hidden flex flex-col transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-md",
         roomy ? "px-2.5 py-2 gap-0.5" : "px-2 py-1",
@@ -343,6 +344,7 @@ function MonthGrid({
                     type="button"
                     key={apt.id}
                     data-appt-block="1"
+                    data-appt-id={apt.id}
                     onClick={(e) => onSelect(apt.id, e.currentTarget.getBoundingClientRect())}
                     className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left min-w-0"
                     style={{
@@ -387,18 +389,39 @@ function MonthGrid({
 
 /* ─── Main export ───────────────────────────────────────────────── */
 
+/** "Show this appointment": the page's patient search sends one; `key` makes each a new request. */
+export interface CalendarGoTo {
+  date: string;
+  appointmentId: string;
+  /** Where to open the popover if the appointment is not on the calendar (the filter hides it). */
+  fallback: DOMRect;
+  key: number;
+}
+
 export function ScheduleCalendar({
   selectedId,
   onSelect,
   filter,
+  goTo = null,
 }: {
   selectedId: string | null;
   onSelect: (appointmentId: string, anchor: DOMRect) => void;
   /** Hides appointments the page's filter leaves out. */
   filter?: (apt: Appointment) => boolean;
+  /** Move to this appointment's date and open it. */
+  goTo?: CalendarGoTo | null;
 }) {
   const [view, setView] = useState<CalendarView>("week");
   const [anchor, setAnchor] = useState(manilaToday);
+  // A new goTo moves the calendar now (during render, React's way to follow a
+  // prop) and leaves the appointment pending until its block is on screen.
+  const [handledGoTo, setHandledGoTo] = useState<number | null>(null);
+  const [pending, setPending] = useState<CalendarGoTo | null>(null);
+  if (goTo && goTo.key !== handledGoTo) {
+    setHandledGoTo(goTo.key);
+    setAnchor(goTo.date);
+    setPending(goTo);
+  }
   const today = manilaToday();
   const nowOffset = useNowOffset();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -426,7 +449,7 @@ export function ScheduleCalendar({
   const monthDates = useMemo(() => monthGridOf(anchor), [anchor]);
   const visibleDates = view === "month" ? monthDates : view === "week" ? week : [anchor];
 
-  const { data: appointments, isLoading, isError } = useAppointments(
+  const { data: appointments, isLoading, isFetching, isError } = useAppointments(
     view === "day" ? { date: anchor } : { date_from: visibleDates[0], date_to: visibleDates[visibleDates.length - 1] },
   );
 
@@ -448,6 +471,21 @@ export function ScheduleCalendar({
     // Only on first paint — later minutes must not yank the grid.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Once the new dates have loaded: bring the appointment into view, then open
+  // it beside its block (or beside the search panel's row if the filter hides it).
+  useEffect(() => {
+    if (!pending || isFetching) return;
+    const frame = requestAnimationFrame(() => {
+      const block = document.querySelector<HTMLElement>(`[data-appt-id="${pending.appointmentId}"]`);
+      block?.scrollIntoView({ block: "center", inline: "nearest" });
+      requestAnimationFrame(() => {
+        onSelect(pending.appointmentId, block ? block.getBoundingClientRect() : pending.fallback);
+        setPending(null);
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pending, isFetching, onSelect]);
 
   const step = (direction: 1 | -1) =>
     setAnchor(view === "month" ? addMonths(anchor, direction) : addDays(anchor, direction * (view === "week" ? 7 : 1)));
@@ -498,9 +536,7 @@ export function ScheduleCalendar({
           </button>
         </div>
 
-        <button onClick={() => setAnchor(manilaToday())} className="btn btn-secondary btn-sm" style={{ height: 34 }}>
-          Today
-        </button>
+        {/* Back to today: "Go to today" in the month picker (click the month name). */}
 
         {isLoading && (
           <div className="w-4 h-4 rounded-full border-2 animate-spin shrink-0" style={{ borderColor: "var(--color-primary)", borderTopColor: "transparent" }} aria-hidden="true" />

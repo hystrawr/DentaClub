@@ -16,29 +16,30 @@ import type { PatientListItem, PatientVisit } from "@/types/api";
 const PAGE_SIZE = 20;
 
 type SortKey = "last" | "first" | "visit" | "appointment";
-type AppointmentKey = "has" | "none";
+type AppointmentFilter = "all" | "has" | "none";
 /** Current patients, or the ones removed from the directory (to look up or restore). */
 type StatusFilter = "active" | "inactive";
 
 /**
- * What the list shows. Like the schedule's filter, appointments and dentists are
- * stored as exclusions, so a dentist added later shows up without anyone ticking them.
+ * What the list shows. Like the schedule's filter, ticking a dentist narrows to
+ * them, and no dentist ticked means every dentist.
  */
 export interface PatientFilter {
   status: StatusFilter;
-  hiddenAppointment: AppointmentKey[];
-  hiddenProviders: string[];
+  appointment: AppointmentFilter;
+  providers: string[];
 }
 
-/** No filter: every current patient, whatever their appointment or dentist. What "Clear filters" sets. */
-const DEFAULT_FILTER: PatientFilter = { status: "active", hiddenAppointment: [], hiddenProviders: [] };
+/** No filter: every current patient, whatever their appointment or dentist. What "Reset" goes back to. */
+const DEFAULT_FILTER: PatientFilter = { status: "active", appointment: "all", providers: [] };
 
 const STATUS_OPTIONS: Array<{ key: StatusFilter; label: string }> = [
   { key: "active", label: "Current patients" },
   { key: "inactive", label: "Removed patients" },
 ];
 
-const APPOINTMENT_OPTIONS: Array<{ key: AppointmentKey; label: string }> = [
+const APPOINTMENT_OPTIONS: Array<{ key: AppointmentFilter; label: string }> = [
+  { key: "all", label: "All patients" },
   { key: "has", label: "Has an upcoming appointment" },
   { key: "none", label: "No upcoming appointment" },
 ];
@@ -47,6 +48,19 @@ const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter(
 
 /** The dentist a patient is seeing next, or saw last. */
 const doctorOf = (p: PatientListItem) => (p.next_appointment ?? p.last_visit)?.provider ?? null;
+
+/**
+ * Whether a patient passes the appointment choice and dentist ticks (status is
+ * filtered on the server). Once a dentist is ticked, only their patients show,
+ * so patients with no dentist yet drop out, as unassigned appointments do on the schedule.
+ */
+function matchesPatientFilter(filter: PatientFilter, p: PatientListItem): boolean {
+  if (filter.appointment === "has" && !p.next_appointment) return false;
+  if (filter.appointment === "none" && p.next_appointment) return false;
+  if (filter.providers.length === 0) return true;
+  const doctor = doctorOf(p);
+  return doctor !== null && filter.providers.includes(doctor.id);
+}
 
 /** Sort values; a missing date sorts last whichever way the column runs. */
 const sortValue: Record<SortKey, (p: PatientListItem) => string | null> = {
@@ -82,15 +96,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
   const rows = useMemo(() => {
     const value = sortValue[sort.key];
     return (data ?? [])
-      .filter((p) => {
-        if (filter.hiddenAppointment.includes(p.next_appointment ? "has" : "none")) return false;
-        // Once any dentist is unticked, patients with no dentist drop out too.
-        if (filter.hiddenProviders.length > 0) {
-          const doctor = doctorOf(p);
-          if (!doctor || filter.hiddenProviders.includes(doctor.id)) return false;
-        }
-        return true;
-      })
+      .filter((p) => matchesPatientFilter(filter, p))
       .sort((a, b) => {
         const x = value(a);
         const y = value(b);
@@ -106,7 +112,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
   const current = Math.min(page, pages - 1);
   const shown = rows.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE);
   const filtered =
-    Boolean(search) || filter.status !== "active" || filter.hiddenAppointment.length > 0 || filter.hiddenProviders.length > 0;
+    Boolean(search) || filter.status !== "active" || filter.appointment !== "all" || filter.providers.length > 0;
   const today = manilaToday();
 
   // Any change to what is shown starts back on the first page.
@@ -446,13 +452,6 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
   const [draft, setDraft] = useState(value);
   const ref = useRef<HTMLDivElement>(null);
   const providers = useProviders();
-  const listed = (providers.data ?? []).filter((p) => p.is_active).map((p) => p.id);
-  // An empty list is never what anyone wants: a section with no box ticked can't be applied.
-  const problem = APPOINTMENT_OPTIONS.every((o) => draft.hiddenAppointment.includes(o.key))
-    ? "Tick at least one appointment option."
-    : listed.length > 0 && listed.every((id) => draft.hiddenProviders.includes(id))
-      ? "Tick at least one dentist."
-      : null;
 
   function apply() {
     onChange(draft);
@@ -497,9 +496,8 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
           width="w-72"
           footer={
             <FilterFooter
-              onClear={() => setDraft(DEFAULT_FILTER)}
-              clearDisabled={sameFilter(draft, DEFAULT_FILTER)}
-              problem={problem}
+              onReset={() => setDraft(DEFAULT_FILTER)}
+              resetDisabled={sameFilter(draft, DEFAULT_FILTER)}
               onCancel={() => setOpen(false)}
               onApply={apply}
               applyDisabled={sameFilter(draft, value)}
@@ -522,14 +520,15 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
             {APPOINTMENT_OPTIONS.map((o) => (
               <Option
                 key={o.key}
+                name="patient-appointment-filter"
                 label={o.label}
-                checked={!draft.hiddenAppointment.includes(o.key)}
-                onChange={() => setDraft((d) => ({ ...d, hiddenAppointment: toggle(d.hiddenAppointment, o.key) }))}
+                checked={draft.appointment === o.key}
+                onChange={() => setDraft((d) => ({ ...d, appointment: o.key }))}
               />
             ))}
           </Group>
           <hr className="my-2" style={{ borderColor: "var(--color-border)" }} />
-          <Group title="Dentist">
+          <Group title="Dentist" note={draft.providers.length === 0 ? "All dentists" : undefined}>
             {providers.isLoading && (
               <p className="px-1 py-1.5 text-xs" style={{ color: "var(--color-muted-foreground)" }}>
                 Loading…
@@ -542,8 +541,8 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
                   key={p.id}
                   label={p.name}
                   swatch={p.color_hex}
-                  checked={!draft.hiddenProviders.includes(p.id)}
-                  onChange={() => setDraft((d) => ({ ...d, hiddenProviders: toggle(d.hiddenProviders, p.id) }))}
+                  checked={draft.providers.includes(p.id)}
+                  onChange={() => setDraft((d) => ({ ...d, providers: toggle(d.providers, p.id) }))}
                 />
               ))}
           </Group>

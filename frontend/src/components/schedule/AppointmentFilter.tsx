@@ -6,7 +6,7 @@ import { useProviders } from "@/lib/api/appointments";
 import type { Appointment, AppointmentStatus } from "@/types/api";
 
 /** Statuses grouped the way the front desk thinks about them. */
-export const STATUS_GROUPS: Array<{ key: string; label: string; statuses: AppointmentStatus[] }> = [
+const STATUS_GROUPS: Array<{ key: string; label: string; statuses: AppointmentStatus[] }> = [
   { key: "booked", label: "Scheduled / Confirmed", statuses: ["scheduled", "confirmed"] },
   { key: "here", label: "Arrived / In chair", statuses: ["arrived", "in_chair"] },
   { key: "done", label: "Completed", statuses: ["completed"] },
@@ -14,24 +14,21 @@ export const STATUS_GROUPS: Array<{ key: string; label: string; statuses: Appoin
 ];
 
 /**
- * What the schedule hides. Stored as exclusions, so a dentist added later
- * shows up without anyone having to tick them.
+ * What the schedule narrows to. Ticking a box narrows to it; a section with
+ * nothing ticked shows everything, so a dentist added later shows up untouched.
  */
 export interface ScheduleFilter {
-  hiddenProviders: string[];
-  hiddenGroups: string[];
+  providers: string[];
+  groups: string[];
 }
 
-/** Cancelled and no-show appointments only clutter the week, so they start hidden. */
-export const DEFAULT_FILTER: ScheduleFilter = { hiddenProviders: [], hiddenGroups: ["released"] };
-
-/** No filter at all: every dentist and every status. What "Clear filters" sets. */
-const SHOW_EVERYTHING: ScheduleFilter = { hiddenProviders: [], hiddenGroups: [] };
+/** Nothing ticked: every dentist and every status. What "Reset" goes back to. */
+export const DEFAULT_FILTER: ScheduleFilter = { providers: [], groups: [] };
 
 export function matchesFilter(filter: ScheduleFilter, apt: Appointment): boolean {
-  if (apt.provider && filter.hiddenProviders.includes(apt.provider.id)) return false;
+  if (filter.providers.length > 0 && !(apt.provider && filter.providers.includes(apt.provider.id))) return false;
   const group = STATUS_GROUPS.find((g) => g.statuses.includes(apt.status));
-  return !group || !filter.hiddenGroups.includes(group.key);
+  return filter.groups.length === 0 || (group !== undefined && filter.groups.includes(group.key));
 }
 
 const toggle = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -57,14 +54,6 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
   const [draft, setDraft] = useState(value);
   const ref = useRef<HTMLDivElement>(null);
   const providers = useProviders();
-  const listed = (providers.data ?? []).filter((p) => p.is_active).map((p) => p.id);
-  // Showing nothing is never what anyone wants: a section with no box ticked can't be applied.
-  const problem =
-    listed.length > 0 && listed.every((id) => draft.hiddenProviders.includes(id))
-      ? "Tick at least one dentist."
-      : STATUS_GROUPS.every((g) => draft.hiddenGroups.includes(g.key))
-        ? "Tick at least one status."
-        : null;
 
   function apply() {
     onChange(draft);
@@ -109,35 +98,34 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
           width="w-64"
           footer={
             <FilterFooter
-              onClear={() => setDraft(SHOW_EVERYTHING)}
-              clearDisabled={sameFilter(draft, SHOW_EVERYTHING)}
-              problem={problem}
+              onReset={() => setDraft(DEFAULT_FILTER)}
+              resetDisabled={sameFilter(draft, DEFAULT_FILTER)}
               onCancel={() => setOpen(false)}
               onApply={apply}
               applyDisabled={sameFilter(draft, value)}
             />
           }
         >
-          <Group title="Dentist">
+          <Group title="Dentist" note={draft.providers.length === 0 ? "All dentists" : undefined}>
             {providers.isLoading && <p className="px-1 py-1.5 text-xs" style={{ color: "var(--color-muted-foreground)" }}>Loading…</p>}
             {providers.data?.filter((p) => p.is_active).map((p) => (
               <Option
                 key={p.id}
                 label={p.name}
                 swatch={p.color_hex}
-                checked={!draft.hiddenProviders.includes(p.id)}
-                onChange={() => setDraft((d) => ({ ...d, hiddenProviders: toggle(d.hiddenProviders, p.id) }))}
+                checked={draft.providers.includes(p.id)}
+                onChange={() => setDraft((d) => ({ ...d, providers: toggle(d.providers, p.id) }))}
               />
             ))}
           </Group>
           <hr className="my-2" style={{ borderColor: "var(--color-border)" }} />
-          <Group title="Status">
+          <Group title="Status" note={draft.groups.length === 0 ? "All statuses" : undefined}>
             {STATUS_GROUPS.map((g) => (
               <Option
                 key={g.key}
                 label={g.label}
-                checked={!draft.hiddenGroups.includes(g.key)}
-                onChange={() => setDraft((d) => ({ ...d, hiddenGroups: toggle(d.hiddenGroups, g.key) }))}
+                checked={draft.groups.includes(g.key)}
+                onChange={() => setDraft((d) => ({ ...d, groups: toggle(d.groups, g.key) }))}
               />
             ))}
           </Group>
@@ -167,23 +155,19 @@ export function FilterPanel({ width, footer, children }: { width: string; footer
 }
 
 /**
- * A Filter menu's foot: "Clear filters" (ticks everything back on, so
- * everything shows), then Cancel and Apply. Nothing on the screen changes
- * until Apply.
+ * A Filter menu's foot: "Reset" (back to the ticks the page starts with),
+ * then Cancel and Apply. Nothing on the screen changes until Apply.
  */
 export function FilterFooter({
-  onClear,
-  clearDisabled,
-  problem,
+  onReset,
+  resetDisabled,
   onCancel,
   onApply,
   applyDisabled,
 }: {
-  onClear: () => void;
-  /** True when nothing is filtered out already. */
-  clearDisabled: boolean;
-  /** Why the ticks can't be applied (a section with nothing ticked), or null. */
-  problem: string | null;
+  onReset: () => void;
+  /** True while the ticks already match the page's starting ones. */
+  resetDisabled: boolean;
   onCancel: () => void;
   onApply: () => void;
   /** True while the ticks match what is already applied. */
@@ -191,25 +175,22 @@ export function FilterFooter({
 }) {
   return (
     <>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs" role={problem ? "alert" : undefined} style={{ color: "var(--color-destructive)" }}>
-          {problem}
-        </span>
+      <div className="flex items-center justify-end">
         <button
           type="button"
           className="filter-action shrink-0"
           style={{ color: "var(--color-primary)" }}
-          disabled={clearDisabled}
-          onClick={onClear}
+          disabled={resetDisabled}
+          onClick={onReset}
         >
-          Clear filters
+          Reset
         </button>
       </div>
       <div className="mt-2 flex gap-2">
         <button type="button" className="btn btn-secondary btn-sm flex-1" onClick={onCancel}>
           Cancel
         </button>
-        <button type="button" className="btn btn-primary btn-sm flex-1" onClick={onApply} disabled={applyDisabled || problem !== null}>
+        <button type="button" className="btn btn-primary btn-sm flex-1" onClick={onApply} disabled={applyDisabled}>
           Apply
         </button>
       </div>
@@ -217,12 +198,16 @@ export function FilterFooter({
   );
 }
 
-/** A titled section of a Filter menu. Shared with the patient list's filter. */
-export function Group({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * A titled section of a Filter menu. `note` sits beside the title, e.g. "All
+ * dentists" while nothing in the section is ticked. Shared with the patient list's filter.
+ */
+export function Group({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
     <fieldset>
       <legend className="px-1 mb-1 text-xs font-medium" style={{ color: "var(--color-subtle-foreground)" }}>
         {title}
+        {note && <span className="font-normal" style={{ color: "var(--color-muted-foreground)" }}> · {note}</span>}
       </legend>
       {children}
     </fieldset>

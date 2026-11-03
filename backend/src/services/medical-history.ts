@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { MedicalHistory } from "../generated/prisma/client.js";
-import { isoOffset } from "./dates.js";
+import { isoOffset } from "../lib/dates.js";
 
 // The medical history's answers and how they map to columns: Blocks B and C
 // and Section 13 of the Patient Information Record. Shared by the medical

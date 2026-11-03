@@ -1,23 +1,19 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { Patient, Prisma } from "../generated/prisma/client.js";
-import { prisma } from "../lib/prisma.js";
+import type { Patient } from "../generated/prisma/client.js";
 import { requireAdmin } from "../lib/auth.js";
-import { HttpError, notFound } from "../lib/http-error.js";
 import { ageFrom, dateString, isoOffset } from "../lib/dates.js";
-import { historyData, saveHistory } from "../lib/medical-history.js";
-import { assertActivePatient } from "../lib/patients.js";
+import { saveHistory } from "../services/medical-history.js";
+import * as patients from "../services/patients.js";
+import { fullName } from "../services/patients.js";
 
 // Patients, in DentalOS's wire format (snake_case, `{ data }` envelope) so the
-// ported frontend reads them unchanged. Mounted at /api/patients.
+// ported frontend reads them unchanged. The rules live in services/patients.ts.
+// Mounted at /api/patients.
 export const patientsRouter = Router();
 
 const SEX = ["male", "female", "other"] as const;
 const CIVIL_STATUS = ["single", "married", "widowed", "separated"] as const;
-
-/** DentalOS: "Juan Santos Dela Cruz Jr." — middle name and suffix included when present. */
-const fullName = (p: { firstName: string; middleName: string | null; lastName: string; suffix: string | null }): string =>
-  `${p.firstName} ${p.middleName ?? ""} ${p.lastName} ${p.suffix ?? ""}`.replace(/\s+/g, " ").trim();
 
 /**
  * The Patient Information Record's own fields (Block A): wire name → column and
@@ -84,6 +80,10 @@ function patientDetail(p: Patient) {
   };
 }
 
+/** A visit in the directory: when, and with which dentist. */
+const visit = (a: { id: string; scheduledStart: Date; provider: { id: string; name: string } } | undefined) =>
+  a ? { appointment_id: a.id, start: isoOffset(a.scheduledStart), provider: a.provider } : null;
+
 /**
  * Optional text: a blank input becomes `null` (cleared), and an absent key is
  * left alone. DentalOS's edit form relies on those being different — a deleted
@@ -120,45 +120,11 @@ const createPatient = z.object({
   }),
 });
 
-/**
- * Registration: the patient, and optionally their medical history, saved
- * together. History is left out when nothing in it was answered, so a blank
- * checklist is never stored as "No" to every condition.
- */
+/** Registration can include the medical history, saved with the patient. */
 const registerPatient = createPatient.extend({ medical_history: saveHistory.optional() });
 
 /** Every field optional: absent = untouched, null = cleared (DentalOS's PartialType). */
 const updatePatient = createPatient.partial();
-
-type Name = { firstName: string; middleName: string | null; lastName: string };
-
-const sameText = (value: string) => ({ equals: value, mode: "insensitive" as const });
-
-/**
- * The patient already filed under this first, middle and last name, whatever
- * the capitals, or null. No middle name only matches no middle name.
- * `exceptId` is the patient being renamed, who may keep their own name.
- */
-function findNameClash(db: Prisma.TransactionClient, name: Name, exceptId?: string) {
-  return db.patient.findFirst({
-    where: {
-      isActive: true,
-      firstName: sameText(name.firstName),
-      lastName: sameText(name.lastName),
-      ...(name.middleName ? { middleName: sameText(name.middleName) } : { OR: [{ middleName: null }, { middleName: "" }] }),
-      ...(exceptId ? { NOT: { id: exceptId } } : {}),
-    },
-    select: { id: true, firstName: true, middleName: true, lastName: true, suffix: true },
-  });
-}
-
-/** Refuse a second patient with the same name (see findNameClash). */
-async function assertNameFree(db: Prisma.TransactionClient, name: Name, exceptId?: string) {
-  const clash = await findNameClash(db, name, exceptId);
-  if (clash) {
-    throw new HttpError(409, `A patient named ${fullName(clash)} already exists.`, undefined, { existing_patient_id: clash.id });
-  }
-}
 
 type PatientInput = z.infer<typeof updatePatient>;
 
@@ -183,60 +149,16 @@ function toData(dto: PatientInput) {
 
 /**
  * GET /api/patients?search=dela
- * Every patient, A–Z by last name then first name, each with their last
- * completed visit and next booked appointment (and who it is with).
- * Search matches first name, last name or mobile number.
- * `?status=inactive` lists removed patients instead, so they can be found and restored.
+ * `?status=inactive` lists removed patients instead.
  */
 patientsRouter.get("/", async (req, res) => {
   const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
-  const inactive = req.query.status === "inactive";
-
-  const patients = await prisma.patient.findMany({
-    where: {
-      isActive: !inactive,
-      ...(search
-        ? {
-            OR: [
-              { firstName: { contains: search, mode: "insensitive" } },
-              { lastName: { contains: search, mode: "insensitive" } },
-              { mobile: { contains: search } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { id: "asc" }],
-  });
-
-  const ids = patients.map((p) => p.id);
-  const withProvider = { provider: { select: { id: true, name: true } } } as const;
-
-  // One row per patient: their latest completed visit and their soonest booked appointment.
-  const [lastVisits, nextAppointments] = await Promise.all([
-    prisma.appointment.findMany({
-      where: { patientId: { in: ids }, status: "completed" },
-      orderBy: [{ patientId: "asc" }, { scheduledStart: "desc" }],
-      distinct: ["patientId"],
-      include: withProvider,
-    }),
-    prisma.appointment.findMany({
-      where: { patientId: { in: ids }, status: { in: ["scheduled", "confirmed"] }, scheduledStart: { gte: new Date() } },
-      orderBy: [{ patientId: "asc" }, { scheduledStart: "asc" }],
-      distinct: ["patientId"],
-      include: withProvider,
-    }),
-  ]);
-
-  const visit = (a: (typeof lastVisits)[number] | undefined) =>
-    a ? { appointment_id: a.id, start: isoOffset(a.scheduledStart), provider: a.provider } : null;
-  const lastByPatient = new Map(lastVisits.map((a) => [a.patientId, a]));
-  const nextByPatient = new Map(nextAppointments.map((a) => [a.patientId, a]));
-
+  const rows = await patients.list(search, req.query.status === "inactive");
   res.json({
-    data: patients.map((p) => ({
-      ...patientSummary(p),
-      last_visit: visit(lastByPatient.get(p.id)),
-      next_appointment: visit(nextByPatient.get(p.id)),
+    data: rows.map((row) => ({
+      ...patientSummary(row.patient),
+      last_visit: visit(row.lastVisit),
+      next_appointment: visit(row.nextAppointment),
     })),
   });
 });
@@ -250,22 +172,18 @@ const nameCheck = createPatient.pick({ first_name: true, middle_name: true, last
  */
 patientsRouter.get("/name-check", async (req, res) => {
   const dto = nameCheck.parse(req.query);
-  const clash = await findNameClash(prisma, { firstName: dto.first_name, middleName: dto.middle_name ?? null, lastName: dto.last_name });
+  const clash = await patients.findNameClash({ firstName: dto.first_name, middleName: dto.middle_name ?? null, lastName: dto.last_name });
   res.json({ data: clash ? { exists: true, id: clash.id, full_name: fullName(clash) } : { exists: false } });
 });
 
 patientsRouter.get("/:id", async (req, res) => {
-  const patient = await prisma.patient.findUnique({ where: { id: req.params.id } });
-  if (!patient) throw notFound("Patient not found");
-  res.json({ data: patientDetail(patient) });
+  res.json({ data: patientDetail(await patients.findOrFail(req.params.id)) });
 });
 
 patientsRouter.post("/", async (req, res) => {
   const { medical_history, ...dto } = registerPatient.parse(req.body);
-  const patient = await prisma.$transaction(async (tx) => {
-    await assertNameFree(tx, { firstName: dto.first_name, middleName: dto.middle_name ?? null, lastName: dto.last_name });
-    const created = await tx.patient.create({
-      data: {
+  const patient = await patients.register(
+    {
       firstName: dto.first_name,
       lastName: dto.last_name,
       dateOfBirth: new Date(dto.date_of_birth),
@@ -279,88 +197,26 @@ patientsRouter.post("/", async (req, res) => {
       referredBy: dto.referred_by ?? null,
       notes: dto.notes ?? null,
       ...recordData(dto),
-      },
-    });
-    if (medical_history) {
-      await tx.medicalHistory.create({ data: { patientId: created.id, ...historyData(medical_history) } });
-    }
-    return created;
-  });
+    },
+    medical_history,
+  );
   res.status(201).json({ data: patientDetail(patient) });
 });
 
 /** PATCH /api/patients/:id — partial update. */
 patientsRouter.patch("/:id", async (req, res) => {
-  await assertActivePatient(req.params.id);
+  await patients.assertActivePatient(req.params.id);
   const dto = updatePatient.parse(req.body);
-  const id = req.params.id;
-  const patient = await prisma.$transaction(async (tx) => {
-    if (dto.first_name !== undefined || dto.middle_name !== undefined || dto.last_name !== undefined) {
-      const current = await tx.patient.findUnique({ where: { id } });
-      if (!current) throw notFound("Patient not found");
-      await assertNameFree(
-        tx,
-        {
-          firstName: dto.first_name ?? current.firstName,
-          middleName: dto.middle_name !== undefined ? dto.middle_name : current.middleName,
-          lastName: dto.last_name ?? current.lastName,
-        },
-        id,
-      );
-    }
-    return tx.patient.update({ where: { id }, data: toData(dto) });
-  });
-  res.json({ data: patientDetail(patient) });
+  res.json({ data: patientDetail(await patients.update(req.params.id, toData(dto))) });
 });
 
-/**
- * DELETE /api/patients/:id — takes the patient out of the directory; their
- * chart, consents and appointments are kept. Refused while they still have an
- * upcoming appointment, so the front desk cancels it first.
- */
+/** DELETE /api/patients/:id — takes the patient out of the directory (see patients.remove). */
 patientsRouter.delete("/:id", async (req, res) => {
-  const id = req.params.id;
-  const upcoming = await prisma.appointment.findMany({
-    where: {
-      patientId: id,
-      status: { in: ["scheduled", "confirmed", "arrived", "in_chair"] },
-      scheduledEnd: { gte: new Date() },
-    },
-    orderBy: { scheduledStart: "asc" },
-    select: { id: true, scheduledStart: true },
-  });
-  const [next] = upcoming;
-  if (next) {
-    // "Nov 5, 10:00 AM" on the clinic's clock.
-    const when = next.scheduledStart.toLocaleString("en-PH", {
-      timeZone: "Asia/Manila",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-    const message =
-      upcoming.length === 1
-        ? `This patient has an appointment on ${when}. Cancel it first.`
-        : `This patient has ${upcoming.length} upcoming appointments, the next on ${when}. Cancel them first.`;
-    throw new HttpError(409, message, undefined, {
-      upcoming_appointments: upcoming.length,
-      next_appointment: { appointment_id: next.id, start: isoOffset(next.scheduledStart) },
-    });
-  }
-  await prisma.patient.update({ where: { id }, data: { isActive: false } });
+  await patients.remove(req.params.id);
   res.status(204).end();
 });
 
 /** POST /api/patients/:id/restore — puts a removed patient back in the directory. Admins only. */
 patientsRouter.post("/:id/restore", requireAdmin, async (req, res) => {
-  const id = req.params.id;
-  const patient = await prisma.$transaction(async (tx) => {
-    const current = await tx.patient.findUnique({ where: { id } });
-    if (!current) throw notFound("Patient not found");
-    // Someone may have registered a patient with the same name since; don't make two.
-    await assertNameFree(tx, current, id);
-    return tx.patient.update({ where: { id }, data: { isActive: true } });
-  });
-  res.json({ data: patientDetail(patient) });
+  res.json({ data: patientDetail(await patients.restore(req.params.id)) });
 });

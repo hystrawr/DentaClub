@@ -5,9 +5,9 @@ import {
   ODONTOGRAM_EVENT_TYPES,
   SUPERSESSION_TYPES,
   SURFACES,
-} from "../lib/chart.js";
+} from "../services/chart.js";
 import { HttpError } from "../lib/http-error.js";
-import { odontogramEventResource } from "../lib/serialize.js";
+import { odontogramEventResource } from "../services/odontogram-mapper.js";
 import * as odontogram from "../services/odontogram.js";
 
 // Mounted at /api/patients/:id/odontogram. `mergeParams` lets us read that :id.

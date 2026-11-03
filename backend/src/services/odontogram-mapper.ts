@@ -1,5 +1,5 @@
 import type { OdontogramEvent } from "../generated/prisma/client.js";
-import { isoOffset } from "./dates.js";
+import { isoOffset } from "../lib/dates.js";
 
 /**
  * FHIR `observation-status` words, so the frontend does a lookup rather than

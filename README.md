@@ -19,6 +19,8 @@ dentaclub/
 └── backend/    Express REST API + Prisma schema (port 4000)
 ```
 
+In `backend/src`, a route file reads the request and sends the response. Simple saving and loading is done right in the route. A feature with rules of its own (patients, appointments, consent, the dental chart, medical history) keeps those rules in `services/`. `lib/` holds general helpers that any feature can use: dates, errors and sign-in.
+
 ## Features
 
 ### Sign-in and roles

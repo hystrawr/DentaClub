@@ -2,7 +2,7 @@ import type { Appointment, AppointmentStatus, Prisma } from "../../generated/pri
 import { prisma } from "../../lib/prisma.js";
 import { HttpError, invalidField, notFound, ruleViolation } from "../../lib/http-error.js";
 import { isDateString, manilaDayEnd, manilaDayStart } from "../../lib/dates.js";
-import { assertActivePatient } from "../../lib/patients.js";
+import { assertActivePatient } from "../patients.js";
 import { appointmentResource } from "./mapper.js";
 
 // Ported from DentalOS apps/api/src/scheduling/appointment.service.ts.

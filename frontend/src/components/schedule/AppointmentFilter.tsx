@@ -25,6 +25,9 @@ export interface ScheduleFilter {
 /** Cancelled and no-show appointments only clutter the week, so they start hidden. */
 export const DEFAULT_FILTER: ScheduleFilter = { hiddenProviders: [], hiddenGroups: ["released"] };
 
+/** No filter at all: every dentist and every status. What "Clear filters" sets. */
+const SHOW_EVERYTHING: ScheduleFilter = { hiddenProviders: [], hiddenGroups: [] };
+
 export function matchesFilter(filter: ScheduleFilter, apt: Appointment): boolean {
   if (apt.provider && filter.hiddenProviders.includes(apt.provider.id)) return false;
   const group = STATUS_GROUPS.find((g) => g.statuses.includes(apt.status));
@@ -33,15 +36,40 @@ export function matchesFilter(filter: ScheduleFilter, apt: Appointment): boolean
 
 const toggle = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
-/** The Filter button and its menu: which dentists and which statuses the calendar shows. */
+/**
+ * Whether two filters say the same thing. Lists are compared as sets, so
+ * unticking a box and ticking it again counts as no change.
+ */
+export function sameFilter<T extends object>(a: T, b: T): boolean {
+  const norm = (f: T) =>
+    JSON.stringify(Object.entries(f).map(([k, v]) => [k, Array.isArray(v) ? [...v].sort() : v]));
+  return norm(a) === norm(b);
+}
+
+/**
+ * The Filter button and its menu: which dentists and which statuses the calendar shows.
+ *
+ * Ticking a box only changes the menu's working copy (`draft`); the calendar
+ * changes when Apply is pressed. Cancel, a click outside or Escape drop it.
+ */
 export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; onChange: (next: ScheduleFilter) => void }) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
   const ref = useRef<HTMLDivElement>(null);
   const providers = useProviders();
   const listed = (providers.data ?? []).filter((p) => p.is_active).map((p) => p.id);
-  const anyHidden = value.hiddenProviders.length + value.hiddenGroups.length > 0;
-  const anyShown =
-    listed.some((id) => !value.hiddenProviders.includes(id)) || STATUS_GROUPS.some((g) => !value.hiddenGroups.includes(g.key));
+  // Showing nothing is never what anyone wants: a section with no box ticked can't be applied.
+  const problem =
+    listed.length > 0 && listed.every((id) => draft.hiddenProviders.includes(id))
+      ? "Tick at least one dentist."
+      : STATUS_GROUPS.every((g) => draft.hiddenGroups.includes(g.key))
+        ? "Tick at least one status."
+        : null;
+
+  function apply() {
+    onChange(draft);
+    setOpen(false);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -64,7 +92,11 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
       <button
         type="button"
         className="btn btn-secondary btn-filter"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          // Each opening starts from what the calendar shows now.
+          if (!open) setDraft(value);
+          setOpen(!open);
+        }}
         aria-expanded={open}
         aria-haspopup="true"
       >
@@ -73,9 +105,18 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
       </button>
 
       {open && (
-        <div
-          className="absolute right-0 z-30 mt-2 w-64 max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-2xl p-3"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
+        <FilterPanel
+          width="w-64"
+          footer={
+            <FilterFooter
+              onClear={() => setDraft(SHOW_EVERYTHING)}
+              clearDisabled={sameFilter(draft, SHOW_EVERYTHING)}
+              problem={problem}
+              onCancel={() => setOpen(false)}
+              onApply={apply}
+              applyDisabled={sameFilter(draft, value)}
+            />
+          }
         >
           <Group title="Dentist">
             {providers.isLoading && <p className="px-1 py-1.5 text-xs" style={{ color: "var(--color-muted-foreground)" }}>Loading…</p>}
@@ -84,8 +125,8 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
                 key={p.id}
                 label={p.name}
                 swatch={p.color_hex}
-                checked={!value.hiddenProviders.includes(p.id)}
-                onChange={() => onChange({ ...value, hiddenProviders: toggle(value.hiddenProviders, p.id) })}
+                checked={!draft.hiddenProviders.includes(p.id)}
+                onChange={() => setDraft((d) => ({ ...d, hiddenProviders: toggle(d.hiddenProviders, p.id) }))}
               />
             ))}
           </Group>
@@ -95,34 +136,84 @@ export function AppointmentFilter({ value, onChange }: { value: ScheduleFilter; 
               <Option
                 key={g.key}
                 label={g.label}
-                checked={!value.hiddenGroups.includes(g.key)}
-                onChange={() => onChange({ ...value, hiddenGroups: toggle(value.hiddenGroups, g.key) })}
+                checked={!draft.hiddenGroups.includes(g.key)}
+                onChange={() => setDraft((d) => ({ ...d, hiddenGroups: toggle(d.hiddenGroups, g.key) }))}
               />
             ))}
           </Group>
-          <div className="mt-2 pt-2 flex items-center justify-between gap-2" style={{ borderTop: "1px solid var(--color-border)" }}>
-            <button
-              type="button"
-              className="filter-action"
-              style={{ color: "var(--color-muted-foreground)" }}
-              disabled={!anyShown}
-              onClick={() => onChange({ hiddenProviders: listed, hiddenGroups: STATUS_GROUPS.map((g) => g.key) })}
-            >
-              Clear all
-            </button>
-            <button
-              type="button"
-              className="filter-action"
-              style={{ color: "var(--color-primary)" }}
-              disabled={!anyHidden}
-              onClick={() => onChange({ hiddenProviders: [], hiddenGroups: [] })}
-            >
-              Show everything
-            </button>
-          </div>
-        </div>
+        </FilterPanel>
       )}
     </div>
+  );
+}
+
+/**
+ * A Filter menu's dropdown. Its options scroll inside it, and its footer stays
+ * at the bottom, so Apply is always in view however long the dentist list.
+ * Shared with the patient list's filter.
+ */
+export function FilterPanel({ width, footer, children }: { width: string; footer: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div
+      className={`absolute right-0 z-30 mt-2 ${width} max-w-[calc(100vw-2rem)] max-h-[70vh] flex flex-col rounded-2xl overflow-hidden`}
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
+    >
+      <div className="min-h-0 overflow-y-auto p-3">{children}</div>
+      <div className="shrink-0 px-3 pb-3 pt-2" style={{ borderTop: "1px solid var(--color-border)" }}>
+        {footer}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A Filter menu's foot: "Clear filters" (ticks everything back on, so
+ * everything shows), then Cancel and Apply. Nothing on the screen changes
+ * until Apply.
+ */
+export function FilterFooter({
+  onClear,
+  clearDisabled,
+  problem,
+  onCancel,
+  onApply,
+  applyDisabled,
+}: {
+  onClear: () => void;
+  /** True when nothing is filtered out already. */
+  clearDisabled: boolean;
+  /** Why the ticks can't be applied (a section with nothing ticked), or null. */
+  problem: string | null;
+  onCancel: () => void;
+  onApply: () => void;
+  /** True while the ticks match what is already applied. */
+  applyDisabled: boolean;
+}) {
+  return (
+    <>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs" role={problem ? "alert" : undefined} style={{ color: "var(--color-destructive)" }}>
+          {problem}
+        </span>
+        <button
+          type="button"
+          className="filter-action shrink-0"
+          style={{ color: "var(--color-primary)" }}
+          disabled={clearDisabled}
+          onClick={onClear}
+        >
+          Clear filters
+        </button>
+      </div>
+      <div className="mt-2 flex gap-2">
+        <button type="button" className="btn btn-secondary btn-sm flex-1" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="button" className="btn btn-primary btn-sm flex-1" onClick={onApply} disabled={applyDisabled || problem !== null}>
+          Apply
+        </button>
+      </div>
+    </>
   );
 }
 

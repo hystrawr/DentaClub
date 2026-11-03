@@ -123,7 +123,8 @@ export async function book(dto: BookInput) {
     throw ruleViolation("Validation failed.", { scheduled_start: ["The scheduled start must not be in the past."] });
   }
 
-  const provider = await prisma.providerProfile.findUnique({ where: { id: dto.provider_profile_id } });
+  // A retired dentist or service stays on old appointments but cannot be newly booked.
+  const provider = await prisma.providerProfile.findFirst({ where: { id: dto.provider_profile_id, isActive: true } });
   if (!provider) throw invalidField("provider_profile_id");
 
   if (dto.patient_id && !(await prisma.patient.findUnique({ where: { id: dto.patient_id }, select: { id: true } }))) {
@@ -133,7 +134,7 @@ export async function book(dto: BookInput) {
 
   let type = null;
   if (dto.appointment_type_id) {
-    type = await prisma.appointmentType.findUnique({ where: { id: dto.appointment_type_id } });
+    type = await prisma.appointmentType.findFirst({ where: { id: dto.appointment_type_id, isActive: true } });
     if (!type) throw invalidField("appointment_type_id");
   }
 
@@ -193,6 +194,10 @@ export async function update(id: string, dto: UpdateInput) {
     const start = dto.scheduled_start !== undefined ? new Date(dto.scheduled_start) : current.scheduledStart;
     const end = dto.scheduled_end !== undefined ? new Date(dto.scheduled_end) : current.scheduledEnd;
     assertRange(start, end);
+    // Same rule as book(): a new start time may not be in the past.
+    if (start.getTime() !== current.scheduledStart.getTime() && start.getTime() < Date.now() - PAST_GRACE_MS) {
+      throw ruleViolation("Validation failed.", { scheduled_start: ["The scheduled start must not be in the past."] });
+    }
 
     // A retired chair may stay on an appointment that already had it, but not be newly picked.
     if (

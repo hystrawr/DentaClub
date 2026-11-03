@@ -249,18 +249,6 @@ export interface CreateAppointmentPayload {
   notes?: string | null;
 }
 
-/** One row of the chairside board. */
-export interface BoardItem {
-  id: string;
-  patient_name: string | null;
-  appointment_type_name: string | null;
-  status: AppointmentStatus;
-  scheduled_start: ISODateTimeString;
-}
-
-/** `GET /api/chairside/board` — today's appointments keyed by chair name. */
-export type ChairsideBoard = Record<string, BoardItem[]>;
-
 export interface Provider {
   id: string;
   name: string;

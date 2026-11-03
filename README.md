@@ -57,10 +57,10 @@ dentaclub/
 - **Sign again** records a new signing. Earlier ones stay under "Previous consents", so nothing signed is ever lost.
 - Each signed copy keeps the wording that was signed, even if the form text is edited later.
 
-### Appointment queue and schedule
-- **Queue:** today's patients in one column per chair, with counts for still to come, waiting room, in the chair and done. Tap a patient to move them along: Confirm → Check In → Seat → Complete. Cancelling (with a reason) and marking a no-show are also available. The board refreshes every 30 seconds.
+### Appointments and schedule
+- **Status:** open an appointment to move it along: Confirm → Check In → Seat → Complete. Cancelling (with a reason) and marking a no-show are also available.
 - **Schedule:** week and day calendar in Philippine time. Drag on the calendar to start a booking. Overlapping appointments are shown side by side.
-- **Booking:** choose an appointment type (the length fills in automatically), patient, dentist and chair, then pick from the dentist's free times.
+- **Booking:** choose an appointment type (the length fills in automatically), patient, dentist and (optionally) chair, then pick from the dentist's free times.
 - **Double-booking protection:** an appointment can't be confirmed if the dentist or chair is already taken. The message names the clashing time.
 - Each patient has an Appointments tab listing upcoming and past visits.
 

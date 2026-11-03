@@ -309,7 +309,7 @@ input[type="search"]::-webkit-search-cancel-button { appearance: none; }
 /* =========================================================
    Patient record — folder tabs, the record panel, and the
    paper-form controls (fields, Yes/No toggles, allergy cards).
-   Used by app/(frontdesk)/patients/[id]/ and
+   Used by app/(main)/patients/[id]/ and
    components/patient-record/.
    ========================================================= */
 

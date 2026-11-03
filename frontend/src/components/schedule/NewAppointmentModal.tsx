@@ -4,15 +4,15 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { useAppointmentTypes, useCreateAppointment, useOperatories, useProviders, useSlots } from "@/lib/api/appointments";
 import { usePatients } from "@/lib/api/patients";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { FormError } from "@/components/ui/form";
-import { addMinutes, clock, manilaTimestamp, manilaToday } from "@/lib/utils/manila";
+import { addMinutes, clock, manilaMinutes, manilaTimestamp, manilaToday } from "@/lib/utils/manila";
 
 /**
  * Book an appointment (from DentalOS's NewAppointmentModal).
  *
- * Added to DentalOS's form: the appointment type (which sets the length), the
- * chair (without it every appointment lands under "Unassigned" on the queue
- * board), and a free-slot picker driven by the dentist's weekly hours. Times
+ * Added to DentalOS's form: the appointment type (which sets the length), an
+ * optional chair (checked for double-booking when set), and a free-slot picker driven by the dentist's weekly hours. Times
  * are sent with Manila's `+08:00` offset — DentalOS sent them bare, leaving the
  * timezone to whichever machine parsed them.
  *
@@ -61,8 +61,12 @@ export function NewAppointmentModal({
   const freeSteps = (slots.data ?? []).map((s) => s.start);
   const free = new Set(freeSteps);
   const stepsNeeded = Math.max(1, Math.ceil((duration ?? 30) / 15));
-  const fitting = freeSteps.filter((start) =>
-    Array.from({ length: stepsNeeded }, (_, i) => addMinutes(start, i * 15)).every((t) => free.has(t)),
+  // Today's steps that have already gone by are not offered.
+  const nowClock = addMinutes("00:00", manilaMinutes());
+  const fitting = freeSteps.filter(
+    (start) =>
+      !(date === manilaToday() && start < nowClock) &&
+      Array.from({ length: stepsNeeded }, (_, i) => addMinutes(start, i * 15)).every((t) => free.has(t)),
   );
 
   function chooseType(id: string) {
@@ -76,18 +80,23 @@ export function NewAppointmentModal({
     setEndTime(addMinutes(value, duration ?? 30));
   }
 
+  const today = manilaToday();
   const endBeforeStart = endTime <= startTime;
+  // Same 15-minute grace as the API, so a walk-in entered a little late still books.
+  const [startH = 0, startM = 0] = startTime.split(":").map(Number);
+  const startInPast = date < today || (date === today && startH * 60 + startM < manilaMinutes() - 15);
   const errors = {
     patient: submitted && !patientId && !blockTime ? "Please select a patient." : undefined,
     provider: submitted && !providerId ? "Please select a dentist." : undefined,
-    date: submitted && !date ? "Please select a date." : undefined,
+    date: submitted && !date ? "Please select a date." : submitted && date < today ? "The date has already passed." : undefined,
+    startTime: submitted && date === today && startInPast ? "This time has already passed." : undefined,
     endTime: submitted && endBeforeStart ? "End time must be after start time." : undefined,
   };
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitted(true);
-    if ((!patientId && !blockTime) || !providerId || !date || endBeforeStart) return;
+    if ((!patientId && !blockTime) || !providerId || !date || startInPast || endBeforeStart) return;
 
     create.mutate(
       {
@@ -114,7 +123,8 @@ export function NewAppointmentModal({
       <div className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose} aria-hidden="true" />
 
       <div role="dialog" aria-modal="true" aria-label="New Appointment" className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
-        <div className="card-premium w-full max-w-lg pointer-events-auto" style={{ maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
+        {/* A fixed height, so the free-time list or the patient matches never make the modal grow or shrink. */}
+        <div className="card-premium w-full max-w-lg pointer-events-auto" style={{ height: "min(640px, 92vh)", display: "flex", flexDirection: "column" }}>
           <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--color-border)" }}>
             <h2 className="text-sm font-semibold" style={{ color: "var(--color-foreground)" }}>
               New Appointment
@@ -129,77 +139,81 @@ export function NewAppointmentModal({
             <div className="modal-body px-5 py-4 space-y-4">
               {/* Who it is for first, then what: the type still sets the length, and block time (lunch) makes the patient optional. */}
               <Labelled label="Patient" htmlFor="patient-search" required={!blockTime} error={errors.patient}>
-                <input
-                  id="patient-search"
-                  className={control}
-                  style={controlStyle(Boolean(errors.patient))}
-                  placeholder={blockTime ? "Not needed for blocked time" : "Search by name…"}
-                  value={patientSearch}
-                  onChange={(e) => {
-                    setPatientSearch(e.target.value);
-                    setPatientId("");
-                  }}
-                  autoComplete="off"
-                />
-                {(patients.data?.length ?? 0) > 0 && patientSearch && !patientId && (
-                  <ul className="mt-1 rounded-lg overflow-hidden" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)", boxShadow: "var(--shadow-dropdown)" }}>
-                    {patients.data!.slice(0, 6).map((p) => (
-                      <li key={p.id}>
-                        <button
-                          type="button"
-                          className="w-full text-left px-3 py-2 text-sm table-row-hover"
-                          onClick={() => {
-                            setPatientId(p.id);
-                            setPatientSearch(p.full_name);
-                          }}
-                        >
-                          {p.full_name}
-                          <span className="text-xs ml-2" style={{ color: "var(--color-muted-foreground)" }}>
-                            {p.date_of_birth}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <div className="relative">
+                  <input
+                    id="patient-search"
+                    className={control}
+                    style={controlStyle(Boolean(errors.patient))}
+                    placeholder={blockTime ? "Not needed for blocked time" : "Search by name…"}
+                    value={patientSearch}
+                    onChange={(e) => {
+                      setPatientSearch(e.target.value);
+                      setPatientId("");
+                    }}
+                    autoComplete="off"
+                  />
+                  {/* Floats over the fields below instead of pushing them down. */}
+                  {(patients.data?.length ?? 0) > 0 && patientSearch && !patientId && (
+                    <ul className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg max-h-56 overflow-y-auto" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)", boxShadow: "var(--shadow-dropdown)" }}>
+                      {patients.data!.slice(0, 6).map((p) => (
+                        <li key={p.id}>
+                          <button
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm table-row-hover"
+                            onClick={() => {
+                              setPatientId(p.id);
+                              setPatientSearch(p.full_name);
+                            }}
+                          >
+                            {p.full_name}
+                            <span className="text-xs ml-2" style={{ color: "var(--color-muted-foreground)" }}>
+                              {p.date_of_birth}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </Labelled>
 
               <Labelled label="Appointment type" htmlFor="appt-type">
-                <select id="appt-type" className={control} style={controlStyle()} value={typeId} onChange={(e) => chooseType(e.target.value)}>
-                  <option value="">— Select type —</option>
-                  {activeTypes.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} · {t.duration_minutes} min{t.is_block_time ? " (blocked time)" : ""}
-                    </option>
-                  ))}
-                </select>
+                <Dropdown
+                  id="appt-type"
+                  value={typeId}
+                  onChange={chooseType}
+                  placeholder="— Select type —"
+                  options={activeTypes.map((t) => ({
+                    value: t.id,
+                    label: `${t.name} · ${t.duration_minutes} min${t.is_block_time ? " (blocked time)" : ""}`,
+                  }))}
+                />
               </Labelled>
 
               <div className="grid grid-cols-2 gap-3">
                 <Labelled label="Dentist" htmlFor="appt-provider" required error={errors.provider}>
-                  <select id="appt-provider" className={control} style={controlStyle(Boolean(errors.provider))} value={providerId} onChange={(e) => setProviderId(e.target.value)}>
-                    <option value="">— Select dentist —</option>
-                    {activeProviders.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Dropdown
+                    id="appt-provider"
+                    value={providerId}
+                    onChange={setProviderId}
+                    placeholder="— Select dentist —"
+                    invalid={Boolean(errors.provider)}
+                    options={activeProviders.map((p) => ({ value: p.id, label: p.name, swatch: p.color_hex ?? undefined }))}
+                  />
                 </Labelled>
                 <Labelled label="Chair" htmlFor="appt-chair">
-                  <select id="appt-chair" className={control} style={controlStyle()} value={chairId} onChange={(e) => setChairId(e.target.value)}>
-                    <option value="">Unassigned</option>
-                    {chairs.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Dropdown
+                    id="appt-chair"
+                    value={chairId}
+                    onChange={setChairId}
+                    placeholder="Unassigned"
+                    options={chairs.map((c) => ({ value: c.id, label: c.name }))}
+                  />
                 </Labelled>
               </div>
 
               <Labelled label="Date" htmlFor="appt-date" required error={errors.date}>
-                <input id="appt-date" type="date" className={control} style={controlStyle(Boolean(errors.date))} value={date} onChange={(e) => setDate(e.target.value)} />
+                <input id="appt-date" type="date" min={today} className={control} style={controlStyle(Boolean(errors.date))} value={date} onChange={(e) => setDate(e.target.value)} />
               </Labelled>
 
               {/* Free slots for the chosen dentist and date. */}
@@ -239,8 +253,8 @@ export function NewAppointmentModal({
               )}
 
               <div className="grid grid-cols-2 gap-3">
-                <Labelled label="Start" htmlFor="start-time" required>
-                  <input id="start-time" type="time" step={300} className={control} style={controlStyle()} value={startTime} onChange={(e) => chooseStart(e.target.value)} />
+                <Labelled label="Start" htmlFor="start-time" required error={errors.startTime}>
+                  <input id="start-time" type="time" step={300} className={control} style={controlStyle(Boolean(errors.startTime))} value={startTime} onChange={(e) => chooseStart(e.target.value)} />
                 </Labelled>
                 <Labelled label="End" htmlFor="end-time" required error={errors.endTime}>
                   <input id="end-time" type="time" step={300} className={control} style={controlStyle(Boolean(errors.endTime))} value={endTime} onChange={(e) => setEndTime(e.target.value)} />
@@ -258,11 +272,6 @@ export function NewAppointmentModal({
                   onChange={(e) => setNotes(e.target.value)}
                 />
               </Labelled>
-
-              <p className="text-xs" style={{ color: "var(--color-muted-foreground)" }}>
-                Booked as <strong>scheduled</strong>. The double-booking check runs when it is confirmed.
-              </p>
-
             </div>
 
             <div className="shrink-0 px-5 py-3 space-y-2" style={{ borderTop: "1px solid var(--color-border)" }}>

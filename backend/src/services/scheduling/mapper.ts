@@ -125,26 +125,3 @@ export function operatoryResource(o: Operatory & { location?: Location | null })
     is_active: o.isActive,
   };
 }
-
-/**
- * One row of the chairside board. Six fields in DentalOS — this is rendered on a
- * tablet and refetched every thirty seconds, so anything the board does not draw
- * does not belong in it. (`encounter_id` is dropped: there are no encounters here.)
- */
-export function boardItem(appointment: {
-  id: string;
-  status: string;
-  scheduledStart: Date;
-  patient?: { firstName: string; lastName: string } | null;
-  appointmentType?: { name: string } | null;
-}) {
-  return {
-    id: appointment.id,
-    patient_name: appointment.patient
-      ? `${appointment.patient.firstName} ${appointment.patient.lastName}`.trim()
-      : null,
-    appointment_type_name: appointment.appointmentType?.name ?? null,
-    status: appointment.status,
-    scheduled_start: isoOffset(appointment.scheduledStart),
-  };
-}

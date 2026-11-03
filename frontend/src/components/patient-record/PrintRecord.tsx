@@ -2,11 +2,11 @@
 
 import { Printer } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef } from "react";
-import PatientAppointmentsPage from "@/app/(frontdesk)/patients/[id]/appointments/page";
-import PatientChartPage from "@/app/(frontdesk)/patients/[id]/chart/page";
-import PatientConsentPage from "@/app/(frontdesk)/patients/[id]/consent/page";
-import PatientInfoPage from "@/app/(frontdesk)/patients/[id]/info/page";
-import PatientTreatmentPage from "@/app/(frontdesk)/patients/[id]/treatment/page";
+import PatientAppointmentsPage from "@/app/(main)/patients/[id]/appointments/page";
+import PatientChartPage from "@/app/(main)/patients/[id]/chart/page";
+import PatientConsentPage from "@/app/(main)/patients/[id]/consent/page";
+import PatientInfoPage from "@/app/(main)/patients/[id]/info/page";
+import PatientTreatmentPage from "@/app/(main)/patients/[id]/treatment/page";
 import { RECORD_TABS } from "./RecordTabs";
 
 const PAGES = {

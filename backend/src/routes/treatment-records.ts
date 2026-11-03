@@ -4,7 +4,7 @@ import type { TreatmentRecord } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 import { notFound } from "../lib/http-error.js";
 import { dateString } from "../lib/dates.js";
-import { assertActivePatient } from "../lib/patients.js";
+import { assertActivePatient } from "../services/patients.js";
 
 // The Treatment Record sheet: one row per procedure, typed in like a
 // spreadsheet. Mounted at /api.

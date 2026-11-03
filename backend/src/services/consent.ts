@@ -6,7 +6,7 @@ import { prisma } from "../lib/prisma.js";
 import { HttpError, notFound, ruleViolation } from "../lib/http-error.js";
 import { ageFrom, dateString, isoOffset } from "../lib/dates.js";
 import { renderPdf } from "../lib/pdf.js";
-import { assertActivePatient } from "../lib/patients.js";
+import { assertActivePatient } from "./patients.js";
 
 // The clinic's one consent form, signed on the clinic's device.
 //

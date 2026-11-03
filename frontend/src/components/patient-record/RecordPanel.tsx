@@ -4,7 +4,8 @@ import { useState } from "react";
 
 /**
  * Reset and Delete. Reset throws away unsaved edits; Delete asks first, in
- * place — the question replaces the buttons until it is answered.
+ * place — the question replaces the buttons until it is answered. When the
+ * record can't be deleted yet, pressing Delete says why instead of asking.
  */
 export function ResetDelete({
   onReset,
@@ -20,10 +21,23 @@ export function ResetDelete({
   /** The question asked before deleting, e.g. "Delete this patient and every record?" */
   confirmText: string;
   deleting?: boolean;
-  /** Why the record can't be deleted yet. Shown in place of Delete; Reset stays. */
+  /** Why the record can't be deleted yet. Shown once Delete is pressed, in place of the question. */
   blocked?: React.ReactNode;
 }) {
   const [confirming, setConfirming] = useState(false);
+
+  if (confirming && blocked && !deleting) {
+    return (
+      <div className="flex items-center gap-2 flex-wrap" role="alert">
+        <span className="text-xs font-medium" style={{ color: "var(--color-destructive)" }}>
+          {blocked}
+        </span>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setConfirming(false)}>
+          OK
+        </button>
+      </div>
+    );
+  }
 
   if (confirming || deleting) {
     return (
@@ -38,10 +52,8 @@ export function ResetDelete({
           type="button"
           className="btn btn-danger btn-sm"
           disabled={deleting}
-          onClick={() => {
-            onDelete();
-            setConfirming(false);
-          }}
+          // Stays open, so a refusal from the server (`blocked`) shows here too.
+          onClick={onDelete}
         >
           {deleting ? "Deleting…" : "Yes, delete"}
         </button>
@@ -54,15 +66,9 @@ export function ResetDelete({
       <button type="button" className="btn btn-secondary btn-sm" onClick={onReset} disabled={resetDisabled}>
         Reset
       </button>
-      {blocked ? (
-        <span className="text-xs font-medium" role="status" style={{ color: "var(--color-destructive)" }}>
-          {blocked}
-        </span>
-      ) : (
-        <button type="button" className="btn btn-ghost btn-sm" style={{ color: "var(--color-destructive)" }} onClick={() => setConfirming(true)}>
-          Delete
-        </button>
-      )}
+      <button type="button" className="btn btn-ghost btn-sm" style={{ color: "var(--color-destructive)" }} onClick={() => setConfirming(true)}>
+        Delete
+      </button>
     </>
   );
 }

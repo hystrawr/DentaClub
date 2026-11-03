@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, FileSignature, FileText, History, PenLine, RotateCcw } from "lucide-react";
-import { SignaturePad } from "@/components/shared/SignaturePad";
+import { SignaturePad } from "@/components/ui/SignaturePad";
 import { Field, FormError, TextField } from "@/components/ui/form";
 import { ApiError } from "@/lib/api/client";
 import { documentFileUrl, signatureUrl, useConsentForm, usePatientConsent, useSignConsent } from "@/lib/api/consent";

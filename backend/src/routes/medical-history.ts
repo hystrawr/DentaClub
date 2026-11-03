@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { notFound } from "../lib/http-error.js";
-import { historyData, historyResource, saveHistory, withConditions } from "../lib/medical-history.js";
-import { assertActivePatient } from "../lib/patients.js";
+import { historyData, historyResource, saveHistory, withConditions } from "../services/medical-history.js";
+import { assertActivePatient } from "../services/patients.js";
 
 // The medical history from the clinic's paper dental record, one per patient:
 // Blocks B and C and Section 13 of the Patient Information Record.

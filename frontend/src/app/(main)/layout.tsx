@@ -1,6 +1,6 @@
-import { AppHeader } from "@/components/frontdesk/AppHeader";
-import { Sidebar } from "@/components/frontdesk/Sidebar";
-import { SignInGate } from "@/components/frontdesk/SignInGate";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { SignInGate } from "@/components/layout/SignInGate";
 
 /**
  * Front-desk shell, behind the sign-in: the header on top, the navigation (a

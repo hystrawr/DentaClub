@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useOperatories, useRescheduleAppointment, useSlots } from "@/lib/api/appointments";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { FormError } from "@/components/ui/form";
 import { conflictNote } from "@/lib/utils/appointment-status";
 import { addMinutes, clock, dateOf, fullDate, manilaTimestamp, manilaToday, minutesOf, timeOf } from "@/lib/utils/manila";
@@ -181,14 +182,13 @@ export function RescheduleModal({ appointment, onClose }: { appointment: Appoint
                 <label htmlFor="resched-chair" className="text-xs font-medium block mb-1" style={{ color: "var(--color-foreground)" }}>
                   Chair
                 </label>
-                <select id="resched-chair" className={control} style={controlStyle} value={chairId} onChange={(e) => setChairId(e.target.value)}>
-                  <option value="">Unassigned</option>
-                  {chairs.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <Dropdown
+                  id="resched-chair"
+                  value={chairId}
+                  onChange={setChairId}
+                  placeholder="Unassigned"
+                  options={chairs.map((c) => ({ value: c.id, label: c.name }))}
+                />
               </div>
 
             </div>

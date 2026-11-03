@@ -13,7 +13,6 @@ import { appointmentsRouter } from "./routes/appointments.js";
 import { providersRouter } from "./routes/providers.js";
 import { clinicStructureRouter } from "./routes/clinic-structure.js";
 import { appointmentTypesRouter } from "./routes/appointment-types.js";
-import { chairsideRouter } from "./routes/chairside.js";
 import { HttpError } from "./lib/http-error.js";
 import { requireSignIn } from "./lib/auth.js";
 import { authRouter } from "./routes/auth.js";
@@ -51,7 +50,6 @@ app.use("/api", appointmentsRouter);
 app.use("/api", providersRouter);
 app.use("/api", clinicStructureRouter);
 app.use("/api/appointment-types", appointmentTypesRouter);
-app.use("/api/chairside", chairsideRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Route not found" });

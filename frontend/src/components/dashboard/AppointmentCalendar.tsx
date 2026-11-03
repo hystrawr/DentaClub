@@ -62,7 +62,7 @@ export function AppointmentCalendar({
               type="button"
               onClick={() => setMonth((m) => monthStart(m, step))}
               aria-label={label}
-              className="flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-raised)]"
+              className="flex items-center justify-center rounded-lg hover:bg-surface-raised"
               style={{ width: 28, height: 28, border: "1px solid var(--color-border)", color: "var(--color-muted-foreground)" }}
             >
               <Icon size={14} aria-hidden="true" />
@@ -101,8 +101,8 @@ export function AppointmentCalendar({
               aria-pressed={isSelected}
               aria-label={`${d}${isToday ? ", today" : ""}${booked.has(d) ? ", has appointments" : ""}`}
               className={cn(
-                "relative flex items-center justify-center rounded-[10px] text-[13px] transition-colors",
-                !isSelected && "hover:bg-[var(--color-surface-raised)]",
+                "relative flex items-center justify-center rounded-md text-[13px] transition-colors",
+                !isSelected && "hover:bg-surface-raised",
                 (isSelected || isToday) && "font-bold",
               )}
               style={{

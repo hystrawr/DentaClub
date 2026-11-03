@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layoutLanes } from "./ScheduleCalendar";
+import { layoutLanes } from "./layout-lanes";
 import type { Appointment } from "@/types/api";
 
 const apt = (id: string, start: string, end: string) =>

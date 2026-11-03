@@ -89,7 +89,7 @@ clinicStructureRouter.patch("/locations/:id", requireAdmin, async (req, res) => 
 
 /* ── Operatories ───────────────────────────────────────────────────────── */
 
-/** Ordered the way the chairside board draws them — `sort_order`, then name. */
+/** Ordered by `sort_order`, then name. */
 clinicStructureRouter.get("/operatories", async (req, res) => {
   const locationId = typeof req.query.location_id === "string" ? req.query.location_id : undefined;
   const rows = await prisma.operatory.findMany({

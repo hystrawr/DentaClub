@@ -317,13 +317,13 @@ model Location {
   @@map("locations")
 }
 
-/// A chair / treatment room. The chairside board groups today's patients by it.
+/// A chair / treatment room. Optional on an appointment; when set, no two live appointments may share it.
 model Operatory {
   id         String   @id @default(cuid())
   locationId String   @map("location_id")
   name       String
   color      String?  @db.VarChar(7)
-  /// Left-to-right order on the chairside board.
+  /// Order in the booking form's chair list.
   sortOrder  Int      @default(0) @map("sort_order") @db.SmallInt
   isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -429,7 +429,7 @@ model Appointment {
   appointmentType AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
   operatory       Operatory?       @relation(fields: [operatoryId], references: [id], onDelete: SetNull)
 
-  // Drives the day/week calendar and the chairside board.
+  // Drives the day/week calendar and the double-booking checks.
   @@index([scheduledStart])
   @@index([operatoryId, scheduledStart])
   @@index([providerProfileId, scheduledStart])

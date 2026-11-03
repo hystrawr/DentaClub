@@ -1,8 +1,8 @@
 import type { OdontogramEvent } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
-import { isValidFdi } from "../lib/chart.js";
+import { isValidFdi } from "./chart.js";
 import { notFound, ruleViolation } from "../lib/http-error.js";
-import { assertActivePatient } from "../lib/patients.js";
+import { assertActivePatient } from "./patients.js";
 
 /**
  * The odontogram — the tooth chart — is **append-only**. (Ported from DentalOS.)

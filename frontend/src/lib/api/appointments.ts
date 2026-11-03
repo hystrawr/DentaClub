@@ -5,7 +5,6 @@ import type {
   AppointmentStatus,
   AppointmentType,
   AppointmentTypePayload,
-  ChairsideBoard,
   CreateAppointmentPayload,
   Operatory,
   Provider,
@@ -47,12 +46,11 @@ export function useAppointment(id: string | undefined | null) {
 
 /* ─── Writes ────────────────────────────────────────────────────── */
 
-/** Everything that shows an appointment's status: the calendar, the detail panel, the board, the patient list. */
+/** Everything that shows an appointment's status: the calendar, the detail panel, the patient list. */
 function useInvalidateSchedule() {
   const qc = useQueryClient();
   return () => {
     void qc.invalidateQueries({ queryKey: ["appointments"] });
-    void qc.invalidateQueries({ queryKey: OPERATORY_BOARD_KEY });
     void qc.invalidateQueries({ queryKey: ["slots"] });
     void qc.invalidateQueries({ queryKey: ["patients", "list"] });
   };
@@ -142,20 +140,6 @@ export function useSlots(providerId: string | undefined, date: string | undefine
     queryFn: async () =>
       (await get<{ data: Slot[] }>(`/api/providers/${providerId}/slots?date=${date}&slot_minutes=${slotMinutes}`)).data,
     enabled: Boolean(providerId && date),
-  });
-}
-
-/* ─── Operatory board (the queue) ───────────────────────────────── */
-
-/** One key for the board, so every write that changes it can invalidate it. */
-const OPERATORY_BOARD_KEY = ["operatory-board", "today"] as const;
-
-export function useTodayOperatoryBoard() {
-  return useQuery({
-    queryKey: OPERATORY_BOARD_KEY,
-    queryFn: () => get<ChairsideBoard>("/api/chairside/board"),
-    // Thirty seconds is the board's contract with the chair (DentalOS rule #4).
-    refetchInterval: 30_000,
   });
 }
 

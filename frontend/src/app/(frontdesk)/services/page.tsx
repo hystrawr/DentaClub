@@ -57,14 +57,14 @@ export default function ServicesPage() {
   return (
     <>
       {/* Title and toolbar, laid out like the Patient List's. */}
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3 shrink-0">
         <div className="flex-1 min-w-60">
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--color-foreground)" }}>
             Services
           </h1>
+          {/* The count under the title, like the Patient List's. */}
           <p className="mt-1 text-sm" style={{ color: "var(--color-muted-foreground)" }}>
-            Services are booked as appointment types. Their price fills in on the Treatment sheet, where it can still be
-            changed for a discount.
+            {isLoading ? "Loading services…" : `${rows.length} service${rows.length === 1 ? "" : "s"} · ${activeCount} active`}
           </p>
         </div>
         <button className="btn btn-primary shrink-0" onClick={addNew}>
@@ -73,7 +73,7 @@ export default function ServicesPage() {
         </button>
       </div>
 
-      <div className="card-premium overflow-hidden">
+      <div className="card-premium overflow-hidden flex flex-col">
         {isError ? (
           <p className="px-5 py-6 text-sm" role="alert" style={{ color: "var(--color-destructive)" }}>
             The services could not be loaded. Reload the page to try again.
@@ -103,7 +103,7 @@ export default function ServicesPage() {
         ) : (
           <>
             {/* Phones: one card per service instead of the wide table. */}
-            <ul className="md:hidden">
+            <ul className="md:hidden flex-auto min-h-[160px] overflow-auto">
               {rows.map((t) => (
                 <li
                   key={t.id}
@@ -132,16 +132,16 @@ export default function ServicesPage() {
               ))}
             </ul>
 
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block flex-auto min-h-[160px] overflow-auto">
               <table className="w-full min-w-[760px] border-collapse text-sm">
-                <thead>
-                  <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                <thead className="sticky-head">
+                  <tr>
                     <th className="w-16" aria-label="Colour" />
                     <SortHeader label="Service" active={sort.key === "name"} dir={sort.dir} onClick={() => sortBy("name")} />
                     <SortHeader label="Length" active={sort.key === "length"} dir={sort.dir} onClick={() => sortBy("length")} />
                     <SortHeader label="Price" active={sort.key === "price"} dir={sort.dir} onClick={() => sortBy("price")} />
                     <Th>Status</Th>
-                    <th className="sr-only">Actions</th>
+                    <th><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -199,12 +199,6 @@ export default function ServicesPage() {
               </table>
             </div>
 
-            <div
-              className="px-4 py-3 text-[13px]"
-              style={{ background: "var(--color-surface-raised)", color: "var(--color-muted-foreground)" }}
-            >
-              {rows.length} service{rows.length === 1 ? "" : "s"} · {activeCount} active
-            </div>
           </>
         )}
         <div className="px-4 empty:hidden">

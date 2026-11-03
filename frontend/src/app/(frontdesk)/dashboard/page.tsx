@@ -18,8 +18,10 @@ function greeting(hour: number) {
 /**
  * The front-desk dashboard: today's patients, recent visits and upcoming appointments.
  *
- * Each card keeps its own content's height, so a quiet day does not leave a tall
- * empty box. On small screens the cards stack and the page scrolls as usual.
+ * From 1024px wide it fits the screen exactly, like the other pages: the bottom
+ * card takes the height that is left, and a long day's appointment list (or a
+ * calendar on a short window) scrolls inside it, so the page itself never does.
+ * On smaller screens the cards stack and the page scrolls as usual.
  */
 export default function DashboardPage() {
   const today = manilaToday();
@@ -28,27 +30,24 @@ export default function DashboardPage() {
   const todays = useAppointments({ date: today });
 
   const appointments = todays.data ?? [];
-  const left = appointments.filter((a) => ["scheduled", "confirmed", "arrived", "in_chair"].includes(a.status)).length;
 
   return (
-    <div className="flex flex-col px-5 sm:px-10 lg:px-12 py-6">
+    <div className="flex flex-col px-5 sm:px-10 lg:px-12 py-6 lg:h-full">
       <h1 className="text-6xl font-bold tracking-tight" style={{ color: "var(--color-foreground)" }}>
         {greeting(manilaHour())}
         {user.data?.username ? `, ${user.data.username}` : ""}!
       </h1>
       <p className="mt-1 mb-5 text-sm" style={{ color: "var(--color-muted-foreground)" }}>
         {longDate(today)}
-        {!todays.isLoading &&
-          ` · ${left === 0 ? "No more appointments today." : `You have ${left} appointment${left === 1 ? "" : "s"} left today.`}`}
       </p>
 
-      <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[260px_1fr] lg:flex-1 lg:min-h-0 lg:grid-rows-[auto_minmax(0,1fr)]">
         <PatientsTodayCard appointments={appointments} isLoading={todays.isLoading} />
         <RecentVisitsCard />
 
-        <section className="card-premium lg:col-span-2 grid md:grid-cols-[minmax(280px,360px)_1fr] overflow-hidden">
+        <section className="card-premium lg:col-span-2 grid md:grid-cols-[minmax(280px,360px)_1fr] lg:grid-rows-[minmax(0,1fr)] lg:min-h-0 overflow-hidden">
           <div
-            className="p-5 border-b md:border-b-0 md:border-r min-h-0"
+            className="p-5 border-b md:border-b-0 md:border-r min-h-0 lg:overflow-y-auto"
             style={{ borderColor: "var(--color-border)" }}
           >
             <AppointmentCalendar today={today} selected={selected} onSelect={setSelected} />

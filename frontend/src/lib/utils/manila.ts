@@ -80,6 +80,12 @@ export function shortDate(date: string, withYear = false): string {
   });
 }
 
+/** `2026-11-13` → `11/13/2026`: the short date for table columns. */
+export function numericDate(date: string): string {
+  const [y, m, d] = date.split("-");
+  return `${m}/${d}/${y}`;
+}
+
 export function fullDate(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
     month: "long",

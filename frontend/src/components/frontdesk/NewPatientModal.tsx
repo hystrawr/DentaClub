@@ -17,7 +17,7 @@ export function NewPatientModal({ open, onClose }: { open: boolean; onClose: () 
     <>
       <div className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.35)" }} aria-hidden="true" />
       <div role="dialog" aria-modal="true" aria-label="New Patient" className="fixed z-50 inset-0 flex items-center justify-center p-2 sm:p-4">
-        <div className="record-panel w-full max-w-6xl flex flex-col overflow-y-auto" style={{ maxHeight: "94vh", flex: "none", marginTop: 0, borderRadius: "var(--radius-xl)" }}>
+        <div className="record-panel w-full max-w-6xl flex flex-col" style={{ maxHeight: "94vh", flex: "none", marginTop: 0, borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
           <PatientInfoForm patient={null} onCancel={onClose} />
         </div>
       </div>

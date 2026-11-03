@@ -65,7 +65,10 @@
   --shadow-dropdown:   0 8px 24px -4px rgb(30 34 16 / 0.14), 0 1px 3px 0 rgb(30 34 16 / 0.08);
 
   /* --- Layout --- */
-  --rail-width: 90px;
+  --rail-width: 80px;
+  /* The rail's top edge, level with the dashboard's first row of cards: 24px
+     page padding + the 60px greeting + 44px for the date line under it. */
+  --rail-top: calc(var(--header-height) + 128px);
   --header-height: 64px;
   --bottom-nav-height: 64px;
 }
@@ -250,9 +253,47 @@ body {
 
 /* The front-desk main area: room for the bottom bar on a phone, and for the
    floating rail (16px in from the edge, plus its width) from 768px up. */
+/* The floating rail's left edge is the header logo's: 40px, then 48px from 1024px. */
+:root { --rail-left: 40px; }
+@media (min-width: 1024px) { :root { --rail-left: 48px; } }
+
 .app-main { padding-bottom: var(--bottom-nav-height); }
 @media (min-width: 768px) {
-  .app-main { padding-bottom: 0; padding-left: calc(16px + var(--rail-width)); }
+  .app-main { padding-bottom: 0; padding-left: calc(var(--rail-left) + var(--rail-width)); }
+}
+
+/* Every dropdown gets the same chevron, 12px in from its right edge, with room
+   kept so the chosen text never runs under it (the browser's own arrow sits
+   almost on the edge). !important: several selects set their background
+   inline, which would otherwise wipe the arrow out. */
+select:not([multiple]):not([size]) {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23585D45' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 16px 16px !important;
+  padding-right: 36px !important;
+}
+
+/* The scrolling middle of a pop-up window: only the fields scroll, so the title
+   above and the buttons below stay put, and the scrollbar never runs over them.
+   The gutter keeps room for the scrollbar, so it never sits on a field either. */
+.modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+/* A table inside a card that scrolls: the column headers stay put at the top
+   while the rows scroll under them. */
+.sticky-head th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  box-shadow: inset 0 -1px 0 var(--color-border);
 }
 
 /* Search inputs draw their own clear (×) button; hide the browser's, or there are two. */

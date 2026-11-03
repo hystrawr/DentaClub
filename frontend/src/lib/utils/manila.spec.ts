@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, addMinutes, clock, minutesOf, timeOf, weekOf, weekdayOf } from "./manila";
+import { addDays, addMinutes, clock, minutesOf, numericDate, timeOf, weekOf, weekdayOf } from "./manila";
 
 describe("manila calendar maths", () => {
   it("builds a Monday-to-Sunday week from any day in it", () => {
@@ -24,5 +24,12 @@ describe("manila calendar maths", () => {
     expect(clock("13:05")).toBe("1:05 PM");
     expect(clock("00:15")).toBe("12:15 AM");
     expect(weekdayOf("2026-10-05")).toBe(1);
+  });
+});
+
+describe("numericDate", () => {
+  it("writes a date as month/day/year with leading zeros", () => {
+    expect(numericDate("2026-11-13")).toBe("11/13/2026");
+    expect(numericDate("2026-01-05")).toBe("01/05/2026");
   });
 });

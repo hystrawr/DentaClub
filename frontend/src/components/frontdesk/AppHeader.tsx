@@ -16,8 +16,8 @@ export function AppHeader() {
 
   return (
     <header
-      // Logo lines up with the rail (24px); the user chip with the page's right margin.
-      className="flex items-center justify-between gap-4 px-5 sm:pl-6 sm:pr-10 lg:pr-12 shrink-0"
+      // Same margin on both sides, matching the pages: 20px on a phone, 40px from 640px, 48px from 1024px.
+      className="flex items-center justify-between gap-4 px-5 sm:px-10 lg:px-12 shrink-0"
       style={{
         height: "var(--header-height)",
         background: "var(--color-canvas)",

@@ -124,152 +124,157 @@ export function NewAppointmentModal({
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 overflow-y-auto" noValidate>
-            {/* Type first: it decides the length, and whether a patient is needed. */}
-            <Labelled label="Appointment type" htmlFor="appt-type">
-              <select id="appt-type" className={control} style={controlStyle()} value={typeId} onChange={(e) => chooseType(e.target.value)}>
-                <option value="">— Select type —</option>
-                {activeTypes.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} · {t.duration_minutes} min{t.is_block_time ? " (blocked time)" : ""}
-                  </option>
-                ))}
-              </select>
-            </Labelled>
-
-            <Labelled label="Patient" htmlFor="patient-search" required={!blockTime} error={errors.patient}>
-              <input
-                id="patient-search"
-                className={control}
-                style={controlStyle(Boolean(errors.patient))}
-                placeholder={blockTime ? "Not needed for blocked time" : "Search by name…"}
-                value={patientSearch}
-                onChange={(e) => {
-                  setPatientSearch(e.target.value);
-                  setPatientId("");
-                }}
-                autoComplete="off"
-              />
-              {(patients.data?.length ?? 0) > 0 && patientSearch && !patientId && (
-                <ul className="mt-1 rounded-lg overflow-hidden" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)", boxShadow: "var(--shadow-dropdown)" }}>
-                  {patients.data!.slice(0, 6).map((p) => (
-                    <li key={p.id}>
-                      <button
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm table-row-hover"
-                        onClick={() => {
-                          setPatientId(p.id);
-                          setPatientSearch(p.full_name);
-                        }}
-                      >
-                        {p.full_name}
-                        <span className="text-xs ml-2" style={{ color: "var(--color-muted-foreground)" }}>
-                          {p.date_of_birth}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Labelled>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Labelled label="Dentist" htmlFor="appt-provider" required error={errors.provider}>
-                <select id="appt-provider" className={control} style={controlStyle(Boolean(errors.provider))} value={providerId} onChange={(e) => setProviderId(e.target.value)}>
-                  <option value="">— Select dentist —</option>
-                  {activeProviders.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </Labelled>
-              <Labelled label="Chair" htmlFor="appt-chair">
-                <select id="appt-chair" className={control} style={controlStyle()} value={chairId} onChange={(e) => setChairId(e.target.value)}>
-                  <option value="">Unassigned</option>
-                  {chairs.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </Labelled>
-            </div>
-
-            <Labelled label="Date" htmlFor="appt-date" required error={errors.date}>
-              <input id="appt-date" type="date" className={control} style={controlStyle(Boolean(errors.date))} value={date} onChange={(e) => setDate(e.target.value)} />
-            </Labelled>
-
-            {/* Free slots for the chosen dentist and date. */}
-            {providerId && date && (
-              <div>
-                <p className="text-xs font-medium mb-1.5" style={{ color: "var(--color-foreground)" }}>
-                  Free times {duration ? `for ${duration} min` : ""}
-                </p>
-                {slots.isLoading ? (
-                  <div className="skeleton" style={{ height: 30 }} />
-                ) : fitting.length === 0 ? (
-                  <p className="text-xs" style={{ color: "var(--color-subtle-foreground)" }}>
-                    {slots.data?.length ? "No gap long enough on this day." : "This dentist has no working hours on this day."} You can still enter a time below.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto" role="listbox" aria-label="Free start times">
-                    {fitting.map((start) => (
-                      <button
-                        key={start}
-                        type="button"
-                        role="option"
-                        aria-selected={startTime === start}
-                        onClick={() => chooseStart(start)}
-                        className="text-xs font-semibold rounded-full px-2.5 py-1"
-                        style={{
-                          border: `1px solid ${startTime === start ? "var(--color-primary)" : "var(--color-border)"}`,
-                          background: startTime === start ? "var(--color-primary)" : "var(--color-surface)",
-                          color: startTime === start ? "#fff" : "var(--color-foreground)",
-                        }}
-                      >
-                        {clock(start)}
-                      </button>
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0" noValidate>
+            {/* Only the fields scroll (.modal-body); the title above and the buttons below stay put. */}
+            <div className="modal-body px-5 py-4 space-y-4">
+              {/* Who it is for first, then what: the type still sets the length, and block time (lunch) makes the patient optional. */}
+              <Labelled label="Patient" htmlFor="patient-search" required={!blockTime} error={errors.patient}>
+                <input
+                  id="patient-search"
+                  className={control}
+                  style={controlStyle(Boolean(errors.patient))}
+                  placeholder={blockTime ? "Not needed for blocked time" : "Search by name…"}
+                  value={patientSearch}
+                  onChange={(e) => {
+                    setPatientSearch(e.target.value);
+                    setPatientId("");
+                  }}
+                  autoComplete="off"
+                />
+                {(patients.data?.length ?? 0) > 0 && patientSearch && !patientId && (
+                  <ul className="mt-1 rounded-lg overflow-hidden" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)", boxShadow: "var(--shadow-dropdown)" }}>
+                    {patients.data!.slice(0, 6).map((p) => (
+                      <li key={p.id}>
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm table-row-hover"
+                          onClick={() => {
+                            setPatientId(p.id);
+                            setPatientSearch(p.full_name);
+                          }}
+                        >
+                          {p.full_name}
+                          <span className="text-xs ml-2" style={{ color: "var(--color-muted-foreground)" }}>
+                            {p.date_of_birth}
+                          </span>
+                        </button>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 )}
-              </div>
-            )}
+              </Labelled>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Labelled label="Start" htmlFor="start-time" required>
-                <input id="start-time" type="time" step={300} className={control} style={controlStyle()} value={startTime} onChange={(e) => chooseStart(e.target.value)} />
+              <Labelled label="Appointment type" htmlFor="appt-type">
+                <select id="appt-type" className={control} style={controlStyle()} value={typeId} onChange={(e) => chooseType(e.target.value)}>
+                  <option value="">— Select type —</option>
+                  {activeTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} · {t.duration_minutes} min{t.is_block_time ? " (blocked time)" : ""}
+                    </option>
+                  ))}
+                </select>
               </Labelled>
-              <Labelled label="End" htmlFor="end-time" required error={errors.endTime}>
-                <input id="end-time" type="time" step={300} className={control} style={controlStyle(Boolean(errors.endTime))} value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+
+              <div className="grid grid-cols-2 gap-3">
+                <Labelled label="Dentist" htmlFor="appt-provider" required error={errors.provider}>
+                  <select id="appt-provider" className={control} style={controlStyle(Boolean(errors.provider))} value={providerId} onChange={(e) => setProviderId(e.target.value)}>
+                    <option value="">— Select dentist —</option>
+                    {activeProviders.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </Labelled>
+                <Labelled label="Chair" htmlFor="appt-chair">
+                  <select id="appt-chair" className={control} style={controlStyle()} value={chairId} onChange={(e) => setChairId(e.target.value)}>
+                    <option value="">Unassigned</option>
+                    {chairs.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </Labelled>
+              </div>
+
+              <Labelled label="Date" htmlFor="appt-date" required error={errors.date}>
+                <input id="appt-date" type="date" className={control} style={controlStyle(Boolean(errors.date))} value={date} onChange={(e) => setDate(e.target.value)} />
               </Labelled>
+
+              {/* Free slots for the chosen dentist and date. */}
+              {providerId && date && (
+                <div>
+                  <p className="text-xs font-medium mb-1.5" style={{ color: "var(--color-foreground)" }}>
+                    Free times {duration ? `for ${duration} min` : ""}
+                  </p>
+                  {slots.isLoading ? (
+                    <div className="skeleton" style={{ height: 30 }} />
+                  ) : fitting.length === 0 ? (
+                    <p className="text-xs" style={{ color: "var(--color-subtle-foreground)" }}>
+                      {slots.data?.length ? "No gap long enough on this day." : "This dentist has no working hours on this day."} You can still enter a time below.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto" role="listbox" aria-label="Free start times">
+                      {fitting.map((start) => (
+                        <button
+                          key={start}
+                          type="button"
+                          role="option"
+                          aria-selected={startTime === start}
+                          onClick={() => chooseStart(start)}
+                          className="text-xs font-semibold rounded-full px-2.5 py-1"
+                          style={{
+                            border: `1px solid ${startTime === start ? "var(--color-primary)" : "var(--color-border)"}`,
+                            background: startTime === start ? "var(--color-primary)" : "var(--color-surface)",
+                            color: startTime === start ? "#fff" : "var(--color-foreground)",
+                          }}
+                        >
+                          {clock(start)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <Labelled label="Start" htmlFor="start-time" required>
+                  <input id="start-time" type="time" step={300} className={control} style={controlStyle()} value={startTime} onChange={(e) => chooseStart(e.target.value)} />
+                </Labelled>
+                <Labelled label="End" htmlFor="end-time" required error={errors.endTime}>
+                  <input id="end-time" type="time" step={300} className={control} style={controlStyle(Boolean(errors.endTime))} value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                </Labelled>
+              </div>
+
+              <Labelled label="Notes" htmlFor="appt-notes">
+                <textarea
+                  id="appt-notes"
+                  rows={2}
+                  className="w-full rounded-lg px-3 py-2 text-sm outline-none field-focus"
+                  style={{ ...controlStyle(), resize: "vertical" }}
+                  placeholder="Optional notes…"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </Labelled>
+
+              <p className="text-xs" style={{ color: "var(--color-muted-foreground)" }}>
+                Booked as <strong>scheduled</strong>. The double-booking check runs when it is confirmed.
+              </p>
+
             </div>
 
-            <Labelled label="Notes" htmlFor="appt-notes">
-              <textarea
-                id="appt-notes"
-                rows={2}
-                className="w-full rounded-lg px-3 py-2 text-sm outline-none field-focus"
-                style={{ ...controlStyle(), resize: "vertical" }}
-                placeholder="Optional notes…"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </Labelled>
-
-            <p className="text-xs" style={{ color: "var(--color-muted-foreground)" }}>
-              Booked as <strong>scheduled</strong>. The double-booking check runs when it is confirmed.
-            </p>
-
-            <FormError error={create.error} />
-
-            <div className="flex gap-3 pt-1">
-              <button type="submit" className="btn-gradient flex-1 py-2 text-sm font-semibold" disabled={create.isPending}>
-                {create.isPending ? "Booking…" : "Book Appointment"}
-              </button>
-              <button type="button" className="btn-ghost px-4 text-sm" onClick={onClose}>
-                Cancel
-              </button>
+            <div className="shrink-0 px-5 py-3 space-y-2" style={{ borderTop: "1px solid var(--color-border)" }}>
+              <FormError error={create.error} />
+              <div className="flex gap-3">
+                <button type="submit" className="btn-gradient flex-1 py-2 text-sm font-semibold" disabled={create.isPending}>
+                  {create.isPending ? "Booking…" : "Book Appointment"}
+                </button>
+                <button type="button" className="btn-ghost px-4 text-sm" onClick={onClose}>
+                  Cancel
+                </button>
+              </div>
             </div>
           </form>
         </div>

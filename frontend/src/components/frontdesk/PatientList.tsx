@@ -7,8 +7,8 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Search, Sli
 import { usePatients } from "@/lib/api/patients";
 import { useProviders } from "@/lib/api/appointments";
 import { initials } from "@/lib/utils/alphabet";
-import { addDays, clock, dateOf, fullDate, manilaToday, timeOf } from "@/lib/utils/manila";
-import { Group, Option } from "@/components/schedule/AppointmentFilter";
+import { clock, dateOf, manilaToday, numericDate, timeOf } from "@/lib/utils/manila";
+import { FilterFooter, FilterPanel, Group, Option, sameFilter } from "@/components/schedule/AppointmentFilter";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Skeleton } from "@/components/shared/Skeleton";
 import type { PatientListItem, PatientVisit } from "@/types/api";
@@ -30,6 +30,7 @@ export interface PatientFilter {
   hiddenProviders: string[];
 }
 
+/** No filter: every current patient, whatever their appointment or dentist. What "Clear filters" sets. */
 const DEFAULT_FILTER: PatientFilter = { status: "active", hiddenAppointment: [], hiddenProviders: [] };
 
 const STATUS_OPTIONS: Array<{ key: StatusFilter; label: string }> = [
@@ -106,7 +107,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
   const shown = rows.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE);
   const filtered =
     Boolean(search) || filter.status !== "active" || filter.hiddenAppointment.length > 0 || filter.hiddenProviders.length > 0;
-  const weekEnd = addDays(manilaToday(), 7);
+  const today = manilaToday();
 
   // Any change to what is shown starts back on the first page.
   function sortBy(key: SortKey) {
@@ -119,10 +120,12 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
     setPage(0);
   }
 
+  // The page is as tall as the screen: the title stays put, and when the list is
+  // longer than the room left, the rows scroll inside the card (see .sticky-head).
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 flex-1 min-h-0">
       {/* Title and toolbar */}
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3 shrink-0">
         <div className="flex-1 min-w-48">
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--color-foreground)" }}>
             Patient List
@@ -171,7 +174,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
       </div>
 
       {/* Table */}
-      <div className="card-premium overflow-hidden">
+      <div className="card-premium overflow-hidden flex flex-col">
         {isError ? (
           <p className="px-5 py-6 text-sm" role="alert" style={{ color: "var(--color-destructive)" }}>
             The patient list could not be loaded. Check that the backend is running, then reload.
@@ -204,11 +207,11 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
           )
         ) : (
           <>
-            {/* Phones: one card per patient instead of the wide table. */}
-            <ul className="md:hidden">
+            {/* Phones and narrow windows: one row per patient instead of the wide table. */}
+            <ul className="lg:hidden flex-auto min-h-[160px] overflow-y-auto">
               {shown.map((p) => {
                 const doctor = doctorOf(p);
-                const soon = p.next_appointment !== null && dateOf(p.next_appointment.start) <= weekEnd;
+                const isToday = p.next_appointment !== null && dateOf(p.next_appointment.start) === today;
                 return (
                   <li key={p.id} className="patient-row" style={{ borderBottom: "1px solid var(--color-border)" }}>
                     <Link
@@ -234,14 +237,14 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
                         </p>
                         <p className="text-xs truncate" style={{ color: "var(--color-muted-foreground)" }}>
                           {p.next_appointment
-                            ? `Next: ${fullDate(dateOf(p.next_appointment.start))}, ${clock(timeOf(p.next_appointment.start))}`
+                            ? `Next: ${numericDate(dateOf(p.next_appointment.start))}, ${clock(timeOf(p.next_appointment.start))}`
                             : p.last_visit
-                              ? `Last visit: ${fullDate(dateOf(p.last_visit.start))}`
+                              ? `Last visit: ${numericDate(dateOf(p.last_visit.start))}`
                               : "No visits yet"}
                           {doctor && ` · ${doctor.name}`}
                         </p>
                       </div>
-                      {soon && <span className="chip chip-scheduled !py-0 !text-[11px] shrink-0">This week</span>}
+                      {isToday && <span className="chip chip-scheduled !py-0 !text-[11px] shrink-0">Today</span>}
                       <ChevronRight size={16} className="shrink-0" style={{ color: "var(--color-subtle-foreground)" }} aria-hidden="true" />
                     </Link>
                   </li>
@@ -249,10 +252,11 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
               })}
             </ul>
 
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full min-w-[900px] border-collapse text-sm">
-                <thead>
-                  <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+            {/* From 1024px the columns fit the card, so it only ever scrolls up and down. */}
+            <div className="hidden lg:block flex-auto min-h-[160px] overflow-y-auto overflow-x-hidden">
+              <table className="w-full border-collapse text-sm">
+                <thead className="sticky-head">
+                  <tr>
                     <th className="w-16" aria-label="Photo" />
                     <SortHeader label="Last Name" active={sort.key === "last"} dir={sort.dir} onClick={() => sortBy("last")} />
                     <SortHeader label="First Name" active={sort.key === "first"} dir={sort.dir} onClick={() => sortBy("first")} />
@@ -264,13 +268,13 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
                       onClick={() => sortBy("appointment")}
                     />
                     <Th>Doctor</Th>
-                    <th className="sr-only">Actions</th>
+                    <th><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   {shown.map((p) => {
                     const doctor = doctorOf(p);
-                    const soon = p.next_appointment !== null && dateOf(p.next_appointment.start) <= weekEnd;
+                    const isToday = p.next_appointment !== null && dateOf(p.next_appointment.start) === today;
                     return (
                       <tr key={p.id} className="patient-row" style={{ borderBottom: "1px solid var(--color-border)" }}>
                         <td className="pl-4 py-3">
@@ -288,7 +292,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
                             {initials(`${p.first_name} ${p.last_name}`)}
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-semibold" style={{ color: "var(--color-foreground)" }}>
+                        <td className="px-3 xl:px-4 py-3 font-semibold" style={{ color: "var(--color-foreground)" }}>
                           {p.last_name}
                           {filter.status === "inactive" && (
                             <span className="chip ml-1.5 !py-0 !text-[11px]" style={{ background: "var(--color-warning-light)", color: "var(--color-warning)" }}>
@@ -296,16 +300,16 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3" style={{ color: "var(--color-foreground)" }}>
+                        <td className="px-3 xl:px-4 py-3" style={{ color: "var(--color-foreground)" }}>
                           {p.first_name}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 xl:px-4 py-3">
                           <When visit={p.last_visit} />
                         </td>
-                        <td className="px-4 py-3">
-                          <When visit={p.next_appointment} soon={soon} />
+                        <td className="px-3 xl:px-4 py-3">
+                          <When visit={p.next_appointment} isToday={isToday} />
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 xl:px-4 py-3">
                           {doctor ? (
                             <span className="flex items-center gap-2 whitespace-nowrap" style={{ color: "var(--color-foreground)" }}>
                               <span
@@ -323,14 +327,16 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <td className="px-3 xl:px-4 py-3 text-right whitespace-nowrap">
                           <Link
                             href={`/patients/${p.id}/info` as Route}
                             className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-semibold hover:bg-[var(--color-primary-light)]"
                             style={{ color: "var(--color-primary)" }}
                             aria-label={`View patient record of ${p.first_name} ${p.last_name}`}
                           >
-                            View Patient Record <span aria-hidden="true">→</span>
+                            {/* Shorter where the table is narrow (1024–1279px), so every column fits. */}
+                            <span className="hidden xl:inline">View Patient Record</span>
+                            <span className="xl:hidden">View record</span> <span aria-hidden="true">→</span>
                           </Link>
                         </td>
                       </tr>
@@ -340,14 +346,12 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
               </table>
             </div>
 
-            <div
-              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-[13px]"
-              style={{ background: "var(--color-surface-raised)", color: "var(--color-muted-foreground)" }}
-            >
-              <span>
-                Showing {current * PAGE_SIZE + 1}–{current * PAGE_SIZE + shown.length} of {rows.length}
-              </span>
-              {pages > 1 && (
+            {/* The count is under the title; this bar only appears when there is a page 2 to reach. */}
+            {pages > 1 && (
+              <div
+                className="flex items-center justify-end px-4 py-3 text-[13px] shrink-0"
+                style={{ background: "var(--color-surface-raised)", color: "var(--color-muted-foreground)", borderTop: "1px solid var(--color-border)" }}
+              >
                 <div className="flex items-center gap-1">
                   <button
                     className="btn btn-secondary btn-sm"
@@ -369,8 +373,8 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
                     <ChevronRight size={14} />
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -381,7 +385,7 @@ export function PatientList({ onAddPatient }: { onAddPatient: () => void }) {
 function Th({ children }: { children: React.ReactNode }) {
   return (
     <th
-      className="px-4 py-3 text-left text-xs font-medium whitespace-nowrap"
+      className="px-3 xl:px-4 py-3 text-left text-xs font-medium whitespace-nowrap"
       style={{ color: "var(--color-muted-foreground)" }}
     >
       {children}
@@ -393,7 +397,7 @@ function SortHeader({ label, active, dir, onClick }: { label: string; active: bo
   const Icon = !active ? ArrowUpDown : dir === 1 ? ArrowUp : ArrowDown;
   return (
     <th
-      className="px-4 py-3 text-left whitespace-nowrap"
+      className="px-3 xl:px-4 py-3 text-left whitespace-nowrap"
       aria-sort={active ? (dir === 1 ? "ascending" : "descending") : "none"}
     >
       <button
@@ -410,7 +414,7 @@ function SortHeader({ label, active, dir, onClick }: { label: string; active: bo
 }
 
 /** A visit's date with the time beneath, or a grey dash when there is none. */
-function When({ visit, soon = false }: { visit: PatientVisit | null; soon?: boolean }) {
+function When({ visit, isToday = false }: { visit: PatientVisit | null; isToday?: boolean }) {
   if (!visit) {
     return (
       <span style={{ color: "var(--color-subtle-foreground)" }} aria-label="None">
@@ -421,25 +425,39 @@ function When({ visit, soon = false }: { visit: PatientVisit | null; soon?: bool
   return (
     <div className="whitespace-nowrap">
       <div className="font-medium" style={{ color: "var(--color-foreground)" }}>
-        {fullDate(dateOf(visit.start))}
-        {soon && <span className="chip chip-scheduled ml-1.5 !py-0 !text-[11px]">This week</span>}
+        {numericDate(dateOf(visit.start))}
       </div>
-      <div className="text-xs" style={{ color: "var(--color-muted-foreground)" }}>
+      {/* "Today" rides on the time line, so the column stays as narrow as a date. */}
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--color-muted-foreground)" }}>
         {clock(timeOf(visit.start))}
+        {isToday && <span className="chip chip-scheduled !py-0 !text-[11px]">Today</span>}
       </div>
     </div>
   );
 }
 
-/** The Filter button and its menu: current or removed patients, upcoming appointment or not, and which dentist. */
+/**
+ * The Filter button and its menu: current or removed patients, upcoming
+ * appointment or not, and which dentist. Like the schedule's filter, the ticks
+ * change a working copy and the list changes on Apply.
+ */
 function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange: (next: PatientFilter) => void }) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
   const ref = useRef<HTMLDivElement>(null);
   const providers = useProviders();
   const listed = (providers.data ?? []).filter((p) => p.is_active).map((p) => p.id);
-  const anyHidden = value.hiddenAppointment.length + value.hiddenProviders.length > 0;
-  const anyShown =
-    APPOINTMENT_OPTIONS.some((o) => !value.hiddenAppointment.includes(o.key)) || listed.some((id) => !value.hiddenProviders.includes(id));
+  // An empty list is never what anyone wants: a section with no box ticked can't be applied.
+  const problem = APPOINTMENT_OPTIONS.every((o) => draft.hiddenAppointment.includes(o.key))
+    ? "Tick at least one appointment option."
+    : listed.length > 0 && listed.every((id) => draft.hiddenProviders.includes(id))
+      ? "Tick at least one dentist."
+      : null;
+
+  function apply() {
+    onChange(draft);
+    setOpen(false);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -462,7 +480,11 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
       <button
         type="button"
         className="btn btn-secondary btn-filter"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          // Each opening starts from what the list shows now.
+          if (!open) setDraft(value);
+          setOpen(!open);
+        }}
         aria-expanded={open}
         aria-haspopup="true"
       >
@@ -471,9 +493,18 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
       </button>
 
       {open && (
-        <div
-          className="absolute right-0 z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-2xl p-3"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
+        <FilterPanel
+          width="w-72"
+          footer={
+            <FilterFooter
+              onClear={() => setDraft(DEFAULT_FILTER)}
+              clearDisabled={sameFilter(draft, DEFAULT_FILTER)}
+              problem={problem}
+              onCancel={() => setOpen(false)}
+              onApply={apply}
+              applyDisabled={sameFilter(draft, value)}
+            />
+          }
         >
           <Group title="Patients">
             {STATUS_OPTIONS.map((o) => (
@@ -481,8 +512,8 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
                 key={o.key}
                 name="patient-status-filter"
                 label={o.label}
-                checked={value.status === o.key}
-                onChange={() => onChange({ ...value, status: o.key })}
+                checked={draft.status === o.key}
+                onChange={() => setDraft((d) => ({ ...d, status: o.key }))}
               />
             ))}
           </Group>
@@ -492,8 +523,8 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
               <Option
                 key={o.key}
                 label={o.label}
-                checked={!value.hiddenAppointment.includes(o.key)}
-                onChange={() => onChange({ ...value, hiddenAppointment: toggle(value.hiddenAppointment, o.key) })}
+                checked={!draft.hiddenAppointment.includes(o.key)}
+                onChange={() => setDraft((d) => ({ ...d, hiddenAppointment: toggle(d.hiddenAppointment, o.key) }))}
               />
             ))}
           </Group>
@@ -511,32 +542,12 @@ function PatientFilterMenu({ value, onChange }: { value: PatientFilter; onChange
                   key={p.id}
                   label={p.name}
                   swatch={p.color_hex}
-                  checked={!value.hiddenProviders.includes(p.id)}
-                  onChange={() => onChange({ ...value, hiddenProviders: toggle(value.hiddenProviders, p.id) })}
+                  checked={!draft.hiddenProviders.includes(p.id)}
+                  onChange={() => setDraft((d) => ({ ...d, hiddenProviders: toggle(d.hiddenProviders, p.id) }))}
                 />
               ))}
           </Group>
-          <div className="mt-2 pt-2 flex items-center justify-between gap-2" style={{ borderTop: "1px solid var(--color-border)" }}>
-            <button
-              type="button"
-              className="filter-action"
-              style={{ color: "var(--color-muted-foreground)" }}
-              disabled={!anyShown}
-              onClick={() => onChange({ ...value, hiddenAppointment: APPOINTMENT_OPTIONS.map((o) => o.key), hiddenProviders: listed })}
-            >
-              Clear all
-            </button>
-            <button
-              type="button"
-              className="filter-action"
-              style={{ color: "var(--color-primary)" }}
-              disabled={!anyHidden}
-              onClick={() => onChange({ ...value, hiddenAppointment: [], hiddenProviders: [] })}
-            >
-              Show everything
-            </button>
-          </div>
-        </div>
+        </FilterPanel>
       )}
     </div>
   );

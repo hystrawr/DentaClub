@@ -1,6 +1,19 @@
 "use client";
 
+import { styleFor } from "@/lib/utils/appointment-status";
+import type { RowTag } from "@/lib/utils/day-list";
 import { clock } from "@/lib/utils/manila";
+
+/** How each tag looks: Next in the brand olive, Late in amber, the rest in their status colours. */
+const TAG: Record<RowTag, { label: string; bg: string; text: string }> = {
+  next: { label: "Next", bg: "var(--color-primary)", text: "var(--color-primary-foreground)" },
+  late: { label: "Late", bg: "var(--color-warning-light)", text: "var(--color-warning)" },
+  arrived: { label: "Arrived", bg: styleFor("arrived").bg, text: styleFor("arrived").text },
+  in_chair: { label: "In chair", bg: styleFor("in_chair").bg, text: styleFor("in_chair").text },
+  completed: { label: "Completed", bg: styleFor("completed").bg, text: styleFor("completed").text },
+  no_show: { label: "No-show", bg: styleFor("no_show").bg, text: styleFor("no_show").text },
+  cancelled: { label: "Cancelled", bg: styleFor("cancelled").bg, text: styleFor("cancelled").text },
+};
 
 /** "Barby Peregil" → "BP"; one-word names give one letter. */
 function initialsOf(name: string): string {
@@ -29,7 +42,10 @@ export function PatientAvatar({ name, color }: { name: string; color?: string | 
   );
 }
 
-/** One appointment in the dashboard's upcoming list (from DentalOS's chairside PatientCard). */
+/**
+ * One appointment in the dashboard's list (from DentalOS's chairside PatientCard).
+ * `tag` says where the patient is in the day; `muted` dims a booking that is over.
+ */
 export function AppointmentRow({
   patientName,
   appointmentType,
@@ -37,6 +53,8 @@ export function AppointmentRow({
   end,
   color,
   onView,
+  tag = null,
+  muted = false,
 }: {
   patientName: string;
   appointmentType: string | null;
@@ -44,18 +62,26 @@ export function AppointmentRow({
   end: string; // "10:00"
   color: string;
   onView: () => void;
+  tag?: RowTag | null;
+  muted?: boolean;
 }) {
+  const t = tag ? TAG[tag] : null;
   return (
     <li
       className="grid items-center gap-4 rounded-2xl py-2.5 pl-3 pr-4 transition-shadow duration-200 hover:shadow-md grid-cols-[4px_1fr_auto] sm:grid-cols-[4px_1fr_auto_auto]"
-      style={{ border: "1px solid var(--color-border)" }}
+      style={{ border: "1px solid var(--color-border)", opacity: muted ? 0.65 : 1 }}
     >
       <span className="h-9 rounded" style={{ background: color }} aria-hidden="true" />
       <div className="flex items-center gap-3 min-w-0">
         <PatientAvatar name={patientName} color={color} />
         <div className="min-w-0">
-          <p className="text-sm font-semibold truncate" style={{ color: "var(--color-foreground)" }}>
-            {patientName}
+          <p className="flex items-center gap-2 min-w-0 text-sm font-semibold" style={{ color: "var(--color-foreground)" }}>
+            <span className="truncate">{patientName}</span>
+            {t && (
+              <span className="chip !py-0 !text-[11px] shrink-0" style={{ background: t.bg, color: t.text }}>
+                {t.label}
+              </span>
+            )}
           </p>
           <p className="text-[11px] truncate" style={{ color: "var(--color-subtle-foreground)" }}>
             Patient{appointmentType ? ` · ${appointmentType}` : ""}

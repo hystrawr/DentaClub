@@ -39,13 +39,13 @@ export function Sidebar() {
       <aside
         className="hidden md:flex fixed z-30 flex-col"
         style={{
-          left: 16,
-          top: "calc(var(--header-height) + 16px)",
-          bottom: 16,
-          // Capped and centred in the space below the header, so on a tall
-          // screen the rail does not stretch far past its four links.
+          // Left edge under the header logo; top edge level with the dashboard's
+          // "Patients today" card (see --rail-left and --rail-top).
+          left: "var(--rail-left)",
+          top: "var(--rail-top)",
+          bottom: 24,
+          // Capped, so on a tall screen the rail does not stretch far past its links.
           maxHeight: 520,
-          marginBlock: "auto",
           width: "var(--rail-width)",
           background: "var(--color-surface)",
           border: "1px solid var(--color-border-strong)",

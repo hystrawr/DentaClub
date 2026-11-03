@@ -16,5 +16,6 @@ export default function ServicesLayout({ children }: { children: React.ReactNode
 
   if (!isAdmin) return null;
 
-  return <div className="px-5 sm:px-10 lg:px-12 py-6 space-y-5">{children}</div>;
+  // As tall as the screen, like Appointments: the title stays put and the table scrolls inside its card.
+  return <div className="h-full flex flex-col gap-5 px-5 sm:px-10 lg:px-12 py-6">{children}</div>;
 }

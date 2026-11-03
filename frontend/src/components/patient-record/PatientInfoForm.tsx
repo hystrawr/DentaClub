@@ -147,7 +147,8 @@ export function PatientInfoForm(
   const [checkingName, setCheckingName] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
-  const headerRef = useRef<HTMLDivElement>(null);
+  // Registration scrolls only its form (the step bar and buttons stay put), so a new step scrolls that.
+  const formRef = useRef<HTMLFormElement>(null);
 
   const age = ageOn(details.date_of_birth);
   const [guardianOpen, setGuardianOpen] = useState(
@@ -198,7 +199,7 @@ export function PatientInfoForm(
     if (next === step) return;
     if (step === 0 && next > 0 && !(await patientStepValid())) return;
     setStep(next);
-    headerRef.current?.parentElement?.scrollTo({ top: 0 });
+    formRef.current?.scrollTo({ top: 0 });
   }
 
   /** The bottom button, and Enter in a field: Next until the last step, then Create Patient. */
@@ -283,8 +284,7 @@ export function PatientInfoForm(
     <>
       {creating && (
         <div
-          ref={headerRef}
-          className="sticky top-0 z-10 px-4 sm:px-6 pt-4 pb-3 space-y-3"
+          className="shrink-0 px-4 sm:px-6 pt-4 pb-3 space-y-3"
           style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}
         >
           <h2 className="text-base font-semibold" style={{ color: "var(--color-foreground)" }}>
@@ -297,7 +297,8 @@ export function PatientInfoForm(
         </div>
       )}
       <form
-        className="p-4 sm:p-6"
+        ref={formRef}
+        className={creating ? "modal-body p-4 sm:p-6" : "p-4 sm:p-6"}
         autoComplete="off"
         onSubmit={(e) => {
           e.preventDefault();

@@ -84,9 +84,10 @@ export function FormDialog({
               e.preventDefault();
               onSubmit();
             }}
-            className="flex-1 overflow-y-auto"
+            className="flex flex-col flex-1 min-h-0"
           >
-            <div ref={firstField} className="px-5 py-4 space-y-4">
+            {/* Only the fields scroll; the title above and the buttons below stay put. */}
+            <div ref={firstField} className="modal-body px-5 py-4 space-y-4">
               {children}
               <FormError error={error} />
             </div>

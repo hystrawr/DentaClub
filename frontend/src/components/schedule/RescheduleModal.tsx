@@ -85,128 +85,133 @@ export function RescheduleModal({ appointment, onClose }: { appointment: Appoint
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 overflow-y-auto" noValidate>
-            <div className="rounded-lg px-3 py-2.5 text-xs space-y-0.5" style={{ background: "var(--color-surface-subtle)", color: "var(--color-muted-foreground)" }}>
-              <p className="font-semibold" style={{ color: "var(--color-foreground)" }}>
-                {appointment.patient?.full_name ?? appointment.appointment_type?.name ?? "Appointment"}
-              </p>
-              <p>
-                Now: {fullDate(dateOf(appointment.scheduled_start))}, {clock(timeOf(appointment.scheduled_start))}–
-                {clock(timeOf(appointment.scheduled_end))}
-              </p>
-              {appointment.provider && <p>With {appointment.provider.name} · {length} min</p>}
-            </div>
-
-            <div>
-              <label htmlFor="resched-date" className="text-xs font-medium block mb-1" style={{ color: "var(--color-foreground)" }}>
-                New date
-              </label>
-              <input
-                id="resched-date"
-                type="date"
-                min={manilaToday()}
-                className={control}
-                style={controlStyle}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </div>
-
-            {providerId && date && (
-              <div>
-                <p className="text-xs font-medium mb-1.5" style={{ color: "var(--color-foreground)" }}>
-                  Free times for {length} min
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0" noValidate>
+            {/* Only the fields scroll (.modal-body); the title above and the buttons below stay put. */}
+            <div className="modal-body px-5 py-4 space-y-4">
+              <div className="rounded-lg px-3 py-2.5 text-xs space-y-0.5" style={{ background: "var(--color-surface-subtle)", color: "var(--color-muted-foreground)" }}>
+                <p className="font-semibold" style={{ color: "var(--color-foreground)" }}>
+                  {appointment.patient?.full_name ?? appointment.appointment_type?.name ?? "Appointment"}
                 </p>
-                {slots.isLoading ? (
-                  <div className="skeleton" style={{ height: 30 }} />
-                ) : fitting.length === 0 ? (
-                  <p className="text-xs" style={{ color: "var(--color-subtle-foreground)" }}>
-                    {slots.data?.length ? "No gap long enough on this day." : "This dentist has no working hours on this day."} You can still enter a time below.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto" role="listbox" aria-label="Free start times">
-                    {fitting.map((start) => (
-                      <button
-                        key={start}
-                        type="button"
-                        role="option"
-                        aria-selected={startTime === start}
-                        onClick={() => chooseStart(start)}
-                        className="text-xs font-semibold rounded-full px-2.5 py-1"
-                        style={{
-                          border: `1px solid ${startTime === start ? "var(--color-primary)" : "var(--color-border)"}`,
-                          background: startTime === start ? "var(--color-primary)" : "var(--color-surface)",
-                          color: startTime === start ? "#fff" : "var(--color-foreground)",
-                        }}
-                      >
-                        {clock(start)}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <p>
+                  Now: {fullDate(dateOf(appointment.scheduled_start))}, {clock(timeOf(appointment.scheduled_start))}–
+                  {clock(timeOf(appointment.scheduled_end))}
+                </p>
+                {appointment.provider && <p>With {appointment.provider.name} · {length} min</p>}
               </div>
-            )}
 
-            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="resched-start" className="text-xs font-medium block mb-1" style={{ color: "var(--color-foreground)" }}>
-                  Start
-                </label>
-                <input id="resched-start" type="time" step={300} className={control} style={controlStyle} value={startTime} onChange={(e) => chooseStart(e.target.value)} />
-              </div>
-              <div>
-                <label htmlFor="resched-end" className="text-xs font-medium block mb-1" style={{ color: "var(--color-foreground)" }}>
-                  End
+                <label htmlFor="resched-date" className="text-xs font-medium block mb-1" style={{ color: "var(--color-foreground)" }}>
+                  New date
                 </label>
                 <input
-                  id="resched-end"
-                  type="time"
-                  step={300}
+                  id="resched-date"
+                  type="date"
+                  min={manilaToday()}
                   className={control}
-                  style={{ ...controlStyle, borderColor: endBeforeStart ? "var(--color-destructive)" : "var(--color-border)" }}
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
+                  style={controlStyle}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
                 />
-                {endBeforeStart && (
-                  <p className="mt-1 text-xs" style={{ color: "var(--color-destructive)" }}>
-                    End time must be after start time.
+              </div>
+
+              {providerId && date && (
+                <div>
+                  <p className="text-xs font-medium mb-1.5" style={{ color: "var(--color-foreground)" }}>
+                    Free times for {length} min
                   </p>
-                )}
+                  {slots.isLoading ? (
+                    <div className="skeleton" style={{ height: 30 }} />
+                  ) : fitting.length === 0 ? (
+                    <p className="text-xs" style={{ color: "var(--color-subtle-foreground)" }}>
+                      {slots.data?.length ? "No gap long enough on this day." : "This dentist has no working hours on this day."} You can still enter a time below.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto" role="listbox" aria-label="Free start times">
+                      {fitting.map((start) => (
+                        <button
+                          key={start}
+                          type="button"
+                          role="option"
+                          aria-selected={startTime === start}
+                          onClick={() => chooseStart(start)}
+                          className="text-xs font-semibold rounded-full px-2.5 py-1"
+                          style={{
+                            border: `1px solid ${startTime === start ? "var(--color-primary)" : "var(--color-border)"}`,
+                            background: startTime === start ? "var(--color-primary)" : "var(--color-surface)",
+                            color: startTime === start ? "#fff" : "var(--color-foreground)",
+                          }}
+                        >
+                          {clock(start)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="resched-start" className="text-xs font-medium block mb-1" style={{ color: "var(--color-foreground)" }}>
+                    Start
+                  </label>
+                  <input id="resched-start" type="time" step={300} className={control} style={controlStyle} value={startTime} onChange={(e) => chooseStart(e.target.value)} />
+                </div>
+                <div>
+                  <label htmlFor="resched-end" className="text-xs font-medium block mb-1" style={{ color: "var(--color-foreground)" }}>
+                    End
+                  </label>
+                  <input
+                    id="resched-end"
+                    type="time"
+                    step={300}
+                    className={control}
+                    style={{ ...controlStyle, borderColor: endBeforeStart ? "var(--color-destructive)" : "var(--color-border)" }}
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                  />
+                  {endBeforeStart && (
+                    <p className="mt-1 text-xs" style={{ color: "var(--color-destructive)" }}>
+                      End time must be after start time.
+                    </p>
+                  )}
+                </div>
               </div>
+
+              <div>
+                <label htmlFor="resched-chair" className="text-xs font-medium block mb-1" style={{ color: "var(--color-foreground)" }}>
+                  Chair
+                </label>
+                <select id="resched-chair" className={control} style={controlStyle} value={chairId} onChange={(e) => setChairId(e.target.value)}>
+                  <option value="">Unassigned</option>
+                  {chairs.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
             </div>
 
-            <div>
-              <label htmlFor="resched-chair" className="text-xs font-medium block mb-1" style={{ color: "var(--color-foreground)" }}>
-                Chair
-              </label>
-              <select id="resched-chair" className={control} style={controlStyle} value={chairId} onChange={(e) => setChairId(e.target.value)}>
-                <option value="">Unassigned</option>
-                {chairs.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {reschedule.error && (
-              <div className="text-xs" style={{ color: "var(--color-destructive)" }}>
-                <FormError error={reschedule.error} />
-                {conflictNote(reschedule.error) && <p>{conflictNote(reschedule.error).trim()}</p>}
+            <div className="shrink-0 px-5 py-3 space-y-2" style={{ borderTop: "1px solid var(--color-border)" }}>
+              {reschedule.error && (
+                <div className="text-xs" style={{ color: "var(--color-destructive)" }}>
+                  <FormError error={reschedule.error} />
+                  {conflictNote(reschedule.error) && <p>{conflictNote(reschedule.error).trim()}</p>}
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="btn-gradient flex-1 py-2 text-sm font-semibold"
+                  disabled={reschedule.isPending || !date || endBeforeStart || unchanged}
+                >
+                  {reschedule.isPending ? "Saving…" : "Reschedule"}
+                </button>
+                <button type="button" className="btn-ghost px-4 text-sm" onClick={onClose}>
+                  Cancel
+                </button>
               </div>
-            )}
-
-            <div className="flex gap-3 pt-1">
-              <button
-                type="submit"
-                className="btn-gradient flex-1 py-2 text-sm font-semibold"
-                disabled={reschedule.isPending || !date || endBeforeStart || unchanged}
-              >
-                {reschedule.isPending ? "Saving…" : "Reschedule"}
-              </button>
-              <button type="button" className="btn-ghost px-4 text-sm" onClick={onClose}>
-                Cancel
-              </button>
             </div>
           </form>
         </div>

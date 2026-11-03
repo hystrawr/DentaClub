@@ -113,7 +113,7 @@ export function PatientInfoForm(
   const deletePatient = useDeletePatient(patient?.id ?? "");
 
   // A patient with an appointment still ahead can't be deleted (the API refuses
-  // with a 409), so say so up front, in place of Delete.
+  // with a 409), so pressing Delete says so instead of asking to confirm.
   const appointments = useAppointments({ patient_id: patient?.id }, { enabled: !creating });
   const upcoming = (appointments.data ?? [])
     .filter((a) => OPEN_STATUSES.includes(a.status) && Date.parse(a.scheduled_end) >= Date.now())

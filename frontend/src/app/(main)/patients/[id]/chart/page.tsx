@@ -2,7 +2,7 @@
 
 import { History } from "lucide-react";
 import { use } from "react";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ToothChart } from "@/components/odontogram/ToothChart";
 import { useToothHistory, type OdontogramEvent } from "@/lib/api/odontogram";
 import { conditionFor } from "@/lib/odontogram/conditions";

@@ -9,8 +9,8 @@ import { useProviders } from "@/lib/api/appointments";
 import { initials } from "@/lib/utils/alphabet";
 import { clock, dateOf, manilaToday, numericDate, timeOf } from "@/lib/utils/manila";
 import { FilterFooter, FilterPanel, Group, Option, sameFilter } from "@/components/schedule/AppointmentFilter";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { Skeleton } from "@/components/shared/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Skeleton";
 import type { PatientListItem, PatientVisit } from "@/types/api";
 
 const PAGE_SIZE = 20;

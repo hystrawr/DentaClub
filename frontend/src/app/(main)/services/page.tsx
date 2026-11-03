@@ -5,8 +5,8 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Pencil, Plus, Stethoscope } from "luci
 import { useAppointmentTypes, useSaveAppointmentType } from "@/lib/api/appointments";
 import { initials } from "@/lib/utils/alphabet";
 import { peso } from "@/lib/utils/money";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { Skeleton } from "@/components/shared/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { FormError } from "@/components/ui/form";
 import { ServiceModal } from "@/components/services/ServiceModal";
 import type { AppointmentType } from "@/types/api";

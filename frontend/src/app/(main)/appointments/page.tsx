@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Plus } from "lucide-react";
-import { PatientSearch } from "@/components/frontdesk/PatientSearch";
+import { PatientSearch } from "@/components/patients/PatientSearch";
 import { AppointmentFilter, DEFAULT_FILTER, matchesFilter, type ScheduleFilter } from "@/components/schedule/AppointmentFilter";
 import { AppointmentPopover } from "@/components/schedule/AppointmentPopover";
 import { NewAppointmentModal } from "@/components/schedule/NewAppointmentModal";

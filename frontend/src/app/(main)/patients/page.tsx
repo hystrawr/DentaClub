@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { PatientList } from "@/components/frontdesk/PatientList";
-import { NewPatientModal } from "@/components/frontdesk/NewPatientModal";
+import { PatientList } from "@/components/patients/PatientList";
+import { NewPatientModal } from "@/components/patients/NewPatientModal";
 
 export default function PatientsPage() {
   const [modalOpen, setModalOpen] = useState(false);

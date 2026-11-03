@@ -11,9 +11,8 @@ import { addMinutes, clock, manilaMinutes, manilaTimestamp, manilaToday } from "
 /**
  * Book an appointment (from DentalOS's NewAppointmentModal).
  *
- * Added to DentalOS's form: the appointment type (which sets the length), the
- * chair (without it every appointment lands under "Unassigned" on the queue
- * board), and a free-slot picker driven by the dentist's weekly hours. Times
+ * Added to DentalOS's form: the appointment type (which sets the length), an
+ * optional chair (checked for double-booking when set), and a free-slot picker driven by the dentist's weekly hours. Times
  * are sent with Manila's `+08:00` offset — DentalOS sent them bare, leaving the
  * timezone to whichever machine parsed them.
  *

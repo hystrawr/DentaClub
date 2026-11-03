@@ -144,7 +144,7 @@ export async function book(dto: BookInput) {
     });
   }
 
-  if (dto.operatory_id && !(await prisma.operatory.findUnique({ where: { id: dto.operatory_id }, select: { id: true } }))) {
+  if (dto.operatory_id && !(await prisma.operatory.findFirst({ where: { id: dto.operatory_id, isActive: true }, select: { id: true } }))) {
     throw invalidField("operatory_id");
   }
 
@@ -182,9 +182,9 @@ export interface UpdateInput {
 /**
  * Reschedule or annotate.
  *
- * Added here: DentalOS lets a *confirmed* appointment be moved onto a time that
- * is already taken, because conflicts are only checked at confirmation. Moving a
- * live (non-scheduled) appointment re-runs the same double-booking check.
+ * Added here: DentalOS lets an appointment be moved onto a time that is already
+ * taken, because conflicts are only checked at confirmation. Moving one re-runs
+ * the same double-booking check `book()` does.
  */
 export async function update(id: string, dto: UpdateInput) {
   return prisma.$transaction(async (tx) => {
@@ -194,7 +194,12 @@ export async function update(id: string, dto: UpdateInput) {
     const end = dto.scheduled_end !== undefined ? new Date(dto.scheduled_end) : current.scheduledEnd;
     assertRange(start, end);
 
-    if (dto.operatory_id && !(await tx.operatory.findUnique({ where: { id: dto.operatory_id }, select: { id: true } }))) {
+    // A retired chair may stay on an appointment that already had it, but not be newly picked.
+    if (
+      dto.operatory_id &&
+      dto.operatory_id !== current.operatoryId &&
+      !(await tx.operatory.findFirst({ where: { id: dto.operatory_id, isActive: true }, select: { id: true } }))
+    ) {
       throw invalidField("operatory_id");
     }
 
@@ -215,7 +220,8 @@ export async function update(id: string, dto: UpdateInput) {
       throw ruleViolation(`A ${current.status.replace("_", " ")} appointment cannot be rescheduled.`);
     }
 
-    if (moved && current.status !== "scheduled" && !RELEASES_SLOT.includes(current.status)) {
+    // Only scheduled or confirmed get here, and both hold their slot.
+    if (moved) {
       await assertNoConflicts(tx, next);
     }
 

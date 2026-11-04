@@ -41,6 +41,20 @@ describe('folding the API chart', () => {
     expect(chart[16].surfaces).toEqual({})
   })
 
+  it('keeps what a whole-tooth finding sits on, so a crowned implant is still an implant', () => {
+    const chart = toChart({
+      16: {
+        base: event({ condition_code: 'implant', surfaces: null }),
+        '*': event({ condition_code: 'crown', surfaces: null }),
+      },
+    } as unknown as SurfaceChart)
+
+    expect(chart[16].base?.code).toBe('implant')
+    expect(chart[16].whole?.code).toBe('crown')
+    expect(chart[16].surfaces).toEqual({})
+    expect(summarise(chart).sort()).toEqual(['Implant: 16', 'Jacket crown: 16'])
+  })
+
   // A wrong colour is worse than none, because it looks deliberate.
   it('skips a condition code it does not recognise rather than guessing', () => {
     const chart = toChart({

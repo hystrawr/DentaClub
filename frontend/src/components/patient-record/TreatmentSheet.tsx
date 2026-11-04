@@ -263,11 +263,10 @@ export function TreatmentSheet({ patientId, records }: { patientId: string; reco
       </div>
 
       <div
-        className="flex items-center justify-between gap-3 flex-wrap px-4 sm:px-6 py-3 text-xs"
+        className="flex items-center justify-end gap-3 flex-wrap px-4 sm:px-6 py-3 text-xs"
         style={{ color: "var(--color-muted-foreground)" }}
         data-print="hide"
       >
-        <span>Balance carries over from the row above · Enter or ↑ ↓ to move between rows · Tab for the next cell</span>
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows((rs) => [...rs, blank()])}>
           + Add row
         </button>

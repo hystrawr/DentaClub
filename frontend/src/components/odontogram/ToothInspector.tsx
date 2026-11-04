@@ -47,14 +47,18 @@ export interface ToothInspectorProps {
   /** Density only. `chair` enlarges every target for a gloved finger. */
   variant?: 'desk' | 'chair'
   onClose: () => void
-  onChart: (input: { code: string; surfaces: Surface[]; notes?: string }) => void
-  onSupersede: (input: {
-    replaces: number
-    kind: 'correction' | 'entered-in-error'
-    reason: string
-    code?: string
-    surfaces?: Surface[]
-  }) => void
+  /** `onSaved` runs only once the server has accepted the entry. */
+  onChart: (input: { code: string; surfaces: Surface[]; notes?: string }, onSaved: () => void) => void
+  onSupersede: (
+    input: {
+      replaces: number
+      kind: 'correction' | 'entered-in-error'
+      reason: string
+      code?: string
+      surfaces?: Surface[]
+    },
+    onSaved: () => void,
+  ) => void
 }
 
 export function ToothInspector({
@@ -104,12 +108,14 @@ export function ToothInspector({
   const ready = Boolean(code) && isAllowedOn(current, code) && (whole || surfaces.length > 0)
   const chosen = conditionFor(code)
 
+  // The form is cleared only once the save goes through, so a failed save keeps what was entered.
   const commit = () => {
-    onChart({ code, surfaces, notes: notes.trim() || undefined })
-    setCode('')
-    setSurfaces([])
-    setTyped('')
-    setNotes('')
+    onChart({ code, surfaces, notes: notes.trim() || undefined }, () => {
+      setCode('')
+      setSurfaces([])
+      setTyped('')
+      setNotes('')
+    })
   }
 
   // The header says exactly what the button will chart, which catches a mis-tap.
@@ -411,12 +417,15 @@ function ToothHistoryPanel({
               type="button"
               disabled={!reason.trim() || busy}
               onClick={() => {
-                onSupersede({
-                  replaces: retracting.id,
-                  kind: 'entered-in-error',
-                  reason: reason.trim(),
-                })
-                onRetract(null)
+                // Closed only once withdrawn, so a failed save keeps the reason typed.
+                onSupersede(
+                  {
+                    replaces: retracting.id,
+                    kind: 'entered-in-error',
+                    reason: reason.trim(),
+                  },
+                  () => onRetract(null),
+                )
               }}
               className="od-retract-confirm"
             >

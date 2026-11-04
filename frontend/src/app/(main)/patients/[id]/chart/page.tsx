@@ -29,9 +29,6 @@ export default function PatientChartPage({ params }: PageProps<"/patients/[id]/c
           <h2 className="text-sm font-semibold" style={{ color: "var(--color-foreground)" }}>
             Chart History
           </h2>
-          <p className="text-xs mt-0.5" style={{ color: "var(--color-muted-foreground)" }}>
-            Every entry ever charted, newest first — corrections and retractions included
-          </p>
         </div>
 
         {history.isLoading && (

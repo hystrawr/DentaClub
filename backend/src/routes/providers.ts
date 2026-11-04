@@ -7,8 +7,7 @@ import { isDateString } from "../lib/dates.js";
 import { getAvailableSlots } from "../services/scheduling/availability.js";
 import { providerAvailabilityModel, providerProfileResource, withSpecializations } from "../services/scheduling/mapper.js";
 
-// Dentists and their weekly availability. Ported from DentalOS
-// apps/api/src/scheduling/provider.controller.ts. Mounted at /api.
+// Dentists and their weekly availability. Mounted at /api.
 export const providersRouter = Router();
 
 const hexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "The color hex field must be like #3B82F6.");
@@ -25,7 +24,6 @@ const specializationRows = (names: string[] | null | undefined) => ({
 });
 
 const createProvider = z.object({
-  // DentalOS takes a `user_id` and reads the name from the staff account.
   name: z.string().trim().min(1, "The name field is required.").max(255),
   prc_number: z.string().nullish(),
   specializations,
@@ -138,11 +136,8 @@ providersRouter.get("/providers/:id/availability", async (req, res) => {
 
 /**
  * PUT /api/providers/:id/availability — replace the whole weekly schedule.
- *
- * **Destructive by design**: every existing rule is deleted and the payload
- * written in its place, so callers must send the whole week. The delete and the
- * re-create run in **one transaction** — a failure halfway must not leave the
- * dentist with no availability at all.
+ * Callers send the full week; the delete and re-create share one transaction,
+ * so a failure never leaves the dentist with no hours.
  */
 providersRouter.put("/providers/:id/availability", requireAdmin, async (req, res) => {
   const dto = setAvailability.parse(req.body);

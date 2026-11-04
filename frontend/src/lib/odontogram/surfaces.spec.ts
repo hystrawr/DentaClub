@@ -14,19 +14,14 @@ import {
 } from './surfaces'
 
 /**
- * The geometry, which is the part that fails silently.
- *
- * The component that stood here drew `M` on the left of every tooth and `B` on
- * the top of every tooth. Both are wrong for half the mouth, and neither throws:
- * the chart simply records an MO restoration as a DO, on the wrong side, in a
- * clinical record. These tests exist because nothing else can catch that.
+ * The geometry. A surface drawn on the wrong side throws no error; it just
+ * records the wrong surface, so these tests are the only check.
  */
 
 describe('mesial faces the midline', () => {
   /**
-   * The chart is drawn dentist's-view, patient's right on the viewer's left. So
-   * the right-hand quadrants sit *left* of the midline and their mesial — which
-   * always points at the midline — is the right-hand region.
+   * The chart is in dentist's view (patient's right on the viewer's left), so
+   * mesial, which always faces the midline, is on the right for right-side quadrants.
    */
   it.each([11, 18, 41, 48, 51, 81])('quadrant of tooth %i is a right quadrant', (fdi) => {
     expect(isPatientRight(fdi)).toBe(true)
@@ -54,11 +49,7 @@ describe('buccal faces the cheek', () => {
     expect(surfacesByRegion(fdi).bottom).toBe('L')
   })
 
-  /**
-   * The lower cell is drawn flipped — root pointing down, crown toward the
-   * occlusal plane — so its buccal is at the bottom. This is the half of the
-   * chart the previous component had upside down.
-   */
+  // Lower teeth are drawn flipped, so their buccal surface is at the bottom.
   it.each([31, 38, 41, 48, 71, 85])('tooth %i is lower, so buccal is the bottom', (fdi) => {
     expect(isUpper(fdi)).toBe(false)
     expect(surfacesByRegion(fdi).bottom).toBe('B')
@@ -128,12 +119,7 @@ describe('typed surface codes', () => {
     expect(parseSurfaceCode(16, 'DOM')).toEqual(parseSurfaceCode(16, 'MOD'))
   })
 
-  /**
-   * Eaglesoft's autocorrect, and worth copying: type an occlusal code against an
-   * incisor and it becomes incisal, because an incisor has no occlusal table.
-   * The alternative is a validation error on an anatomically impossible
-   * combination the clinician cannot see is impossible.
-   */
+  // An incisor has no occlusal surface, so O becomes I (and the reverse on back teeth).
   it('snaps occlusal to incisal on an anterior tooth', () => {
     expect(parseSurfaceCode(11, 'MOD')).toEqual(['M', 'I', 'D'])
   })
@@ -156,11 +142,7 @@ describe('typed surface codes', () => {
     expect(parseSurfaceCode(16, 'mmOo')).toEqual(['M', 'O'])
   })
 
-  /**
-   * The canonical form is clinical order, not the order it was typed. `MOD` is
-   * how a three-surface restoration is written and said; a canonical `MDO` would
-   * be correct data that no clinician would recognise.
-   */
+  // Codes are written in clinical order (MOD), whatever order they were typed in.
   it('canonicalises to clinical order, whatever order it was typed in', () => {
     expect(surfaceCode(36, parseSurfaceCode(36, 'BMOD'))).toBe('MODB')
     expect(surfaceCode(36, parseSurfaceCode(36, 'DBOM'))).toBe('MODB')

@@ -5,13 +5,11 @@ import { isDateString, manilaDayEnd, manilaDayStart } from "../../lib/dates.js";
 import { assertActivePatient } from "../patients.js";
 import { appointmentResource } from "./mapper.js";
 
-// Ported from DentalOS apps/api/src/scheduling/appointment.service.ts.
-// Recurring series are not ported (not selected).
+// Booking, rescheduling, double-booking checks and the appointment status machine.
 
 /**
- * The status machine, exactly as DentalOS defines it. Every terminal state has
- * an empty list, so a completed appointment cannot be reopened and a cancelled
- * one cannot be resurrected.
+ * The status machine. Final states have no next step, so a completed or
+ * cancelled appointment cannot be reopened.
  */
 const ALLOWED: Readonly<Record<AppointmentStatus, readonly AppointmentStatus[]>> = {
   scheduled: ["confirmed", "cancelled", "no_show"],
@@ -46,12 +44,7 @@ export interface AppointmentFilters {
   patient_id?: string;
 }
 
-/**
- * The calendar's list.
- *
- * Bounds are Manila days: `date_to=2026-08-29` includes everything up to that
- * evening, not up to its midnight.
- */
+/** The calendar's list. Date bounds are whole Manila days. */
 export async function list(filters: AppointmentFilters) {
   for (const key of ["date", "date_from", "date_to"] as const) {
     const value = filters[key];
@@ -82,7 +75,6 @@ export async function list(filters: AppointmentFilters) {
   return prisma.appointment.findMany({
     where,
     include: WITH_RELATIONS,
-    // Chronological, `id` breaking ties — stable across reads.
     orderBy: [{ scheduledStart: "asc" }, { id: "asc" }],
   });
 }
@@ -107,13 +99,9 @@ export interface BookInput {
 const PAST_GRACE_MS = 15 * 60_000;
 
 /**
- * Book an appointment.
- *
- * Added here: every referenced id is checked first so a typo is a 422 naming the
- * field rather than a database error. A start already in the past is refused,
- * and so is an overlap with the dentist's, chair's or patient's live
- * appointments — DentalOS only checked conflicts at `confirm()`, so tentative
- * bookings could pile up on the same time.
+ * Book an appointment. Each referenced id is checked first (a clear 422 rather
+ * than a database error); a start in the past is refused, and so is an overlap
+ * with the dentist's, chair's or patient's other appointments.
  */
 export async function book(dto: BookInput) {
   const start = new Date(dto.scheduled_start);
@@ -180,13 +168,7 @@ export interface UpdateInput {
   operatory_id?: string | null;
 }
 
-/**
- * Reschedule or annotate.
- *
- * Added here: DentalOS lets an appointment be moved onto a time that is already
- * taken, because conflicts are only checked at confirmation. Moving one re-runs
- * the same double-booking check `book()` does.
- */
+/** Reschedule or annotate. Moving an appointment runs the same double-booking check as booking. */
 export async function update(id: string, dto: UpdateInput) {
   return prisma.$transaction(async (tx) => {
     const current = await rowOrFail(id, tx);
@@ -244,11 +226,7 @@ export async function update(id: string, dto: UpdateInput) {
   });
 }
 
-/**
- * Double-booking check. Overlap is half-open on both ends —
- * `start < other.end && end > other.start` — so back-to-back appointments do
- * not collide.
- */
+/** Double-booking check. Back-to-back appointments (one ends as the next starts) do not clash. */
 type Booking = Pick<Appointment, "id" | "patientId" | "providerProfileId" | "operatoryId" | "scheduledStart" | "scheduledEnd">;
 
 async function conflictFor(db: Db, appointment: Booking, scope: "provider" | "operatory" | "patient") {
@@ -273,13 +251,9 @@ async function conflictFor(db: Db, appointment: Booking, scope: "provider" | "op
 }
 
 /**
- * A 409 carrying the appointment in the way, so the front desk sees what is
- * blocking rather than being told "no".
- *
- * Added here: the check and the write run under a per-dentist and per-chair
- * advisory lock. Without it, two front-desk clicks confirming overlapping
- * appointments at the same moment would both pass the check (DentalOS has this
- * race).
+ * Refuses a clash with a 409 naming the appointment in the way. The check runs
+ * under a per-dentist and per-chair lock, so two staff confirming overlapping
+ * appointments at the same moment cannot both succeed.
  */
 async function assertNoConflicts(tx: Db, appointment: Booking) {
   const keys = [`provider:${appointment.providerProfileId}`];

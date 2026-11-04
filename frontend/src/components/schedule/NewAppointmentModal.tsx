@@ -9,12 +9,9 @@ import { FormError } from "@/components/ui/form";
 import { addMinutes, clock, manilaMinutes, manilaTimestamp, manilaToday } from "@/lib/utils/manila";
 
 /**
- * Book an appointment (from DentalOS's NewAppointmentModal).
- *
- * Added to DentalOS's form: the appointment type (which sets the length), an
- * optional chair (checked for double-booking when set), and a free-slot picker driven by the dentist's weekly hours. Times
- * are sent with Manila's `+08:00` offset — DentalOS sent them bare, leaving the
- * timezone to whichever machine parsed them.
+ * Book an appointment. The type sets the length, and free slots come from the
+ * dentist's weekly hours. Times are sent with Manila's `+08:00` offset so they
+ * never depend on the timezone of the machine that reads them.
  *
  * Render it with a fresh `key` each time it opens, so a new booking never
  * starts with the last one's answers.

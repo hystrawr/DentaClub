@@ -4,8 +4,7 @@ import { ruleViolation } from "../lib/http-error.js";
 import * as appointments from "../services/scheduling/appointments.js";
 import { appointmentResource } from "../services/scheduling/mapper.js";
 
-// Ported from DentalOS apps/api/src/scheduling/appointment.controller.ts.
-// Mounted at /api.
+// Appointments: booking, rescheduling, cancelling and the status machine. Mounted at /api.
 export const appointmentsRouter = Router();
 
 const APPOINTMENT_STATUSES = [

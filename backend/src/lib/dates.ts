@@ -1,15 +1,15 @@
-/** Date helpers, ported from DentalOS. The clinic runs on Manila time (UTC+8). */
+/** Date helpers. The clinic runs on Manila time (UTC+8). */
 
 const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
 
-/** `2026-10-04T09:30:00+08:00` — timestamps in Philippine time, as DentalOS sends them. */
+/** `2026-10-04T09:30:00+08:00` — a timestamp in Philippine time. */
 export function isoOffset(date: Date | null | undefined): string | null {
   if (!date) return null;
   const shifted = new Date(date.getTime() + MANILA_OFFSET_MS);
   return `${shifted.toISOString().slice(0, 19)}+08:00`;
 }
 
-/** `2026-10-04T01:30:00.000000Z` — UTC, the format DentalOS uses for raw models. */
+/** `2026-10-04T01:30:00.000000Z` — a timestamp in UTC. */
 export function isoUtc(date: Date | null | undefined): string | null {
   if (!date) return null;
   return date.toISOString().replace(/\.(\d{3})Z$/, ".$1000Z");

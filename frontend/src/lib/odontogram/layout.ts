@@ -1,32 +1,14 @@
 import { isDeciduous, positionOf, quadrantOf } from './surfaces'
 
 /**
- * Where each tooth sits on the chart.
- *
- * ## Dentist's view, and the lower arch was mirrored
- *
- * The convention is universal and the PDA's printed chart states it in words:
- * `RIGHT` is at the left edge of every row. The chart is drawn as the clinician
- * sees the patient, so **the patient's right is the viewer's left**.
- *
- * The layout that stood here got the upper arch right and the lower arch
- * backwards: it ran quadrant 3 (lower *left*) beneath quadrant 1 (upper
- * *right*). Every column paired a tooth with one on the opposite side of the
- * mouth — tooth 11 sat above tooth 31 rather than 41. Read-only that is a
- * misreading; clickable it charts the wrong side.
- *
- * Correct is quadrant 1 above quadrant 4, and quadrant 2 above quadrant 3:
+ * Where each tooth sits on the chart. It is drawn as the dentist sees the
+ * patient, so the patient's right is on the viewer's left:
  *
  *     18 17 16 15 14 13 12 11 │ 21 22 23 24 25 26 27 28
  *     ─────────────────────── ┼ ───────────────────────
  *     48 47 46 45 44 43 42 41 │ 31 32 33 34 35 36 37 38
  *
- * ## Deciduous rows sit outside, not inside
- *
- * The PDA chart prints the temporary rows *outside* the permanent ones — upper
- * temporary above upper permanent, lower temporary below lower permanent. The
- * WHO/Indonesian layout nests them inside instead. Following the PDA form means
- * a Filipino clinician reads the chart without relearning it.
+ * As on the PDA chart, baby-teeth rows sit outside the adult rows.
  */
 
 /** Left-to-right, as drawn. Quadrant 1 descending, then quadrant 2 ascending. */
@@ -56,28 +38,14 @@ const ROWS: ArchRow[] = [
 
 export type Dentition = 'permanent' | 'mixed' | 'deciduous'
 
-/**
- * Which rows to draw.
- *
- * A dentition is a display choice, not a fact about the patient — a nine-year-old
- * has both, and a chart that hid one would make half their mouth uncharatable.
- * `mixed` therefore shows all four rows, and the caller picks the default from
- * the patient's age.
- */
+/** Which rows to draw. `mixed` shows all four, for a child who has both sets. */
 export function rowsFor(dentition: Dentition): ArchRow[] {
   if (dentition === 'permanent') return ROWS.filter((r) => !r.key.includes('deciduous'))
   if (dentition === 'deciduous') return ROWS.filter((r) => r.key.includes('deciduous'))
   return ROWS
 }
 
-/**
- * The dentition to open on, from age.
- *
- * Deciduous teeth start exfoliating around six and the last of them is usually
- * gone by thirteen. Both products that do this (Dentrix Ascend, Dentally) derive
- * it from age on chart creation and let the clinician override — the age is a
- * good guess and never an assertion.
- */
+/** The dentition to open on, guessed from age (baby teeth go between about 6 and 13); the user can switch. */
 export function dentitionForAge(age: number | null | undefined): Dentition {
   if (age == null) return 'permanent'
   if (age < 6) return 'deciduous'
@@ -106,12 +74,7 @@ export function quadrantLabel(fdi: number): string {
   return 'LR'
 }
 
-/**
- * The tooth's clinical name — "Upper right first molar".
- *
- * Spoken FDI is digit-by-digit ("one-six", never "sixteen"), but a screen reader
- * needs the name, and so does anyone hovering a tooth they cannot place.
- */
+/** The tooth's clinical name, "Upper right first molar", for tooltips and screen readers. */
 const PERMANENT_NAMES = [
   'central incisor', 'lateral incisor', 'canine', 'first premolar',
   'second premolar', 'first molar', 'second molar', 'third molar',
@@ -131,21 +94,13 @@ export function toothName(fdi: number): string {
   return `${vertical} ${side} ${isDeciduous(fdi) ? 'primary ' : ''}${name}`
 }
 
-/**
- * FDI → Universal (1–32 permanent, A–T deciduous).
- *
- * Display only; FDI is what is stored. Offered because a patient with US dental
- * records — an OFW returning home — arrives with a chart numbered the other way,
- * and reading it against an FDI chart is where transcription errors come from.
- */
+/** FDI → Universal numbering (1–32 adult, A–T baby teeth), for display only; FDI is stored. */
 export function toUniversal(fdi: number): string {
   const q = quadrantOf(fdi)
   const p = positionOf(fdi)
 
   // Universal runs clockwise from the upper-right third molar: 1–16 across the
-  // upper arch, then 17–32 back across the lower. So the *lower left* is 17–24
-  // and the lower right is 25–32 — the opposite way round from the upper arch,
-  // which is exactly the trap. Verified endpoint by endpoint in the spec.
+  // top, then 17–32 back across the bottom (lower left 17–24, lower right 25–32).
   if (q === 1) return String(9 - p)   // 18→1  … 11→8
   if (q === 2) return String(8 + p)   // 21→9  … 28→16
   if (q === 3) return String(25 - p)  // 38→17 … 31→24

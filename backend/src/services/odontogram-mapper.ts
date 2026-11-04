@@ -12,7 +12,7 @@ function statusOf(supersededBy: Array<{ type: string | null }>): string {
   return "amended";
 }
 
-/** The API shape of one odontogram event — same fields as DentalOS. */
+/** The API shape of one dental chart event. */
 export function odontogramEventResource(
   e: OdontogramEvent,
   supersededBy: Array<{ id: string; type: string | null }> = [],
@@ -30,7 +30,6 @@ export function odontogramEventResource(
     replaces_event_id: e.replacesEventId == null ? null : Number(e.replacesEventId),
     supersession_type: e.supersessionType,
     supersession_reason: e.supersessionReason,
-    /** Derived, never stored. */
     superseded_by_event_ids: supersededBy.map((s) => Number(s.id)),
     status: statusOf(supersededBy),
   };

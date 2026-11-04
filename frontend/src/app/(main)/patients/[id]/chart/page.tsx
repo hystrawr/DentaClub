@@ -9,13 +9,8 @@ import { conditionFor } from "@/lib/odontogram/conditions";
 import { usePatient } from "@/lib/api/patients";
 
 /**
- * The clinical chart: the odontogram, and the record behind it.
- *
- * DentalOS shows the patient's visits (encounters) under the chart. This project
- * has no encounters, so the list below shows the chart's own history instead —
- * every event ever charted, oldest first, **including** corrected and retracted
- * ones. The graphic drops a withdrawn finding; this list keeps it, marked, which
- * is the point of an append-only chart.
+ * The Dental Chart tab: the chart, and below it every event ever charted,
+ * oldest first, including corrected and withdrawn ones.
  */
 export default function PatientChartPage({ params }: PageProps<"/patients/[id]/chart">) {
   const { id } = use(params);

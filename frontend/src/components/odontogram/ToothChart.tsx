@@ -20,33 +20,9 @@ import type { Surface } from '@/lib/odontogram/surfaces'
 import { historyForTooth, summarise, toChart } from '@/lib/odontogram/to-chart'
 
 /**
- * Charting, whole.
- *
- * One component behind both surfaces — the front desk chart tab and the
- * chairside encounter screen — because the clinical act is the same in both
- * places and only the density differs. `variant` sets the cell size and grows
- * every target in the inspector to the chairside 44px floor; nothing else
- * changes, so the two can never disagree about what charting means.
- *
- * ## The order down the page is the order of the work
- *
- * Chart, then the inspector docked directly under it, then the read-only
- * summary and legend. The inspector used to be a 380px column *below* those
- * two, so selecting a tooth opened its twenty findings and the surface picker
- * off the bottom of the screen — the arch and the options it drives were never
- * on screen together.
- *
- * ## The write is always an append
- *
- * Nothing here edits. Charting a surface that already carries a finding writes a
- * new event, and the fold decides which one wins — so the record keeps both, and
- * the reason the tooth changed is answerable later.
- *
- * ## Past mode is read-only
- *
- * Scrubbing to a past date shows what was true then. Charting from that view
- * would be a back-dated entry, which is a deliberate act rather than a
- * side-effect of having scrolled a slider.
+ * The whole charting screen: controls, the chart, the charting panel docked
+ * under it, then the findings summary and legend. Every change is appended as a
+ * new event. Viewing a past date is read-only, so nothing is back-dated by accident.
  */
 export function ToothChart({
   patientId,
@@ -78,8 +54,7 @@ export function ToothChart({
   const lines = useMemo(() => summarise(chart), [chart])
   const dates = useMemo(() => chartDates(historyQuery.data), [historyQuery.data])
 
-  // Age is a good guess and never an assertion — the clinician can override, and
-  // an explicit choice always wins.
+  // Opens on a dentition guessed from age; a choice the user makes always wins.
   const shown = dentition ?? dentitionForAge(patientAge)
   const viewingPast = asOf !== null
   const editable = !readOnly && !viewingPast
@@ -141,8 +116,7 @@ export function ToothChart({
         {chartQuery.isLoading ? (
           <OdontogramSkeleton dentition={shown} size={size} />
         ) : chartQuery.isError ? (
-          // Never a blank chart on a failed read. An empty odontogram reads as a
-          // sound mouth, which is a clinical hazard rather than a UI blemish.
+          // Never show an empty chart when loading failed: it would look like a healthy mouth.
           <p className="py-8 text-center text-sm" role="alert" style={{ color: 'var(--color-destructive)' }}>
             The chart could not be loaded. Do not treat this as an unmarked mouth — reload before
             charting.
@@ -164,12 +138,6 @@ export function ToothChart({
       </div>
 
       {/* ─── Charting, docked under the arch ───────────────────────────── */}
-      {/*
-        Directly below the chart, deliberately. It was a narrow column three
-        sections further down, which put every option under the fold and turned
-        a glance-and-tap loop into a scroll. Here the arch stays in view while
-        the finding is chosen.
-      */}
       {selected != null && editable && (
         <ToothInspector
           key={selected}
@@ -185,9 +153,7 @@ export function ToothChart({
                 tooth_number: selected,
                 event_type: 'condition',
                 condition_code: code,
-                // A whole-tooth finding sends no surfaces at all; the API's
-                // fold reads that as covering the tooth and clears its
-                // surfaces.
+                // A whole-tooth finding is sent without surfaces.
                 ...(whole ? {} : { surfaces }),
                 ...(encounterId ? { encounter_id: encounterId } : {}),
                 ...(notes ? { notes } : {}),
@@ -226,10 +192,6 @@ export function ToothChart({
       <ChartScrubber dates={dates} value={asOf} onChange={setAsOf} />
 
       {/* ─── Findings and legend ───────────────────────────────────────── */}
-      {/*
-        Both read-only, so they sit below the working area rather than competing
-        with it for the space beside the chart.
-      */}
       <div
         className="grid gap-x-8 gap-y-4 items-start pt-4"
         style={{

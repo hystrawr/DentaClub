@@ -9,8 +9,7 @@ import type {
 } from "../../generated/prisma/client.js";
 import { isoOffset, isoUtc, timeString } from "../../lib/dates.js";
 
-// Scheduling response shapes, ported from DentalOS
-// apps/api/src/scheduling/scheduling.mapper.ts (tenant_id / deleted_at removed).
+// The API shapes of appointments, dentists, services, locations and chairs.
 
 type AppointmentWithRelations = Appointment & {
   patient?: Patient | null;
@@ -20,10 +19,8 @@ type AppointmentWithRelations = Appointment & {
 };
 
 /**
- * `AppointmentResource`.
- *
- * `withRelations: false` omits the four relation keys entirely — **absent, not
- * null**. The 409 body hands back the conflicting appointment that way.
+ * One appointment. `withRelations: false` leaves the relation keys out entirely
+ * (absent, not null), which is how a double-booking error returns the clash.
  */
 export function appointmentResource(a: AppointmentWithRelations, withRelations = true) {
   const base = {
@@ -40,8 +37,7 @@ export function appointmentResource(a: AppointmentWithRelations, withRelations =
 
   if (!withRelations) return base;
 
-  // A *null* relation — a block-time slot has no patient — serialises as null
-  // rather than throwing on the way through.
+  // Block time has no patient, so a missing relation comes back as null.
   return {
     ...base,
     patient: a.patient
@@ -63,7 +59,6 @@ export function appointmentResource(a: AppointmentWithRelations, withRelations =
 /** Read a dentist with this, so `providerProfileResource` has the specializations. */
 export const withSpecializations = { specializations: { select: { name: true }, orderBy: { name: "asc" } } } as const;
 
-/** `ProviderProfileResource`. */
 export function providerProfileResource(p: ProviderProfile & { specializations: Array<{ name: string }> }) {
   return {
     id: p.id,

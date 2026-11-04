@@ -80,9 +80,8 @@ odontogramRouter.get("/surfaces", async (req, res) => {
 
 /**
  * GET /api/patients/:id/odontogram/history
- * Every event ever charted, oldest first. Superseded and retracted entries are
- * included — and that is the point: the graphic drops a withdrawn finding, the
- * history keeps it, marked, with what replaced it.
+ * Every event ever charted, oldest first, including corrected and withdrawn
+ * ones, each marked with what replaced it.
  */
 odontogramRouter.get("/history", async (req, res) => {
   const patientId = patientIdOf(req.params);

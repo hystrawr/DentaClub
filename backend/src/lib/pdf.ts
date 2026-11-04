@@ -4,24 +4,12 @@ import pdfmake from "pdfmake";
 import type { TDocumentDefinitions } from "pdfmake/interfaces.js";
 
 /**
- * PDF rendering, via pdfmake. (Ported from DentalOS's PdfService.)
+ * PDF rendering with pdfmake. Each document's layout lives beside its feature
+ * (the consent PDF is in `services/consent.ts`).
  *
- * pdfmake takes a **document definition** rather than HTML, so a document's
- * layout is TypeScript, living beside the domain that owns it
- * (`services/consent.ts`).
- *
- * ## Why Roboto
- *
- * The peso sign is not in the fonts every PDF reader has built in. Roboto ships
- * inside pdfmake and covers it, so it is embedded in every file and there is no
- * system font dependency.
- *
- * ## Why the access policies
- *
- * pdfmake will fetch a remote image or read a local file if a document
- * definition names one. Neither is ever wanted: URLs are refused outright and
- * the filesystem is narrowed to the font directory. A signature arrives as a
- * `data:` URI, which is neither.
+ * Roboto is embedded because it has the peso sign, which built-in PDF fonts lack.
+ * Remote URLs are refused and file reads are limited to the font folder, so a
+ * document can never pull in anything else.
  */
 const require = createRequire(import.meta.url);
 const fontDir = join(dirname(require.resolve("pdfmake/package.json")), "fonts", "Roboto");

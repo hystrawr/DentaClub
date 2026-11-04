@@ -12,7 +12,7 @@ export interface StatusStyle {
 
 /**
  * Every status the machine can produce — exhaustive by type, so adding a status
- * fails the build here instead of crashing a screen (from DentalOS PatientCard).
+ * fails the build here instead of crashing a screen.
  */
 const STATUS_STYLE: Record<AppointmentStatus, StatusStyle> = {
   // Pale tint, a border one step darker, and dark text of the same hue. Olive is the brand's own state (booked).

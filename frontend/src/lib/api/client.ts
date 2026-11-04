@@ -1,9 +1,7 @@
 /**
  * API client — a thin fetch wrapper around the Express backend.
  *
- * Adapted from DentalOS's `lib/api/client.ts`, minus the staff/patient tokens
- * and tenant subdomains (this project has neither). What it keeps is the error
- * contract every screen relies on:
+ * The error contract every screen relies on:
  *
  *  - a field-level failure (400 from validation, or 422 with `errors`) throws a
  *    `ValidationError` whose `errors` map can be painted onto the form;

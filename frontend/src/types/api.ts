@@ -1,5 +1,5 @@
 /**
- * Wire types — what the backend sends, in DentalOS's snake_case shape.
+ * Wire types: what the backend sends, in snake_case.
  */
 
 /** `YYYY-MM-DD` */

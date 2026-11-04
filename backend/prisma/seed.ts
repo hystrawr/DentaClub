@@ -1,7 +1,6 @@
 /**
- * Starter data, matching what DentalOS seeds:
- *  - scheduling: appointment types (DentalOS's list), one clinic, two chairs,
- *    two dentists working Mon–Sat 08:00–12:00 and 13:00–17:00
+ * Starter data: the appointment types (services), one clinic, two chairs, and
+ * two dentists working Mon–Sat 08:00–12:00 and 13:00–17:00.
  *
  * Safe to run twice: each part is skipped if its data already exists.
  *
@@ -13,7 +12,7 @@ async function main() {
   await seedScheduling();
 }
 
-/** DentalOS prisma/seed.ts APPOINTMENT_TYPES: name, minutes, color, block time. */
+/** The starter services: name, minutes, color, block time. */
 const APPOINTMENT_TYPES: ReadonlyArray<[string, number, string, boolean]> = [
   ["Recall / Cleaning", 45, "#10B981", false],
   ["New Patient Exam", 60, "#3B82F6", false],

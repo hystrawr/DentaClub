@@ -6,12 +6,9 @@ import { invalidField, notFound } from "../lib/http-error.js";
 import { locationResource, operatoryResource } from "../services/scheduling/mapper.js";
 
 /**
- * Locations (branches) and operatories (chairs). Ported from DentalOS
- * apps/api/src/scheduling/clinic-structure.controller.ts. Mounted at /api.
- *
- * `is_active` is the retirement mechanism. There is no DELETE on either: a
- * location or a chair is named by appointments going back years, and removing
- * the row would orphan them.
+ * Locations (branches) and operatories (chairs). Mounted at /api.
+ * There is no DELETE: old appointments name them, so they are retired with
+ * `is_active` instead.
  */
 export const clinicStructureRouter = Router();
 
@@ -42,11 +39,7 @@ const isTruthy = (raw: unknown) => raw === "1" || raw === "true";
 
 /* ── Locations ─────────────────────────────────────────────────────────── */
 
-/**
- * Every location by default, active ones with `?active=1`. A settings screen
- * that hides what it manages cannot be used to un-hide it; callers offering a
- * choice (a booking form) pass `active=1`.
- */
+/** Every location, or only active ones with `?active=1` (what a booking form wants). */
 clinicStructureRouter.get("/locations", async (req, res) => {
   const rows = await prisma.location.findMany({
     where: isTruthy(req.query.active) ? { isActive: true } : {},

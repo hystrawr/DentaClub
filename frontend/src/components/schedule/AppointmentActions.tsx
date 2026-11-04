@@ -11,10 +11,8 @@ import { RescheduleModal } from "./RescheduleModal";
  * The buttons that move an appointment along, shared by the schedule popover,
  * the patient's detail panel and the chairside sheet.
  *
- * DentalOS's schedule panel had no actions at all — a receptionist could see
- * an appointment and do nothing with it. The rules stay on the server: a 422
- * (illegal hop) or 409 (double-booking) comes back as a message here, and a
- * 409 names the appointment that is in the way.
+ * The rules stay on the server: a 422 (illegal status change) or 409
+ * (double-booking) comes back as a message here.
  *
  * `layout="row"` puts the next step, `extra` and Cancel side by side for the
  * schedule popover; no-show drops to a quiet link underneath.

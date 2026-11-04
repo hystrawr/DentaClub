@@ -4,16 +4,8 @@ import { chartStatusFor, conditionFor } from './conditions'
 import type { Surface } from './surfaces'
 
 /**
- * The API's surface chart, folded into what the component paints.
- *
- * The API already did the hard part — ordering by observation time, dropping
- * superseded and retracted events, deciding whether a finding covers the tooth
- * or its surfaces. This is a translation, and it keeps one rule of its own:
- *
- * **An unrecognised condition code is skipped, never guessed at.** A tooth
- * painted the wrong colour is worse than one left blank, because only the first
- * looks deliberate. The same reasoning the medical-history reader uses for an
- * allergy shape it does not know.
+ * The API's surface chart, turned into what the chart draws. An unknown
+ * condition code is skipped, never guessed at: a wrong colour is worse than none.
  */
 export function toChart(chart: SurfaceChart | undefined): Record<number, ToothState> {
   if (!chart) return {}
@@ -44,15 +36,7 @@ export function toChart(chart: SurfaceChart | undefined): Record<number, ToothSt
   return out
 }
 
-/**
- * A prose readback of the chart.
- *
- * The highest-value, lowest-cost thing on the screen: it is readable, it
- * pastes into a clinical note, a screen reader gets it for free, and it catches
- * a mis-tap instantly — a clinician who charted the wrong tooth sees the wrong
- * number in a sentence long before they would spot it in a grid of thirty-two
- * boxes.
- */
+/** The chart in words ("Decayed: 16 MOD"), for the findings summary and screen readers. */
 export function summarise(chart: Record<number, ToothState>): string[] {
   const lines: string[] = []
   const teeth = Object.keys(chart).map(Number).sort((a, b) => a - b)
@@ -67,8 +51,7 @@ export function summarise(chart: Record<number, ToothState>): string[] {
       wholeByCode.set(state.whole.code, [...(wholeByCode.get(state.whole.code) ?? []), fdi])
     }
 
-    // Surfaces of one tooth sharing a condition are one entry — "16 MOD", not
-    // "16 M, 16 O, 16 D", which is how a chart of routine work becomes unreadable.
+    // One entry per tooth and condition: "16 MOD", not "16 M, 16 O, 16 D".
     const byCode = new Map<string, Surface[]>()
     for (const [surface, finding] of Object.entries(state.surfaces)) {
       byCode.set(finding.code, [...(byCode.get(finding.code) ?? []), surface as Surface])

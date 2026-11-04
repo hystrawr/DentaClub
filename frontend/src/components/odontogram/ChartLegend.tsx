@@ -6,16 +6,8 @@ import { ChevronDown, Info } from 'lucide-react'
 import { CONDITIONS, GROUP_LABELS, STATUS_STYLES, type ConditionGroup } from '@/lib/odontogram/conditions'
 
 /**
- * The legend, grouped as the PDA chart groups it.
- *
- * Worth the space: the two-letter codes are what make the chart readable
- * without colour, and they are only self-explanatory to someone who already
- * knows the paper form. Collapsible, because once you know it you never need it
- * again — and chairside, screen space is the scarce thing.
- *
- * The status row is the second axis and the one people miss: a planned finding
- * is the *same hue* as an existing one and differs by a dashed outline. Saying
- * so once here saves explaining it.
+ * The legend, grouped as on the PDA chart. The status row explains that a
+ * planned finding has the same colour as an existing one, with a dashed outline.
  */
 export function ChartLegend({ defaultOpen = false }: { defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)

@@ -14,13 +14,8 @@ import {
 import { isPatientRight, isUpper } from './surfaces'
 
 /**
- * The arch layout.
- *
- * The previous layout ran quadrant 3 — lower *left* — beneath quadrant 1 — upper
- * *right*. Every column paired teeth from opposite sides of the mouth: tooth 11
- * sat above tooth 31 rather than 41. Read-only that is a misreading; clickable
- * it charts the wrong side. The first test here is the one that would have
- * caught it.
+ * The arch layout. Each column must pair teeth from the same side of the mouth
+ * (11 above 41, not 31), or a tap charts the wrong side.
  */
 
 describe('the arches line up', () => {
@@ -84,11 +79,7 @@ describe('the arches line up', () => {
 })
 
 describe('which rows are drawn', () => {
-  /**
-   * The PDA chart prints the temporary rows *outside* the permanent ones. The
-   * WHO layout nests them inside; following the paper form means a Filipino
-   * clinician reads this chart without relearning it.
-   */
+  // As on the PDA chart, the baby-teeth rows sit outside the permanent ones.
   it('orders the rows as the PDA chart does — temporary outside', () => {
     expect(rowsFor('mixed').map((r) => r.key)).toEqual([
       'upper-deciduous',
@@ -156,8 +147,7 @@ describe('tooth names', () => {
  *
  * The trap is that Universal runs clockwise from the upper-right third molar, so
  * the *lower left* is 17–24 and the lower right is 25–32 — the opposite way
- * round from the upper arch. Both quadrant pairs were transposed on the first
- * attempt at this function.
+ * round from the upper arch.
  */
 describe('FDI to Universal', () => {
   it.each([

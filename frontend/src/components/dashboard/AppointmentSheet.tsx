@@ -9,11 +9,8 @@ import { clock, timeOf } from "@/lib/utils/manila";
 import { AppointmentActions } from "@/components/schedule/AppointmentActions";
 
 /**
- * The bottom sheet an appointment's "View details" opens (from DentalOS's chairside AppointmentSheet).
- *
- * DentalOS's "Seat Patient" also opened a clinical encounter and jumped to it;
- * there are no encounters here, so seating only moves the status, and "Open
- * Chart" goes to the patient's tooth chart.
+ * The bottom sheet an appointment's "View details" opens. Seating only moves
+ * the status; "Open Chart" goes to the patient's tooth chart.
  */
 export function AppointmentSheet({ appointmentId, onClose }: { appointmentId: string; onClose: () => void }) {
   const { data: apt, isLoading, isError } = useAppointment(appointmentId);

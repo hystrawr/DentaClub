@@ -43,7 +43,7 @@ export function PatientAvatar({ name, color }: { name: string; color?: string | 
 }
 
 /**
- * One appointment in the dashboard's list (from DentalOS's chairside PatientCard).
+ * One appointment in the dashboard's list.
  * `tag` says where the patient is in the day; `muted` dims a booking that is over.
  */
 export function AppointmentRow({

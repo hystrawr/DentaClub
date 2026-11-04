@@ -62,22 +62,24 @@ async function assertNameFree(db: Prisma.TransactionClient, name: Name, exceptId
 /**
  * Every patient, A–Z by last name then first name, each with their last
  * completed visit and next booked appointment (and who it is with).
- * Search matches first name, last name or mobile number. `inactive` lists
+ * Search matches each word against the name parts or mobile number. `inactive` lists
  * removed patients instead, so they can be found and restored.
  */
 export async function list(search: string, inactive: boolean) {
+  // Every word must match some part of the name (or the mobile), so a full name like "Juan Dela Cruz" is found.
+  const words = search.split(/\s+/).filter(Boolean);
   const patients = await prisma.patient.findMany({
     where: {
       isActive: !inactive,
-      ...(search
-        ? {
-            OR: [
-              { firstName: { contains: search, mode: "insensitive" } },
-              { lastName: { contains: search, mode: "insensitive" } },
-              { mobile: { contains: search } },
-            ],
-          }
-        : {}),
+      AND: words.map((word) => ({
+        OR: [
+          { firstName: { contains: word, mode: "insensitive" as const } },
+          { middleName: { contains: word, mode: "insensitive" as const } },
+          { lastName: { contains: word, mode: "insensitive" as const } },
+          { suffix: { contains: word, mode: "insensitive" as const } },
+          { mobile: { contains: word } },
+        ],
+      })),
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { id: "asc" }],
   });

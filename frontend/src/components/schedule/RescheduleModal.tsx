@@ -8,6 +8,7 @@ import { Dropdown } from "@/components/ui/Dropdown";
 import { FormError } from "@/components/ui/form";
 import { conflictNote } from "@/lib/utils/appointment-status";
 import { addMinutes, clock, dateOf, fullDate, manilaTimestamp, manilaToday, minutesOf, timeOf } from "@/lib/utils/manila";
+import { LUNCH_MESSAGE, overlapsLunch } from "@/lib/schedule/lunch";
 import type { Appointment } from "@/types/api";
 
 /**
@@ -51,14 +52,16 @@ export function RescheduleModal({ appointment, onClose }: { appointment: Appoint
   }
 
   const endBeforeStart = endTime <= startTime;
-  const unchanged =
+  const sameTime =
     manilaTimestamp(date, startTime) === appointment.scheduled_start.replace(/\.\d+/, "") &&
-    manilaTimestamp(date, endTime) === appointment.scheduled_end.replace(/\.\d+/, "") &&
-    chairId === (appointment.operatory?.id ?? "");
+    manilaTimestamp(date, endTime) === appointment.scheduled_end.replace(/\.\d+/, "");
+  const unchanged = sameTime && chairId === (appointment.operatory?.id ?? "");
+  // Like the server, only a new time is checked: one already over lunch can still change chair.
+  const duringLunch = !sameTime && !endBeforeStart && overlapsLunch(startTime, endTime);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!date || endBeforeStart) return;
+    if (!date || endBeforeStart || duringLunch) return;
     reschedule.mutate(
       {
         scheduled_start: manilaTimestamp(date, startTime),
@@ -155,7 +158,20 @@ export function RescheduleModal({ appointment, onClose }: { appointment: Appoint
                   <label htmlFor="resched-start" className="text-xs font-medium block mb-1" style={{ color: "var(--color-foreground)" }}>
                     Start
                   </label>
-                  <input id="resched-start" type="time" step={300} className={control} style={controlStyle} value={startTime} onChange={(e) => chooseStart(e.target.value)} />
+                  <input
+                    id="resched-start"
+                    type="time"
+                    step={300}
+                    className={control}
+                    style={{ ...controlStyle, borderColor: duringLunch ? "var(--color-destructive)" : "var(--color-border)" }}
+                    value={startTime}
+                    onChange={(e) => chooseStart(e.target.value)}
+                  />
+                  {duringLunch && (
+                    <p className="mt-1 text-xs" style={{ color: "var(--color-destructive)" }}>
+                      {LUNCH_MESSAGE}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="resched-end" className="text-xs font-medium block mb-1" style={{ color: "var(--color-foreground)" }}>

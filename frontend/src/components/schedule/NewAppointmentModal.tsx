@@ -7,6 +7,7 @@ import { usePatients } from "@/lib/api/patients";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { FormError } from "@/components/ui/form";
 import { addMinutes, clock, manilaMinutes, manilaTimestamp, manilaToday } from "@/lib/utils/manila";
+import { LUNCH_MESSAGE, overlapsLunch } from "@/lib/schedule/lunch";
 
 /**
  * Book an appointment. The type sets the length, and free slots come from the
@@ -83,18 +84,24 @@ export function NewAppointmentModal({
   // Same 15-minute grace as the API, so a walk-in entered a little late still books.
   const [startH = 0, startM = 0] = startTime.split(":").map(Number);
   const startInPast = date < today || (date === today && startH * 60 + startM < manilaMinutes() - 15);
+  const duringLunch = !endBeforeStart && overlapsLunch(startTime, endTime);
   const errors = {
     patient: submitted && !patientId && !blockTime ? "Please select a patient." : undefined,
     provider: submitted && !providerId ? "Please select a dentist." : undefined,
     date: submitted && !date ? "Please select a date." : submitted && date < today ? "The date has already passed." : undefined,
-    startTime: submitted && date === today && startInPast ? "This time has already passed." : undefined,
+    startTime:
+      submitted && date === today && startInPast
+        ? "This time has already passed."
+        : submitted && duringLunch
+          ? LUNCH_MESSAGE
+          : undefined,
     endTime: submitted && endBeforeStart ? "End time must be after start time." : undefined,
   };
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitted(true);
-    if ((!patientId && !blockTime) || !providerId || !date || startInPast || endBeforeStart) return;
+    if ((!patientId && !blockTime) || !providerId || !date || startInPast || endBeforeStart || duringLunch) return;
 
     create.mutate(
       {

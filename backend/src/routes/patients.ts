@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import type { Patient } from "../generated/prisma/client.js";
 import { requireAdmin } from "../lib/auth.js";
-import { ageFrom, dateString, isoOffset } from "../lib/dates.js";
+import { ageFrom, dateString, isoOffset, manilaToday } from "../lib/dates.js";
 import { saveHistory } from "../services/medical-history.js";
 import * as patients from "../services/patients.js";
 import { fullName } from "../services/patients.js";
@@ -102,7 +102,10 @@ const createPatient = z.object({
   first_name: z.string().trim().min(1, "The first name field is required.").max(100).transform(singleSpaced),
   last_name: z.string().trim().min(1, "The last name field is required.").max(100).transform(singleSpaced),
   middle_name: optionalText(100).transform((s) => (s ? singleSpaced(s) : s)),
-  date_of_birth: z.iso.date("The date of birth field must be a valid date."),
+  // Compared as YYYY-MM-DD text against today on the clinic's clock.
+  date_of_birth: z.iso
+    .date("The date of birth field must be a valid date.")
+    .refine((d) => d <= manilaToday(), "The date of birth cannot be in the future."),
   sex: z.enum(SEX, "The selected sex is invalid."),
   mobile: optionalText(20),
   email: z

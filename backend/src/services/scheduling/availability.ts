@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { clockInManila, manilaDayEnd, manilaDayStart, manilaInstant, timeString } from "../../lib/dates.js";
-import { RELEASES_SLOT } from "./appointments.js";
+import { LUNCH_END, LUNCH_START, RELEASES_SLOT } from "./appointments.js";
 
 // The free times shown when booking.
 
@@ -39,6 +39,8 @@ export async function getAvailableSlots(providerProfileId: string, date: string,
 
   const slots: Slot[] = [];
   const step = slotMinutes * 60_000;
+  const lunchStart = manilaInstant(day, LUNCH_START).getTime();
+  const lunchEnd = manilaInstant(day, LUNCH_END).getTime();
 
   for (const rule of rules) {
     const windowStart = manilaInstant(day, timeString(rule.startTime) ?? "00:00:00");
@@ -47,7 +49,9 @@ export async function getAvailableSlots(providerProfileId: string, date: string,
     for (let start = windowStart.getTime(); start + step <= windowEnd.getTime(); start += step) {
       const end = start + step;
       const overlaps = booked.some((a) => a.scheduledStart.getTime() < end && a.scheduledEnd.getTime() > start);
-      if (!overlaps) slots.push({ start: clockInManila(new Date(start)), end: clockInManila(new Date(end)) });
+      // Booking refuses the lunch break, so it is never offered either.
+      const duringLunch = start < lunchEnd && end > lunchStart;
+      if (!overlaps && !duringLunch) slots.push({ start: clockInManila(new Date(start)), end: clockInManila(new Date(end)) });
     }
   }
 

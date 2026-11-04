@@ -119,10 +119,13 @@ export async function surfaceState(
     if (surfaces.length === 0) {
       // A crown on an implant, or a pontic where a tooth is missing, sits on
       // top of what the tooth is: keep that under `base` so it is still drawn.
-      const below = tooth["*"];
-      const sitsOnBelow = below?.conditionCode != null && event.conditionCode != null
+      // The current base counts too, so an abutment or a new crown on a
+      // crowned implant still keeps the implant.
+      const sitsOn = (below: OdontogramEvent | undefined) =>
+        below?.conditionCode != null && event.conditionCode != null
         && (allowedFindings(below.conditionCode)?.includes(event.conditionCode) ?? false);
-      state[event.toothNumber] = sitsOnBelow ? { base: below!, "*": event } : { "*": event };
+      const base = [tooth["*"], tooth.base].find(sitsOn);
+      state[event.toothNumber] = base ? { base, "*": event } : { "*": event };
       continue;
     }
 

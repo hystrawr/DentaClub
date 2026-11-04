@@ -359,8 +359,8 @@ async function rowOrFail(id: string, db: Db = prisma) {
 }
 
 /** The clinic's lunch break, on the Manila clock. Kept in step with the frontend's `lib/schedule/lunch.ts`. */
-const LUNCH_START = "12:00";
-const LUNCH_END = "13:00";
+export const LUNCH_START = "12:00";
+export const LUNCH_END = "13:00";
 
 /** Refuses a time that overlaps the lunch break on the day it starts or ends. */
 function assertNotLunch(start: Date, end: Date) {

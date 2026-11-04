@@ -27,7 +27,9 @@ export function toChart(chart: SurfaceChart | undefined): Record<number, ToothSt
       }
 
       // `*` is the API's key for a finding on the whole tooth.
+      // `base` is what that finding sits on: the implant under a crown.
       if (surface === '*') state.whole = finding
+      else if (surface === 'base') state.base = finding
       else state.surfaces[surface as Surface] = finding
     }
 
@@ -48,8 +50,8 @@ export function summarise(chart: Record<number, ToothState>): string[] {
   for (const fdi of teeth) {
     const state = chart[fdi]
 
-    if (state.whole) {
-      wholeByCode.set(state.whole.code, [...(wholeByCode.get(state.whole.code) ?? []), fdi])
+    for (const finding of [state.base, state.whole]) {
+      if (finding) wholeByCode.set(finding.code, [...(wholeByCode.get(finding.code) ?? []), fdi])
     }
 
     // One entry per tooth and condition: "16 MOD", not "16 M, 16 O, 16 D".

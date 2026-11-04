@@ -36,11 +36,19 @@ const ANTERIOR_REGIONS: Record<Region, string> = {
   centre: '25,37.5 75,37.5 75,62.5 25,62.5',
 }
 
+/** Whole-tooth findings that mean the tooth itself is not there. */
+const ABSENT = ['missing', 'missing_other', 'extraction', 'extraction_other', 'unerupted']
+
+/** Whole-tooth findings with their own drawing on the root; the rest show their legend code. */
+const DRAWN_ON_ROOT = ['crown', 'removable_denture', 'root_canal', 'implant', 'impacted', 'unerupted']
+
 export interface ToothState {
   /** Per-surface findings. */
   surfaces: Partial<Record<Surface, { code: string; status: ChartStatus }>>
   /** A whole-tooth finding, if any. */
   whole?: { code: string; status: ChartStatus }
+  /** What the whole-tooth finding sits on: the implant under a crown, the missing tooth under a pontic. */
+  base?: { code: string; status: ChartStatus }
   /** Has a note, an image, or something else worth a flag. */
   flags?: string[]
 }
@@ -83,9 +91,11 @@ function ToothCellInner({
   const whole = state.whole ? conditionFor(state.whole.code) : undefined
   const wholeTone = whole ? `var(--od-${whole.tone})` : undefined
   // A tooth that is not there is drawn hollow, and its surfaces stop mattering.
-  const absent = Boolean(
-    whole && ['missing', 'missing_other', 'extraction', 'extraction_other', 'unerupted'].includes(whole.code),
-  )
+  const absent = Boolean(whole && ABSENT.includes(whole.code))
+  // A pontic or denture where the tooth is missing: something sits there, but no natural root.
+  const noRoot = absent || Boolean(state.base && ABSENT.includes(state.base.code))
+  // Whole-tooth findings with no drawing of their own show their legend code in the box.
+  const wholeLetter = whole && !absent && !DRAWN_ON_ROOT.includes(whole.code) ? whole : undefined
 
   const boxSize = size
   const rootHeight = Math.round(size * 0.46)
@@ -122,7 +132,9 @@ function ToothCellInner({
         height={Math.round((rootHeight / boxSize) * 100)}
         tone={wholeTone}
         code={whole?.code}
+        baseCode={state.base?.code}
         absent={absent}
+        noRoot={noRoot}
         status={state.whole?.status}
       />
     </svg>
@@ -206,6 +218,20 @@ function ToothCellInner({
         )
       })}
 
+      {wholeLetter && (
+        <text
+          x="50"
+          y={isAnterior(fdi) ? 54 : 56}
+          textAnchor="middle"
+          fontSize="20"
+          fontWeight="700"
+          fill={`var(--od-${wholeLetter.tone})`}
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
+        >
+          {wholeLetter.short}
+        </text>
+      )}
+
       {/* Focus and selection rings, outside the tooth so they never hide a finding. */}
       <rect
         className="od-focus-ring"
@@ -246,6 +272,7 @@ function ToothCellInner({
 
   const described = [
     toothName(fdi),
+    state.base ? conditionFor(state.base.code)?.label : null,
     state.whole ? conditionFor(state.whole.code)?.label : null,
     ...Object.entries(state.surfaces).map(
       ([surface, finding]) =>
@@ -304,7 +331,9 @@ function RootSilhouette({
   height,
   tone,
   code,
+  baseCode,
   absent,
+  noRoot,
   status,
 }: {
   fdi: number
@@ -312,7 +341,11 @@ function RootSilhouette({
   height: number
   tone?: string
   code?: string
+  /** What `code` sits on, e.g. the implant under a crown. */
+  baseCode?: string
   absent: boolean
+  /** No natural root: the tooth is missing, whatever now sits in its place. */
+  noRoot: boolean
   status?: ChartStatus
 }) {
   const position = fdi % 10
@@ -341,7 +374,8 @@ function RootSilhouette({
   /** The canal, for a root-filled tooth — one line down the centre of each root. */
   const canals = spread.map((cx) => `M ${cx} ${base - (upper ? 2 : -2)} L ${cx} ${apex}`)
 
-  const fillTone = code === 'unerupted' || absent ? 'transparent' : 'var(--od-root)'
+  const fillTone = code === 'unerupted' || noRoot ? 'transparent' : 'var(--od-root)'
+  const hasImplant = code === 'implant' || baseCode === 'implant'
 
   return (
     <g opacity={absent ? 0.45 : 1}>
@@ -387,7 +421,7 @@ function RootSilhouette({
         ))}
 
       {/* Implant: a threaded fixture, drawn where the root would be. */}
-      {code === 'implant' && (
+      {hasImplant && (
         <>
           <path
             d={`M 36 ${base} L 64 ${base} L 58 ${apex} L 42 ${apex} Z`}

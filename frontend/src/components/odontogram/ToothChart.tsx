@@ -147,7 +147,7 @@ export function ToothChart({
           busy={chartEvent.isPending || supersede.isPending}
           variant={variant}
           onClose={() => setSelected(null)}
-          onChart={({ code, surfaces, notes }) => {
+          onChart={({ code, surfaces, notes }, onSaved) => {
             const whole = isWholeTooth(code)
             chartEvent.mutate(
               {
@@ -159,10 +159,15 @@ export function ToothChart({
                 ...(encounterId ? { encounter_id: encounterId } : {}),
                 ...(notes ? { notes } : {}),
               },
-              { onSuccess: () => flash(selected, whole ? [] : surfaces) },
+              {
+                onSuccess: () => {
+                  onSaved()
+                  flash(selected, whole ? [] : surfaces)
+                },
+              },
             )
           }}
-          onSupersede={({ replaces, kind, reason, code, surfaces }) => {
+          onSupersede={({ replaces, kind, reason, code, surfaces }, onSaved) => {
             supersede.mutate(
               {
                 tooth_number: selected,
@@ -174,7 +179,12 @@ export function ToothChart({
                 ...(surfaces?.length ? { surfaces } : {}),
                 ...(encounterId ? { encounter_id: encounterId } : {}),
               },
-              { onSuccess: () => flash(selected, surfaces ?? []) },
+              {
+                onSuccess: () => {
+                  onSaved()
+                  flash(selected, surfaces ?? [])
+                },
+              },
             )
           }}
         />

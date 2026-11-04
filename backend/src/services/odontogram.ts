@@ -1,6 +1,6 @@
 import type { OdontogramEvent } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
-import { chartingRefusal, FOUNDATION_CODES, isValidFdi } from "./chart.js";
+import { allowedFindings, chartingRefusal, FOUNDATION_CODES, isValidFdi } from "./chart.js";
 import { notFound, ruleViolation } from "../lib/http-error.js";
 import { assertActivePatient } from "./patients.js";
 
@@ -96,7 +96,9 @@ async function assertSupersedable(patientId: string, replacesEventId: bigint): P
 /**
  * The chart as it stands: `tooth → surface → event`, applying events in the
  * order they were true. The `*` key is the whole tooth; a whole-tooth finding
- * (missing, implant, crown) clears the surfaces beneath it.
+ * (missing, implant, crown) clears the surfaces beneath it. `base` is what that
+ * finding sits on, when it is allowed to: the implant under a crown, the
+ * missing tooth under a pontic.
  */
 export async function surfaceState(
   patientId: string,
@@ -115,12 +117,21 @@ export async function surfaceState(
     const surfaces = surfacesOf(event);
 
     if (surfaces.length === 0) {
-      state[event.toothNumber] = { "*": event };
+      // A crown on an implant, or a pontic where a tooth is missing, sits on
+      // top of what the tooth is: keep that under `base` so it is still drawn.
+      // The current base counts too, so an abutment or a new crown on a
+      // crowned implant still keeps the implant.
+      const sitsOn = (below: OdontogramEvent | undefined) =>
+        below?.conditionCode != null && event.conditionCode != null
+        && (allowedFindings(below.conditionCode)?.includes(event.conditionCode) ?? false);
+      const base = [tooth["*"], tooth.base].find(sitsOn);
+      state[event.toothNumber] = base ? { base, "*": event } : { "*": event };
       continue;
     }
 
     // A surface finding replaces an earlier whole-tooth one.
     delete tooth["*"];
+    delete tooth.base;
     for (const surface of surfaces) tooth[surface] = event;
   }
 

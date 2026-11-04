@@ -1,7 +1,7 @@
 import type { Appointment, AppointmentStatus, Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { HttpError, invalidField, notFound, ruleViolation } from "../../lib/http-error.js";
-import { isDateString, manilaDayEnd, manilaDayStart } from "../../lib/dates.js";
+import { isDateString, isoOffset, manilaDayEnd, manilaDayStart, manilaInstant } from "../../lib/dates.js";
 import { assertActivePatient } from "../patients.js";
 import { appointmentResource } from "./mapper.js";
 
@@ -101,8 +101,9 @@ const PAST_GRACE_MS = 15 * 60_000;
 
 /**
  * Book an appointment. Each referenced id is checked first (a clear 422 rather
- * than a database error); a start in the past is refused, and so is an overlap
- * with the dentist's, chair's or patient's other appointments.
+ * than a database error); a start in the past or over the lunch break is
+ * refused, and so is an overlap with the dentist's, chair's or patient's other
+ * appointments.
  */
 export async function book(dto: BookInput) {
   const start = new Date(dto.scheduled_start);
@@ -111,6 +112,7 @@ export async function book(dto: BookInput) {
   if (start.getTime() < Date.now() - PAST_GRACE_MS) {
     throw ruleViolation("Validation failed.", { scheduled_start: ["The scheduled start must not be in the past."] });
   }
+  assertNotLunch(start, end);
 
   // A retired dentist or service stays on old appointments but cannot be newly booked.
   const provider = await prisma.providerProfile.findFirst({ where: { id: dto.provider_profile_id, isActive: true } });
@@ -180,6 +182,10 @@ export async function update(id: string, dto: UpdateInput) {
     // Same rule as book(): a new start time may not be in the past.
     if (start.getTime() !== current.scheduledStart.getTime() && start.getTime() < Date.now() - PAST_GRACE_MS) {
       throw ruleViolation("Validation failed.", { scheduled_start: ["The scheduled start must not be in the past."] });
+    }
+    // Only a new time is checked, so an appointment already booked over lunch can still get notes or a chair.
+    if (start.getTime() !== current.scheduledStart.getTime() || end.getTime() !== current.scheduledEnd.getTime()) {
+      assertNotLunch(start, end);
     }
 
     // A retired chair may stay on an appointment that already had it, but not be newly picked.
@@ -350,6 +356,20 @@ async function rowOrFail(id: string, db: Db = prisma) {
   const appointment = await db.appointment.findUnique({ where: { id } });
   if (!appointment) throw notFound(`No appointment ${id}`);
   return appointment;
+}
+
+/** The clinic's lunch break, on the Manila clock. Kept in step with the frontend's `lib/schedule/lunch.ts`. */
+export const LUNCH_START = "12:00";
+export const LUNCH_END = "13:00";
+
+/** Refuses a time that overlaps the lunch break on the day it starts or ends. */
+function assertNotLunch(start: Date, end: Date) {
+  const days = new Set([isoOffset(start)!.slice(0, 10), isoOffset(end)!.slice(0, 10)]);
+  for (const day of days) {
+    if (start < manilaInstant(day, LUNCH_END) && end > manilaInstant(day, LUNCH_START)) {
+      throw ruleViolation("Validation failed.", { scheduled_start: ["12–1 PM is the lunch break."] });
+    }
+  }
 }
 
 /** Both times must be valid, and the end must come after the start. */

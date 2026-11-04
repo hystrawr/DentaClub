@@ -3,12 +3,9 @@
 import { useState } from 'react'
 import { ChevronDown, Info } from 'lucide-react'
 
-import { CONDITIONS, GROUP_LABELS, STATUS_STYLES, type ConditionGroup } from '@/lib/odontogram/conditions'
+import { CONDITIONS, GROUP_LABELS, type ConditionGroup } from '@/lib/odontogram/conditions'
 
-/**
- * The legend, grouped as on the PDA chart. The status row explains that a
- * planned finding has the same colour as an existing one, with a dashed outline.
- */
+/** The legend, grouped as on the PDA chart. */
 export function ChartLegend({ defaultOpen = false }: { defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
 
@@ -79,42 +76,6 @@ export function ChartLegend({ defaultOpen = false }: { defaultOpen?: boolean }) 
               </ul>
             </div>
           ))}
-        </div>
-
-        <div style={{ borderTop: '1px solid var(--color-border)' }} className="pt-3">
-          <p
-            className="text-xs font-medium mb-1.5"
-            style={{ color: 'var(--color-subtle-foreground)' }}
-          >
-            Status — the outline, not the colour
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {(['existing', 'planned', 'completed'] as const).map((status) => (
-              <span key={status} className="flex items-center gap-1.5">
-                <span
-                  className="shrink-0 rounded"
-                  style={{
-                    width: 14,
-                    height: 14,
-                    background: 'var(--od-metal)',
-                    opacity: STATUS_STYLES[status].fill,
-                    border: `${STATUS_STYLES[status].strokeWidth}px ${
-                      STATUS_STYLES[status].dashed ? 'dashed' : 'solid'
-                    } var(--od-metal)`,
-                  }}
-                  aria-hidden="true"
-                />
-                <span className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
-                  {STATUS_STYLES[status].label}
-                </span>
-              </span>
-            ))}
-          </div>
-          <p className="text-[11px] mt-2 leading-relaxed" style={{ color: 'var(--color-subtle-foreground)' }}>
-            A planned filling is the same colour as a finished one, so accepting a plan does not
-            change the tooth&rsquo;s colour in front of the patient. Every finding also carries its
-            code, so the chart still reads in black and white.
-          </p>
         </div>
       </div>
     </div>

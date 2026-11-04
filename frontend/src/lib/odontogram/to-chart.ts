@@ -26,6 +26,7 @@ export function toChart(chart: SurfaceChart | undefined): Record<number, ToothSt
         status: chartStatusFor(event.status, event.event_type),
       }
 
+      // `*` is the API's key for a finding on the whole tooth.
       if (surface === '*') state.whole = finding
       else state.surfaces[surface as Surface] = finding
     }

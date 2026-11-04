@@ -10,7 +10,7 @@ import { usePatient } from "@/lib/api/patients";
 
 /**
  * The Dental Chart tab: the chart, and below it every event ever charted,
- * oldest first, including corrected and withdrawn ones.
+ * newest first, including corrected and withdrawn ones.
  */
 export default function PatientChartPage({ params }: PageProps<"/patients/[id]/chart">) {
   const { id } = use(params);
@@ -54,6 +54,7 @@ export default function PatientChartPage({ params }: PageProps<"/patients/[id]/c
 
         {events.length > 0 && (
           <ul className="divide-y" style={{ borderBottom: "1px solid var(--color-border)" }}>
+            {/* The API sends oldest first; the list reads newest first. */}
             {[...events].reverse().map((event) => (
               <HistoryRow key={event.id} event={event} />
             ))}
@@ -71,6 +72,7 @@ const STATUS_CHIP: Record<string, { label: string; className: string }> = {
   "entered-in-error": { label: "Entered in error", className: "chip chip-cancelled" },
 };
 
+/** One history entry: the tooth, the finding and its surfaces, and a struck-through label once it no longer stands. */
 function HistoryRow({ event }: { event: OdontogramEvent }) {
   const retraction = event.supersession_type === "entered-in-error";
   const label = retraction

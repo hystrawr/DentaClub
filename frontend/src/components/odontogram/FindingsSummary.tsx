@@ -31,6 +31,7 @@ export function FindingsSummary({
         )}
       </p>
 
+      {/* One line per condition, listing its teeth, e.g. "Caries: 16 MO, 26 O". */}
       {lines.length > 0 && (
         <ul className="mt-2 space-y-1">
           {lines.map((line, i) => (

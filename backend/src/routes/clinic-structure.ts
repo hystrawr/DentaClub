@@ -48,6 +48,7 @@ clinicStructureRouter.get("/locations", async (req, res) => {
   res.json({ data: rows.map(locationResource) });
 });
 
+/** POST /api/locations: add a clinic location (admin only). */
 clinicStructureRouter.post("/locations", requireAdmin, async (req, res) => {
   const dto = createLocation.parse(req.body);
   const created = await prisma.location.create({
@@ -62,6 +63,7 @@ clinicStructureRouter.post("/locations", requireAdmin, async (req, res) => {
   res.status(201).json({ data: locationResource(created) });
 });
 
+/** PATCH /api/locations/:id: change only the fields sent (admin only). */
 clinicStructureRouter.patch("/locations/:id", requireAdmin, async (req, res) => {
   const dto = updateLocation.parse(req.body);
   const found = await prisma.location.findUnique({ where: { id: req.params.id } });

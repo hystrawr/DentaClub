@@ -111,6 +111,7 @@ export async function list(search: string, inactive: boolean) {
   }));
 }
 
+/** One patient, removed ones included (so they can be restored), or 404. */
 export async function findOrFail(id: string) {
   const patient = await prisma.patient.findUnique({ where: { id } });
   if (!patient) throw notFound("Patient not found");

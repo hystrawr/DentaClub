@@ -62,6 +62,7 @@ function requireDate(date: unknown): asserts date is string {
   }
 }
 
+/** `?slot_minutes` for the free-slot search: 15 when not given, never under 5. */
 function readSlotMinutes(raw: unknown): number {
   if (raw === undefined || raw === "") return 15;
   const value = Number(raw);
@@ -77,6 +78,7 @@ async function findOrFail(id: string) {
   return profile;
 }
 
+/** GET /api/providers: every dentist, A–Z, with their specializations. */
 providersRouter.get("/providers", async (_req, res) => {
   const rows = await prisma.providerProfile.findMany({
     orderBy: [{ name: "asc" }, { id: "asc" }],

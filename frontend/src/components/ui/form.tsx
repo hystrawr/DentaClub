@@ -118,6 +118,7 @@ export function FormDialog({
   );
 }
 
+/** The server's error messages for a form, one per line; nothing when there are none. */
 export function FormError({ error }: { error: unknown }) {
   const messages = errorMessages(error);
   if (messages.length === 0) return null;
@@ -134,6 +135,7 @@ export function FormError({ error }: { error: unknown }) {
 
 /* ─── Fields ────────────────────────────────────────────────────── */
 
+/** A labelled field with an optional hint underneath. */
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
@@ -158,6 +160,7 @@ const controlStyle = {
   color: "var(--color-foreground)",
 } as const;
 
+// Plain inputs with the app's field styling; every other prop passes straight through.
 export function TextField(props: React.ComponentProps<"input">) {
   return <input {...props} className={CONTROL_CLASS} style={controlStyle} />;
 }

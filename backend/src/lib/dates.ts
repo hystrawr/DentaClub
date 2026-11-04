@@ -1,5 +1,6 @@
 /** Date helpers. The clinic runs on Manila time (UTC+8). */
 
+// The Philippines has no daylight saving, so the offset is always +8 hours.
 const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 /** `2026-10-04T09:30:00+08:00` — a timestamp in Philippine time. */

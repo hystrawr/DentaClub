@@ -31,6 +31,7 @@ export function EmptyState({ icon: Icon, title, description, action }: EmptyStat
           {description}
         </p>
       )}
+      {/* An optional next step, e.g. a "New patient" button. */}
       {action && <div>{action}</div>}
     </div>
   );

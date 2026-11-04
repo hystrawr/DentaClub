@@ -78,6 +78,7 @@ describe('the arches line up', () => {
   })
 })
 
+// Permanent shows the adult rows, deciduous the baby-teeth rows, mixed all four.
 describe('which rows are drawn', () => {
   // As on the PDA chart, the baby-teeth rows sit outside the permanent ones.
   it('orders the rows as the PDA chart does — temporary outside', () => {

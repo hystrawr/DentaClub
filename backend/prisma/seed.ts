@@ -24,6 +24,7 @@ const APPOINTMENT_TYPES: ReadonlyArray<[string, number, string, boolean]> = [
   ["Lunch Break", 60, "#9CA3AF", true],
 ];
 
+// `@db.Time` columns are stored as a time on 1970-01-01 UTC.
 const time = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
 
 async function seedScheduling() {

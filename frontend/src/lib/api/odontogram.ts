@@ -37,6 +37,7 @@ const chartKey = (patientId: string | undefined, asOf?: string) =>
 const historyKey = (patientId: string | undefined) =>
   ['odontogram', 'history', patientId] as const
 
+/** The chart as it stands now, or on the date `asOf`, one finding per surface. */
 export function useToothChart(patientId: string | undefined, asOf?: string) {
   return useQuery({
     queryKey: chartKey(patientId, asOf),
@@ -52,6 +53,7 @@ export function useToothChart(patientId: string | undefined, asOf?: string) {
   })
 }
 
+/** Every event ever charted for the patient, oldest first. */
 export function useToothHistory(patientId: string | undefined) {
   return useQuery({
     queryKey: historyKey(patientId),

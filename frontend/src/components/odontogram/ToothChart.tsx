@@ -71,6 +71,7 @@ export function ToothChart({
     window.setTimeout(() => setSavedTooth(null), 1000)
   }
 
+  // Chairside cells are a little smaller so a full arch fits a tablet.
   const size = variant === 'chair' ? 72 : 78
 
   return (

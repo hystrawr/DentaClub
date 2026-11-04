@@ -2,6 +2,7 @@ import { ApiError } from "@/lib/api/client";
 import { timeOf } from "@/lib/utils/manila";
 import type { AppointmentStatus } from "@/types/api";
 
+/** How a status is drawn: its label, chip colours, and the dot used on the calendar. */
 export interface StatusStyle {
   label: string;
   bg: string;

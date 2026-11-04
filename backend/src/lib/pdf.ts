@@ -25,7 +25,7 @@ pdfmake.fonts = {
 pdfmake.setUrlAccessPolicy(() => false);
 pdfmake.setLocalAccessPolicy((path) => path.startsWith(fontDir));
 
-/** Render a document definition to the bytes that get stored. */
+/** Render a document definition to the bytes that get stored. A4, Roboto 10pt unless the definition says otherwise. */
 export async function renderPdf(definition: TDocumentDefinitions): Promise<Buffer> {
   return pdfmake
     .createPdf({

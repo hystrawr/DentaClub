@@ -34,6 +34,7 @@ export function AppointmentActions({
   const [reason, setReason] = useState("");
   const [rescheduling, setRescheduling] = useState(false);
 
+  // Which buttons show depends only on the status; the server still checks each move.
   const next = NEXT_ACTION[appointment.status];
   const canCancel = CAN_CANCEL.includes(appointment.status);
   const canNoShow = CAN_NO_SHOW.includes(appointment.status);

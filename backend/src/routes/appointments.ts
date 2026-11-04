@@ -78,6 +78,7 @@ appointmentsRouter.post("/appointments", async (req, res) => {
   res.status(201).json({ data: appointmentResource(await appointments.book(dto)) });
 });
 
+/** GET /api/appointments/:id: one appointment, or 404. */
 appointmentsRouter.get("/appointments/:id", async (req, res) => {
   res.json({ data: appointmentResource(await appointments.findOrFail(req.params.id)) });
 });

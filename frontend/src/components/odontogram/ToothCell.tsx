@@ -62,6 +62,7 @@ interface ToothCellProps {
   onSurface?: (fdi: number, surface: Surface) => void
 }
 
+/** Wrapped in `memo` below, so charting one tooth does not redraw the other 31. */
 function ToothCellInner({
   fdi,
   state,

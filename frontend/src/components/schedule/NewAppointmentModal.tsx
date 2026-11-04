@@ -46,6 +46,7 @@ export function NewAppointmentModal({
   const [submitted, setSubmitted] = useState(false);
 
   const patients = usePatients({ search: patientSearch.trim() }, { enabled: patientSearch.trim().length >= 2 && !patientId });
+  // Only active dentists and services can be booked.
   const activeProviders = providers.filter((p) => p.is_active);
   const activeTypes = types.filter((t) => t.is_active);
   const type = activeTypes.find((t) => t.id === typeId);
@@ -289,6 +290,7 @@ export function NewAppointmentModal({
   );
 }
 
+/** A form field with its label, a required mark, and its error underneath. */
 function Labelled({
   label,
   htmlFor,

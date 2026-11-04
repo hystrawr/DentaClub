@@ -49,6 +49,7 @@ function parseAsOf(value: unknown): Date | undefined {
   return date;
 }
 
+// The patient id comes from the parent route (/api/patients/:id).
 const patientIdOf = (params: unknown) => (params as { id: string }).id;
 
 /**

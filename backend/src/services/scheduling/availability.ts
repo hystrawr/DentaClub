@@ -4,6 +4,7 @@ import { RELEASES_SLOT } from "./appointments.js";
 
 // The free times shown when booking.
 
+/** One free time, `HH:mm` to `HH:mm` on the Manila clock. */
 export interface Slot {
   start: string;
   end: string;

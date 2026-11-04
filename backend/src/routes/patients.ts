@@ -174,10 +174,12 @@ patientsRouter.get("/name-check", async (req, res) => {
   res.json({ data: clash ? { exists: true, id: clash.id, full_name: fullName(clash) } : { exists: false } });
 });
 
+/** GET /api/patients/:id: the patient record, or 404. */
 patientsRouter.get("/:id", async (req, res) => {
   res.json({ data: patientDetail(await patients.findOrFail(req.params.id)) });
 });
 
+/** POST /api/patients: register a patient, with their medical history when any was answered. */
 patientsRouter.post("/", async (req, res) => {
   const { medical_history, ...dto } = registerPatient.parse(req.body);
   const patient = await patients.register(

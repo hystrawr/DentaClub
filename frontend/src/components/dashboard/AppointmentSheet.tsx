@@ -26,6 +26,7 @@ export function AppointmentSheet({ appointmentId, onClose }: { appointmentId: st
         aria-modal="true"
         aria-label={`Appointment details — ${apt?.patient?.full_name ?? "loading"}`}
       >
+        {/* Drag handle, so it reads as a bottom sheet. */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="rounded-full" style={{ width: 36, height: 4, background: "var(--color-border)" }} aria-hidden="true" />
         </div>

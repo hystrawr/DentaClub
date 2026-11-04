@@ -29,6 +29,7 @@ export type ArchRow = {
   inset: number
 }
 
+// Top to bottom, as drawn: baby-teeth rows outside the adult ones.
 const ROWS: ArchRow[] = [
   { key: 'upper-deciduous', label: 'Upper temporary', teeth: UPPER_DECIDUOUS, inset: 3 },
   { key: 'upper-permanent', label: 'Upper permanent', teeth: UPPER_PERMANENT, inset: 0 },
@@ -74,7 +75,7 @@ export function quadrantLabel(fdi: number): string {
   return 'LR'
 }
 
-/** The tooth's clinical name, "Upper right first molar", for tooltips and screen readers. */
+/** Tooth names by position from the midline (1 = central incisor). */
 const PERMANENT_NAMES = [
   'central incisor', 'lateral incisor', 'canine', 'first premolar',
   'second premolar', 'first molar', 'second molar', 'third molar',
@@ -84,6 +85,7 @@ const DECIDUOUS_NAMES = [
   'central incisor', 'lateral incisor', 'canine', 'first molar', 'second molar',
 ]
 
+/** The tooth's clinical name, "Upper right first molar", for tooltips and screen readers. */
 export function toothName(fdi: number): string {
   const q = quadrantOf(fdi)
   const vertical = q === 1 || q === 2 || q === 5 || q === 6 ? 'Upper' : 'Lower'

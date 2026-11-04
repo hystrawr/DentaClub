@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { summarise, toChart } from './to-chart'
 import type { SurfaceChart } from '@/lib/api/odontogram'
 
+/** A sample chart event (caries on 16 O); `over` changes any field for one test. */
 const event = (over: Partial<Record<string, unknown>> = {}) =>
   ({
     id: 1,

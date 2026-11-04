@@ -41,6 +41,7 @@ export default function AppointmentsPage() {
     const { date, time } = nextBookableStart();
     openCreate({ date, startTime: time, endTime: addMinutes(time, 30), patient });
   };
+  // Kept stable because the popover and calendar list them as effect dependencies.
   const closePopover = useCallback(() => setSelected(null), []);
   const select = useCallback((id: string, anchor: DOMRect) => setSelected({ id, anchor }), []);
   const closeSearched = useCallback(() => setSearched(null), []);

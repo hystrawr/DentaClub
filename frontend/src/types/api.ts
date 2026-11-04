@@ -7,6 +7,7 @@ type ISODateString = string;
 /** `2026-10-04T09:30:00+08:00` */
 type ISODateTimeString = string;
 
+// The allowed values, kept as arrays so forms can list them as options.
 export const SEXES = ["male", "female", "other"] as const;
 export type Sex = (typeof SEXES)[number];
 

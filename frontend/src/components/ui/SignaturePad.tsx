@@ -19,6 +19,7 @@ export function SignaturePad({ onChange, disabled = false }: SignaturePadProps) 
   const padRef = useRef<SignatureCanvas>(null)
   const [isEmpty, setIsEmpty] = useState(true)
 
+  // A disabled pad stops taking strokes but keeps the ones already drawn.
   useEffect(() => {
     if (disabled) padRef.current?.off()
     else padRef.current?.on()

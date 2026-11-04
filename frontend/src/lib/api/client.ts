@@ -88,6 +88,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   throw new ApiError(res.status, err.error ?? `Request failed (${res.status})`, data);
 }
 
+// Writes always send a JSON body (an empty one when none is given), as the API expects.
 export const get = <T>(path: string) => request<T>("GET", path);
 export const post = <T>(path: string, body?: unknown) => request<T>("POST", path, body ?? {});
 export const patch = <T>(path: string, body?: unknown) => request<T>("PATCH", path, body ?? {});

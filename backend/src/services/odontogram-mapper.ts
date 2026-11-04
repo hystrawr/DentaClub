@@ -30,6 +30,7 @@ export function odontogramEventResource(
     replaces_event_id: e.replacesEventId == null ? null : Number(e.replacesEventId),
     supersession_type: e.supersessionType,
     supersession_reason: e.supersessionReason,
+    // The events that replaced this one; empty while it still stands.
     superseded_by_event_ids: supersededBy.map((s) => Number(s.id)),
     status: statusOf(supersededBy),
   };

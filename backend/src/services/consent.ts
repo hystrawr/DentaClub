@@ -27,6 +27,7 @@ export interface ConsentForm {
   is_placeholder: boolean;
 }
 
+/** The consent form from backend/consent-form.txt, with a version hash of its exact wording. */
 export async function readForm(): Promise<ConsentForm> {
   const text = (await readFile(FORM_PATH, "utf-8")).replace(/\r\n/g, "\n").trim();
   return {
@@ -189,6 +190,7 @@ function formBody(text: string): Content[] {
   );
 }
 
+/** The signed consent PDF: the form text, then who signed, when, and the signature image. */
 function consentDocument(input: ConsentPdfInput): TDocumentDefinitions {
   const signedFor = input.signerRelationship
     ? `${input.signerName} (${input.signerRelationship}), on behalf of ${input.patientName}`

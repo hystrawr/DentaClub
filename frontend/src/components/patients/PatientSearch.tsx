@@ -20,6 +20,7 @@ interface PatientSearchProps {
   className?: string;
 }
 
+/** `value`, but only once it has stopped changing for `delay` ms. */
 function useDebounce<T>(value: T, delay = 300): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -38,6 +39,7 @@ export function PatientSearch({ onSelect, placeholder = "Search by name or phone
   const listRef = useRef<HTMLDivElement>(null);
   const debouncedQuery = useDebounce(query, 250);
   const listId = useId();
+  // Search starts at two letters, so one keystroke does not list every patient.
   const active = debouncedQuery.trim().length >= 2;
 
   const { data, isFetching } = usePatients({ search: debouncedQuery.trim() }, { enabled: active });

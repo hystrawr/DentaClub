@@ -29,6 +29,8 @@ enum AppointmentStatus {
   no_show
 }
 
+/// A patient (Block A of the Patient Information Record). Removing a patient
+/// sets `isActive` false, so their records stay and they can be restored.
 model Patient {
   id          String   @id @default(cuid())
   firstName   String   @map("first_name")
@@ -382,6 +384,7 @@ model ProviderAvailability {
   @@map("provider_availabilities")
 }
 
+/// A service the clinic offers. Its duration sets an appointment's default length.
 model AppointmentType {
   id                   String   @id @default(cuid())
   name                 String
@@ -401,6 +404,8 @@ model AppointmentType {
   @@map("appointment_types")
 }
 
+/// A booking with one dentist. `status` moves scheduled → confirmed →
+/// arrived → in_chair → completed, or ends as cancelled or no_show.
 model Appointment {
   id                String            @id @default(cuid())
   /// Nullable: a block-time slot (lunch) has no patient.

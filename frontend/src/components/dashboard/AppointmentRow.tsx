@@ -71,6 +71,7 @@ export function AppointmentRow({
       className="grid items-center gap-4 rounded-2xl py-2.5 pl-3 pr-4 transition-shadow duration-200 hover:shadow-md grid-cols-[4px_1fr_auto] sm:grid-cols-[4px_1fr_auto_auto]"
       style={{ border: "1px solid var(--color-border)", opacity: muted ? 0.65 : 1 }}
     >
+      {/* A stripe in the service's colour, the same colour as on the calendar. */}
       <span className="h-9 rounded" style={{ background: color }} aria-hidden="true" />
       <div className="flex items-center gap-3 min-w-0">
         <PatientAvatar name={patientName} color={color} />

@@ -149,6 +149,7 @@ export function AppointmentDetailPanel({ appointmentId, onClose }: { appointment
   );
 }
 
+/** One labelled line of the panel, with its icon. */
 function DetailRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3">

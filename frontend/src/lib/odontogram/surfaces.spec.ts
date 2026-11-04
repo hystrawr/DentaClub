@@ -72,6 +72,7 @@ describe('the centre region', () => {
 })
 
 describe('every tooth has exactly five distinct surfaces', () => {
+  // All 32 adult teeth and 20 baby teeth.
   const everyTooth = [
     ...[1, 2, 3, 4].flatMap((q) => [1, 2, 3, 4, 5, 6, 7, 8].map((p) => q * 10 + p)),
     ...[5, 6, 7, 8].flatMap((q) => [1, 2, 3, 4, 5].map((p) => q * 10 + p)),

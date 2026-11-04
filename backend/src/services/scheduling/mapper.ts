@@ -59,6 +59,7 @@ export function appointmentResource(a: AppointmentWithRelations, withRelations =
 /** Read a dentist with this, so `providerProfileResource` has the specializations. */
 export const withSpecializations = { specializations: { select: { name: true }, orderBy: { name: "asc" } } } as const;
 
+/** The API shape of a dentist. */
 export function providerProfileResource(p: ProviderProfile & { specializations: Array<{ name: string }> }) {
   return {
     id: p.id,
@@ -70,6 +71,7 @@ export function providerProfileResource(p: ProviderProfile & { specializations: 
   };
 }
 
+/** The API shape of a service. Price is sent as a number of pesos, not a Decimal string. */
 export function appointmentTypeModel(t: AppointmentType) {
   return {
     id: t.id,
@@ -84,6 +86,7 @@ export function appointmentTypeModel(t: AppointmentType) {
   };
 }
 
+/** The API shape of one weekly working window (0 = Sunday). */
 export function providerAvailabilityModel(a: ProviderAvailability) {
   return {
     id: a.id,
@@ -97,6 +100,7 @@ export function providerAvailabilityModel(a: ProviderAvailability) {
   };
 }
 
+/** The API shape of a clinic location. */
 export function locationResource(l: Location) {
   return {
     id: l.id,

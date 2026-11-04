@@ -20,11 +20,13 @@ const createType = z.object({
 
 const updateType = createType.partial();
 
+/** GET /api/appointment-types: every service, A–Z, inactive ones included. */
 appointmentTypesRouter.get("/", async (_req, res) => {
   const rows = await prisma.appointmentType.findMany({ orderBy: [{ name: "asc" }, { id: "asc" }] });
   res.json(rows.map(appointmentTypeModel));
 });
 
+/** POST /api/appointment-types: add a service (admin only). */
 appointmentTypesRouter.post("/", requireAdmin, async (req, res) => {
   const dto = createType.parse(req.body);
   const created = await prisma.appointmentType.create({
@@ -41,6 +43,7 @@ appointmentTypesRouter.post("/", requireAdmin, async (req, res) => {
   res.status(201).json(appointmentTypeModel(created));
 });
 
+/** PATCH /api/appointment-types/:id: change only the fields sent (admin only). */
 appointmentTypesRouter.patch("/:id", requireAdmin, async (req, res) => {
   const dto = updateType.parse(req.body);
   const found = await prisma.appointmentType.findUnique({ where: { id: req.params.id } });

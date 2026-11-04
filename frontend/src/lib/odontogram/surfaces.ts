@@ -46,8 +46,9 @@ export const centreSurface = (fdi: number): Surface => (isAnterior(fdi) ? 'I' : 
 
 /** Region → surface, for one tooth. */
 export function surfacesByRegion(fdi: number): Record<Region, Surface> {
+  // Mesial faces the midline: on the right of the box for the patient's right side.
   const [left, right]: [Surface, Surface] = isPatientRight(fdi) ? ['D', 'M'] : ['M', 'D']
-
+  // Buccal faces the cheek: on top for upper teeth, at the bottom for lower teeth.
   const [top, bottom]: [Surface, Surface] = isUpper(fdi) ? ['B', 'L'] : ['L', 'B']
 
   return { top, bottom, left, right, centre: centreSurface(fdi) }

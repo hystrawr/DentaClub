@@ -28,6 +28,8 @@ export function useAppointments(params: {
       return (await get<{ data: Appointment[] }>(`/api/appointments?${qs}`)).data;
     },
     enabled: options?.enabled ?? true,
+    // Keep the last week on screen while the next loads, and refresh every 30s
+    // so bookings made at another desk show up.
     placeholderData: (previous) => previous,
     refetchInterval: 30_000,
   });
@@ -94,6 +96,7 @@ export function useRescheduleAppointment(id: string) {
 
 /* ─── Clinic structure ──────────────────────────────────────────── */
 
+/** Every dentist. Rarely changes, so it is reused for a minute before refetching. */
 export function useProviders() {
   return useQuery({
     queryKey: ["providers"],

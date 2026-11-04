@@ -126,11 +126,13 @@ export const CONDITIONS: readonly ConditionDef[] = [
   },
 ]
 
+// Looked up by code on every tooth, so built once.
 const BY_CODE = new Map(CONDITIONS.map((c) => [c.code, c]))
 
 export const conditionFor = (code: string | null | undefined): ConditionDef | undefined =>
   code ? BY_CODE.get(code) : undefined
 
+/** The findings under one heading of the charting panel's picker. */
 export const conditionsInGroup = (group: ConditionGroup): ConditionDef[] =>
   CONDITIONS.filter((c) => c.group === group)
 

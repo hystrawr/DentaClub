@@ -49,6 +49,7 @@ export function Odontogram({
   const rows = useMemo(() => rowsFor(dentition), [dentition])
   const gridRef = useRef<HTMLDivElement>(null)
 
+  // Focus follows selection, so the keyboard and the mouse always agree on the active tooth.
   useEffect(() => {
     if (selected == null || readOnly) return
     const el = gridRef.current?.querySelector<HTMLElement>(`[data-fdi="${selected}"]`)

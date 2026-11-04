@@ -79,6 +79,7 @@ export async function list(filters: AppointmentFilters) {
   });
 }
 
+/** One appointment with its patient, dentist, type and chair, or 404. */
 export async function findOrFail(id: string, db: Db = prisma) {
   const appointment = await db.appointment.findUnique({ where: { id }, include: WITH_RELATIONS });
   if (!appointment) throw notFound(`No appointment ${id}`);
@@ -344,12 +345,14 @@ async function setStatus(
   }
 }
 
+/** The bare row, without its relations: enough for status checks. */
 async function rowOrFail(id: string, db: Db = prisma) {
   const appointment = await db.appointment.findUnique({ where: { id } });
   if (!appointment) throw notFound(`No appointment ${id}`);
   return appointment;
 }
 
+/** Both times must be valid, and the end must come after the start. */
 function assertRange(start: Date, end: Date) {
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     throw ruleViolation("Validation failed.", { scheduled_start: ["The scheduled start field must be a valid date."] });

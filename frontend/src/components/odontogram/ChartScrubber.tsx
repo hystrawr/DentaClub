@@ -17,6 +17,7 @@ export function ChartScrubber({
   value: string | null
   onChange: (date: string | null) => void
 }) {
+  // With fewer than two dates there is no past to look back to.
   if (dates.length < 2) return null
 
   const index = value ? dates.indexOf(value) : dates.length - 1
@@ -63,6 +64,7 @@ export function ChartScrubber({
         aria-valuetext={label}
         onChange={(e) => {
           const next = Number(e.target.value)
+          // The last stop is today, which is the live (editable) chart.
           onChange(next === dates.length - 1 ? null : dates[next])
         }}
         className="w-full"

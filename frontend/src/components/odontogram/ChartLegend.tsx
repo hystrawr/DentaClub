@@ -59,6 +59,7 @@ export function ChartLegend({ defaultOpen = false }: { defaultOpen?: boolean }) 
                         width: 14,
                         height: 14,
                         background: `var(--od-${def.tone})`,
+                        // Outline findings are drawn faint on the tooth, so the swatch is too.
                         opacity: def.pattern === 'outline' ? 0.2 : 1,
                         border: `1px solid var(--od-${def.tone})`,
                       }}

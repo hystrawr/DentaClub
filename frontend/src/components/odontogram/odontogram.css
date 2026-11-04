@@ -1,31 +1,11 @@
 /**
- * The tooth chart's own tokens and motion.
+ * The tooth chart's own colours and motion, scoped to `.odontogram`.
  *
- * Scoped under `.odontogram` rather than added to `globals.css`, because these
- * are the chart's vocabulary and nothing else should paint with them. Six hues,
- * and the ceiling is deliberate: past about six categories colours start
- * colliding and the two-letter code is doing the work anyway, so status is
- * carried by *fill treatment* instead of by more hues.
+ * Every finding also carries its PDA code, so the chart still reads without
+ * colour and in greyscale print. Nothing loops, and `prefers-reduced-motion`
+ * in `globals.css` turns the motion off.
  *
- * Contrast: every fill is tuned to clear 3:1 against the unfilled tooth for
- * WCAG 1.4.11 (non-text contrast), and no condition is distinguishable by hue
- * alone — each also carries its PDA code, and most a fill pattern. The chart
- * survives greyscale printing, which the PDA form is.
- *
- * Motion is bounded: nothing here loops, nothing moves more than 3px, and the
- * global `prefers-reduced-motion` block in `globals.css` flattens all of it.
- * A clinical chart that fidgets is a chart people stop reading.
- *
- * ## Dark mode follows the app, not the operating system
- *
- * `globals.css` declares `@custom-variant dark (&:is(.dark *))` and a `.dark`
- * token block: this app goes dark when it is *told* to, and never from
- * `prefers-color-scheme`. The dark tokens below therefore hang off `.dark`.
- *
- * They were written as an `@media (prefers-color-scheme: dark)` query first,
- * which is the habit and is wrong here — it painted a dark chart onto a light
- * page for anyone whose laptop was in dark mode, so the teeth went navy against
- * white cards and every one of the six condition hues lost its contrast at once.
+ * Dark mode follows the app's `.dark` class, not the operating system.
  */
 
 .odontogram {
@@ -83,11 +63,7 @@
 /* ─── The cell ──────────────────────────────────────────────────────────── */
 
 .od-tooth {
-  /*
-   * The entrance stagger is set per tooth from the midline outward, so the
-   * chart assembles from the centre of the mouth rather than sweeping in from
-   * one side. It reads as the arch forming rather than as a list loading.
-   */
+  /* Teeth appear from the midline outward (the delay is set per tooth). */
   animation: od-erupt 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--od-delay, 0ms);
   transition:
@@ -143,11 +119,7 @@
   stroke-width: 1.5;
 }
 
-/*
- * A finding blooms in when it is charted — 300ms, once, no loop. It is the
- * only confirmation that a tap landed, and on an iPad over clinic wifi the
- * write may take a moment to acknowledge.
- */
+/* A finding fades in once when it is charted, to confirm the tap landed. */
 .od-surface[data-just-charted='true'] {
   animation: od-bloom 320ms cubic-bezier(0.34, 1.4, 0.64, 1);
   transform-origin: center;
@@ -195,11 +167,7 @@
 
 .od-row[data-jaw='lower'] { align-items: flex-start; }
 
-/*
- * The midline and the occlusal plane are the heaviest lines on the chart —
- * copied from the PDA form, where they are a literal crosshair dividing the
- * four quadrants and thicker than any other rule on the page.
- */
+/* The midline and the line between the arches are the heaviest lines, as on the PDA form. */
 .od-midline {
   width: 2px;
   align-self: stretch;
@@ -225,11 +193,7 @@
 
 /* ─── Surface picker ────────────────────────────────────────────────────── */
 
-/*
- * A separate control, because the arithmetic leaves no choice: a 44pt surface
- * target across sixteen teeth needs 2112pt of width and an iPad Pro 13" in
- * landscape has 1366. Two-step is what every serious product does.
- */
+/* Surfaces are picked in the panel, since 16 teeth are too narrow for touch-sized surface targets. */
 .od-cross {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -281,19 +245,8 @@
 /* ─── The inspector dock ────────────────────────────────────────────────── */
 
 /*
- * The inspector docks under the arch and runs the full width of the chart.
- *
- * It used to be a 380px column below the findings summary and the legend, which
- * put twenty findings, the surface picker, a note field and the commit button
- * into a tall narrow stack most of which was under the fold. Charting is a
- * glance-and-tap loop between a tooth and its options, and the loop was a
- * scroll.
- *
- * `container-type: inline-size` is the load-bearing line. The same component
- * renders inside a chairside tab and on a full-width desk page, so the column
- * count has to follow the room this panel has rather than the size of the
- * window — a viewport query hands the chairside tab a three-column layout it
- * has no width for.
+ * The charting panel, docked under the chart at full width. Its columns follow
+ * the panel's own width (container query), not the window's.
  */
 .od-dock {
   container-type: inline-size;
@@ -346,12 +299,7 @@
   color: var(--color-foreground);
 }
 
-/*
- * The readout is the only place the two halves of the form are stated together,
- * and it is what catches the commonest mis-tap: a finding chosen while a
- * different tooth is selected. It turns accent-coloured the moment the entry is
- * complete, which is the same signal the commit button gives.
- */
+/* The readout states the tooth and the finding together, which catches a tap on the wrong tooth. */
 .od-dock-readout {
   font-size: 12px;
   line-height: 1.35;
@@ -395,11 +343,7 @@
 
 .od-dock-col:first-child { border-top: none; }
 
-/*
- * Two steps, both on the container. At 760px the finding list and the surface
- * picker sit side by side with the history beneath them; at 1120px all three
- * are abreast, which is an iPad Pro in landscape and any desk.
- */
+/* From 760px the findings and surfaces sit side by side; from 1120px the history joins them. */
 @container (min-width: 760px) {
   .od-dock-body { grid-template-columns: minmax(0, 1fr) 336px; }
 
@@ -482,8 +426,7 @@
 .od-chip:active { transform: translateY(0) scale(0.97); }
 .od-chip[data-on='true'] { box-shadow: 0 3px 10px rgba(15, 23, 42, 0.20); }
 
-/* The PDA abbreviation, which is what makes the chart readable without colour
-   and is worth carrying onto the control that sets it. */
+/* The PDA code on each finding chip. */
 .od-chip-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
@@ -545,11 +488,7 @@
 
 /* ── History ─────────────────────────────────────────────────────────────── */
 
-/*
- * Bounded and scrolled rather than growing the panel. A tooth with fifteen
- * entries would otherwise push the commit bar off the screen, and the commit
- * bar is the reason the panel is open.
- */
+/* The history scrolls inside a fixed height so the save bar stays on screen. */
 .od-history-list {
   max-height: 208px;
   overflow-y: auto;
@@ -570,12 +509,7 @@
   color: var(--color-subtle-foreground);
 }
 
-/*
- * The scrollbar stays drawn rather than fading out with the platform default.
- * The list is bounded, so a tooth with more findings than fit has to *look*
- * like it has more — a clinical history that silently ends at the third entry
- * is read as a history with three entries.
- */
+/* The scrollbar stays visible so a long history looks like it has more. */
 .od-history-list { scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; }
 .od-history-list::-webkit-scrollbar { width: 6px; }
 .od-history-list::-webkit-scrollbar-track { background: transparent; }
@@ -584,16 +518,7 @@
   border-radius: 3px;
 }
 
-/*
- * An action, not a status.
- *
- * It was red text reading "Entered in error" under a live finding — the same
- * words a *withdrawn* finding is labelled with two lines above, differing only
- * in hue. Docking the panel put both in the same column, side by side, where
- * the collision is obvious: one says what happened to this entry, the other
- * offers to make it happen. Only the second is a button, so only the second is
- * shaped like one, and it names the act rather than the state.
- */
+/* "Mark entered in error" is an action, so it looks like a button, not a status label. */
 .od-retract-open {
   margin-top: 5px;
   padding: 3px 9px;
@@ -677,11 +602,7 @@
 
 /* ── The commit bar ──────────────────────────────────────────────────────── */
 
-/*
- * Across the bottom, full width, in its own tint. It is the only control that
- * should never move: the note and the button stay where the hand left them
- * however many chips wrap above.
- */
+/* The save bar runs along the bottom and stays put however many chips wrap above it. */
 .od-dock-foot {
   display: flex;
   align-items: center;
@@ -731,10 +652,7 @@
 
 /* ── Chairside density ───────────────────────────────────────────────────── */
 
-/*
- * Every target grows to the 44px floor the chairside rule sets. Nothing else
- * changes, so the two surfaces cannot disagree about what charting means.
- */
+/* Chairside: every target grows to 44px. */
 .od-dock[data-variant='chair'] .od-chip {
   min-height: 44px;
   font-size: 13px;
@@ -773,15 +691,22 @@
 
 /* ─── Skeleton ──────────────────────────────────────────────────────────── */
 
-/*
- * The loading state draws the real grid in outline rather than shimmer blocks.
- * The chart is a fixed-shape object, so its skeleton is its true geometry —
- * which means zero layout shift on arrival, and a clinician can orient before
- * the data lands.
- */
+/* The loading state is the real grid in outline, so nothing shifts when data arrives. */
 .od-skeleton { animation: od-breathe 1.8s ease-in-out infinite; }
 
 @keyframes od-breathe {
   0%, 100% { opacity: 0.32; }
   50%      { opacity: 0.55; }
+}
+
+/* A finding the tooth's current state rules out (a filling on a missing tooth). */
+.od-chip:disabled { opacity: 0.38; cursor: not-allowed; }
+.od-rule-note {
+  margin: 4px 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  font-size: 0.75rem;
+  line-height: 1.4;
 }

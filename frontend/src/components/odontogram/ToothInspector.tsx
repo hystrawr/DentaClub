@@ -10,6 +10,7 @@ import {
   isWholeTooth,
   type ConditionGroup,
 } from '@/lib/odontogram/conditions'
+import { isAllowedOn, toothFoundation, toothRuleNote } from '@/lib/odontogram/tooth-rules'
 import { toothName } from '@/lib/odontogram/layout'
 import {
   parseSurfaceCode,
@@ -23,45 +24,10 @@ import {
 import type { OdontogramEvent } from '@/lib/api/odontogram'
 
 /**
- * What happens after a tooth is tapped — docked under the chart, laid out wide.
- *
- * ## Why it sits below the chart rather than beside it
- *
- * It was a 380px column three sections down the page, below the findings summary
- * and the legend. Selecting a tooth therefore put twenty findings, the surface
- * picker, the note field and the commit button into a tall narrow stack, most of
- * it under the fold — and charting is a glance-and-tap loop between a tooth and
- * its options, so the loop became a scroll.
- *
- * Docked directly under the arch the same content is a band about 300px tall.
- * The chart stays in view while the finding is chosen, and nothing selectable
- * needs scrolling to reach. The columns are the three questions in the order
- * they are actually asked — **what is it, where on the tooth, what is already
- * there** — and the answer is committed from a bar across the bottom, which is
- * the one control that should never move.
- *
- * ## Container queries, not viewport queries
- *
- * The same component renders in a chairside tab and on a full-width desk page.
- * What decides the column count is the room this panel has, not the size of the
- * screen — a viewport query would give the chairside tab a three-column layout
- * it has no width for. Two steps: one column, then finding + surfaces with the
- * history beneath, then all three abreast.
- *
- * ## The code box is the fast path
- *
- * Type `MOD` and three surfaces light up. Eaglesoft has done this for years and
- * it is the single biggest speed difference between charting software that
- * clinicians like and software they tolerate. It also autocorrects what the
- * tooth cannot have — `MOD` on an incisor becomes `MID`, because an incisor has
- * no occlusal table.
- *
- * ## Whole-tooth findings take no surfaces
- *
- * Choosing "Missing" clears the surface selection and disables the picker. The
- * API models it the same way — a surface-less event covers the tooth and clears
- * its surfaces — so the form cannot express "a filling in a tooth that is not
- * there".
+ * The panel for charting one tooth, docked under the chart: what the finding
+ * is, which surfaces, and the tooth's history. Typing a code such as `MOD`
+ * selects those surfaces. A whole-tooth finding (missing, crown…) takes no
+ * surfaces, and what the tooth already is limits what may be charted next.
  */
 
 /** The 3×3 grid position of each region. */
@@ -75,7 +41,7 @@ const GRID: Record<Region, { column: number; row: number }> = {
 
 export interface ToothInspectorProps {
   fdi: number
-  /** Findings already on this tooth, for the history column. */
+  /** Findings already on this tooth, for the history column (and for what may be charted next, see tooth-rules). */
   history: OdontogramEvent[]
   busy?: boolean
   /** Density only. `chair` enlarges every target for a gloved finger. */
@@ -111,13 +77,9 @@ export function ToothInspector({
   const available = useMemo(() => surfacesOf(fdi), [fdi])
   const whole = isWholeTooth(code)
 
-  // Moving to another tooth must not carry the previous tooth's selection.
-  // (ToothChart renders this panel with `key={fdi}`, so a new tooth gets a
-  // fresh panel rather than an effect clearing five fields after the fact.)
+  // A new tooth gets a fresh panel (ToothChart keys it by tooth), so no selection carries over.
 
-  // The panel is below the chart, so on a short screen a tooth near the top of
-  // the arch can open it off-screen. `nearest` scrolls only when it has to,
-  // which keeps a tap on an already-visible tooth from moving the page.
+  // On a short screen the panel can open below the fold; scroll to it only if needed.
   useEffect(() => {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     dockRef.current?.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
@@ -136,7 +98,10 @@ export function ToothInspector({
     setSurfaces(parseSurfaceCode(fdi, value))
   }
 
-  const ready = Boolean(code) && (whole || surfaces.length > 0)
+  // What the tooth is (missing, an implant, a denture…) limits what may be charted next.
+  const current = toothFoundation(history)
+  const ruleNote = toothRuleNote(fdi, current)
+  const ready = Boolean(code) && isAllowedOn(current, code) && (whole || surfaces.length > 0)
   const chosen = conditionFor(code)
 
   const commit = () => {
@@ -147,13 +112,7 @@ export function ToothInspector({
     setNotes('')
   }
 
-  /**
-   * The header says what the button is about to do.
-   *
-   * It is the only place the two halves of the form are stated together, and it
-   * is what catches the commonest mis-tap — a finding chosen on one tooth and
-   * committed while a different one is selected.
-   */
+  // The header says exactly what the button will chart, which catches a mis-tap.
   const readout = !chosen
     ? 'Pick a finding below'
     : whole
@@ -190,6 +149,11 @@ export function ToothInspector({
         {/* ─── What is being charted ───────────────────────────────────── */}
         <section className="od-dock-col od-col-finding">
           <p className="od-col-label">Finding</p>
+          {ruleNote && (
+            <p className="od-rule-note" role="note">
+              {ruleNote} If that finding is wrong, mark it entered in error in the history below.
+            </p>
+          )}
 
           <div className="od-groups">
             {(['condition', 'restoration', 'surgery'] as ConditionGroup[]).map((group) => (
@@ -198,10 +162,12 @@ export function ToothInspector({
                 <div className="od-chips">
                   {conditionsInGroup(group).map((def) => {
                     const on = code === def.code
+                    const allowed = isAllowedOn(current, def.code)
                     return (
                       <button
                         key={def.code}
                         type="button"
+                        disabled={!allowed}
                         onClick={() => {
                           setCode(on ? '' : def.code)
                           // A whole-tooth finding has no surfaces, and the API refuses them.
@@ -215,7 +181,7 @@ export function ToothInspector({
                           background: on ? `var(--od-${def.tone})` : 'var(--color-surface)',
                           color: on ? '#FFFFFF' : 'var(--color-foreground)',
                         }}
-                        title={def.hint}
+                        title={allowed ? def.hint : (ruleNote ?? undefined)}
                       >
                         <span className="od-chip-code">{def.short}</span>
                         {def.label}
@@ -274,8 +240,7 @@ export function ToothInspector({
                 })}
               </div>
 
-              {/* The resolved code, which is not always what was typed — `MOD`
-                  on an incisor comes back `MID`. */}
+              {/* The resolved code: `MOD` on an incisor comes back `MID`. */}
               <p className="od-surface-code" data-empty={surfaces.length === 0}>
                 {surfaces.length > 0 ? surfaceCode(fdi, surfaces) : 'None selected'}
               </p>
@@ -327,17 +292,9 @@ export function ToothInspector({
 }
 
 /**
- * Everything ever charted on this tooth, newest first.
- *
- * **Superseded and retracted entries stay on the list**, struck through and
- * labelled with what replaced them and why. The graphic drops a withdrawn
- * finding; the record keeps it. That split is what every dental product does and
- * what CMS Program Integrity Manual §3.3.2.5 requires — all original content,
- * without deletion, with the amendment identified as such.
- *
- * The list scrolls inside a fixed height rather than growing the panel. A tooth
- * with fifteen entries would otherwise push the commit bar off the screen, and
- * the commit bar is the reason the panel is open.
+ * Everything ever charted on this tooth, newest first. Corrected and withdrawn
+ * entries stay on the list, struck through, with why: the chart drops them,
+ * the record keeps them. The list scrolls so the Chart button stays in view.
  */
 function ToothHistoryPanel({
   fdi,
@@ -422,8 +379,7 @@ function ToothHistoryPanel({
                 </p>
               )}
 
-              {/* Only a live entry can be withdrawn — one already superseded is
-                  refused by the API, which says to supersede the current one. */}
+              {/* Only an entry that still stands can be withdrawn. */}
               {!withdrawn && !replaced && !isTombstone && (
                 <button type="button" onClick={() => onRetract(event)} className="od-retract-open">
                   Mark entered in error

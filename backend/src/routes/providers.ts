@@ -149,12 +149,20 @@ providersRouter.put("/providers/:id/availability", requireAdmin, async (req, res
   const id = req.params.id;
   await findOrFail(id);
 
+  const starts = new Set<string>();
   for (const [index, rule] of dto.availabilities.entries()) {
     if (rule.end_time <= rule.start_time) {
       throw ruleViolation("Validation failed.", {
         [`availabilities.${index}.end_time`]: ["The end time field must be a date after start time."],
       });
     }
+    const key = `${rule.day_of_week}|${rule.start_time}`;
+    if (starts.has(key)) {
+      throw ruleViolation("Validation failed.", {
+        [`availabilities.${index}.start_time`]: ["Another window already starts at this time on this day."],
+      });
+    }
+    starts.add(key);
   }
 
   for (const locationId of new Set(dto.availabilities.map((r) => r.location_id))) {

@@ -194,7 +194,8 @@ model TreatmentRecord {
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
-  @@index([patientId, position])
+  /// A row is identified by its patient and place on the sheet.
+  @@unique([patientId, position])
   @@map("treatment_records")
 }
 
@@ -379,7 +380,8 @@ model ProviderAvailability {
   provider ProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
   location Location        @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
-  @@index([providerProfileId, dayOfWeek])
+  /// A window is identified by its dentist, day and start time.
+  @@unique([providerProfileId, dayOfWeek, startTime])
   @@map("provider_availabilities")
 }
 

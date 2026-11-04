@@ -9,7 +9,7 @@ import { historyData, type HistoryInput } from "./medical-history.js";
 // coming up. Removing only hides a patient; their chart, consents and
 // appointments are kept.
 
-/** DentalOS: "Juan Santos Dela Cruz Jr." — middle name and suffix included when present. */
+/** "Juan Santos Dela Cruz Jr." — the middle name and suffix when present. */
 export const fullName = (p: { firstName: string; middleName: string | null; lastName: string; suffix: string | null }): string =>
   `${p.firstName} ${p.middleName ?? ""} ${p.lastName} ${p.suffix ?? ""}`.replace(/\s+/g, " ").trim();
 

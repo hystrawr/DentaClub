@@ -7,7 +7,7 @@ interface EmptyStateProps {
   action?: React.ReactNode;
 }
 
-/** Empty-state placeholder for list views (from DentalOS). Every list renders this when it has no rows. */
+/** Empty-state placeholder that every list shows when it has no rows. */
 export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-16 px-6" role="status" aria-label={title}>

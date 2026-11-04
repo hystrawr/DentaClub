@@ -4,8 +4,6 @@ import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from "rea
 import { errorMessages } from "@/lib/api/client";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
-// Form primitives, ported from DentalOS components/frontdesk/settings/primitives.tsx.
-
 /* ─── Dialog ────────────────────────────────────────────────────── */
 
 /**

@@ -2,9 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { clockInManila, manilaDayEnd, manilaDayStart, manilaInstant, timeString } from "../../lib/dates.js";
 import { RELEASES_SLOT } from "./appointments.js";
 
-// Ported from DentalOS apps/api/src/scheduling/availability.service.ts —
-// `getAvailableSlots`, the staff slot picker. (`bookableSlots` and
-// `pickProvider` belong to online booking, which was not ported.)
+// The free times shown when booking.
 
 export interface Slot {
   start: string;
@@ -12,15 +10,9 @@ export interface Slot {
 }
 
 /**
- * Free slots for one provider on one date.
- *
- * The provider's weekly rules give the working windows for that weekday; the
- * windows are then walked in `slotMinutes` steps and any step overlapping a live
- * appointment is dropped. A window that does not divide evenly simply stops
- * short — the trailing remainder is not offered as a short slot.
- *
- * Everything here is Manila wall-clock: the weekday, the window boundaries, the
- * "same day" appointment lookup, and the `HH:mm` strings that come back.
+ * Free slots for one dentist on one date: their working windows for that
+ * weekday, in `slotMinutes` steps, minus any step that overlaps an appointment.
+ * All times are Manila wall-clock.
  */
 export async function getAvailableSlots(providerProfileId: string, date: string, slotMinutes = 15): Promise<Slot[]> {
   const day = date.slice(0, 10);

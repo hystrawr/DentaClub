@@ -25,13 +25,9 @@ export function SignaturePad({ onChange, disabled = false }: SignaturePadProps) 
   }, [disabled])
 
   /**
-   * Keep the strokes when the window resizes.
-   *
-   * The library's default (`clearOnResize`) wipes the pad on *any* window
-   * resize — and on a phone that is constant: the address bar collapsing as
-   * the patient scrolls, the keyboard closing, a rotation. A patient would
-   * watch their signature vanish mid-signing. Instead the canvas is resized
-   * only when its width really changed, and the strokes are redrawn into it.
+   * Keep the strokes when the window resizes. On a phone the window resizes
+   * constantly (address bar, keyboard, rotation), so the canvas is only resized
+   * when its width really changes, and the strokes are redrawn into it.
    */
   useEffect(() => {
     function onResize() {

@@ -3,20 +3,8 @@
 import { CalendarClock, RotateCcw } from 'lucide-react'
 
 /**
- * The chart as it stood on a past date.
- *
- * Open Dental has had a slider under its tooth chart for years and it is the
- * best idea in the legacy corpus — nobody in the web-first tier has copied it.
- * It answers the question a recall visit actually asks: what did this mouth look
- * like last time, and what has changed?
- *
- * This is only possible because the events carry **valid time** separately from
- * when they were typed. Scrubbing filters on `observed_at`, so a correction
- * entered last week about a finding from January moves January's picture, which
- * is the honest answer.
- *
- * Past mode is read-only. Charting into the past through a scrubbed view would
- * be a different act — a back-dated entry — and it needs to be a deliberate one.
+ * A slider for viewing the chart as it stood on a past date (read-only). It
+ * uses when each finding was true, so a later correction also updates the past view.
  */
 export function ChartScrubber({
   dates,

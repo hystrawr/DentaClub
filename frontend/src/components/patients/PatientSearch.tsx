@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import { Search, User, X } from "lucide-react";
 import { usePatients } from "@/lib/api/patients";
 
-// Ported from DentalOS components/frontdesk/PatientSearch: a debounced
-// typeahead with keyboard navigation that routes to the chosen patient.
+// A debounced typeahead with keyboard navigation that routes to the chosen patient.
 
 interface PatientResult {
   id: string;

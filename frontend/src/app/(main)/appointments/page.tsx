@@ -22,10 +22,8 @@ interface CreateDefaults {
 }
 
 /**
- * The schedule (from DentalOS's schedule page, without the online-booking queue):
- * a week calendar under the page title, with a popover beside whichever
- * appointment is clicked. Fills the space under the app header; only the
- * calendar grid scrolls.
+ * The schedule: a week calendar with a popover beside whichever appointment is
+ * clicked. Only the calendar grid scrolls.
  *
  * Searching a patient here shows their appointments (not their record):
  * picking one moves the calendar to it and opens it.

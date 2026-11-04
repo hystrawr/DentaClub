@@ -1,29 +1,14 @@
 /**
- * Which region of a tooth's diagram is which surface.
+ * Which region of a tooth's diagram is which surface. Every tooth is drawn as
+ * the same five-region box, but the meaning of each region depends on where
+ * the tooth is in the mouth:
  *
- * This is the detail that is easy to get wrong and impossible to see wrong. The
- * chart draws every tooth as the same five-region box, but **what those regions
- * mean depends on where the tooth is in the mouth** — and the component that
- * stood here hard-coded `M = left, D = right, B = top, L = bottom` for all
- * thirty-two teeth.
+ *  1. **Mesial faces the midline.** The patient's right-hand quadrants (1, 4,
+ *     5, 8) sit left of it on the chart, so their mesial is the right region.
+ *  2. **Buccal faces the cheek:** the top region for upper teeth, the bottom
+ *     for lower teeth (whose cell is drawn flipped).
  *
- * Two independent flips:
- *
- *  1. **Mesial always faces the midline.** On a chart drawn dentist's-view, the
- *     right-hand quadrants (1, 4, 5, 8) sit left of the midline, so their mesial
- *     is the *right* region. The left-hand quadrants (2, 3, 6, 7) are mirrored.
- *  2. **Buccal always faces the cheek.** For maxillary teeth, drawn with the
- *     crown below the root, that is the *top* region. For mandibular teeth the
- *     whole cell is flipped, so buccal is the *bottom*.
- *
- * Get either wrong and the chart records an MO restoration as a DO. Nothing
- * throws, nothing looks broken, and the tooth is painted on the wrong side of
- * the mouth in a clinical record.
- *
- * The centre region is **occlusal** on posteriors and **incisal** on anteriors —
- * molars and premolars grind, incisors and canines cut. The API's surface
- * vocabulary carries both (`O` and `I`), and the frontend previously dropped `I`
- * entirely, so an incisal finding rendered as nothing at all.
+ * The centre is occlusal on back teeth and incisal on front teeth.
  */
 
 /** Where a region sits in the drawn cell. Geometry, not anatomy. */
@@ -59,19 +44,10 @@ export const isAnterior = (fdi: number): boolean => positionOf(fdi) <= 3
 /** The centre region's surface: incisal for anteriors, occlusal for the rest. */
 export const centreSurface = (fdi: number): Surface => (isAnterior(fdi) ? 'I' : 'O')
 
-/**
- * Region → surface, for one tooth.
- *
- * Built per tooth rather than looked up in a table, because the two flips are
- * the whole content of the function and a table would hide them.
- */
+/** Region → surface, for one tooth. */
 export function surfacesByRegion(fdi: number): Record<Region, Surface> {
-  // Mesial faces the midline. Right-hand quadrants sit left of it on the chart,
-  // so their mesial is the right-hand region.
   const [left, right]: [Surface, Surface] = isPatientRight(fdi) ? ['D', 'M'] : ['M', 'D']
 
-  // Buccal faces the cheek. The mandibular cell is drawn flipped, so its buccal
-  // is at the bottom.
   const [top, bottom]: [Surface, Surface] = isUpper(fdi) ? ['B', 'L'] : ['L', 'B']
 
   return { top, bottom, left, right, centre: centreSurface(fdi) }
@@ -85,15 +61,7 @@ export function regionsBySurface(fdi: number): Partial<Record<Surface, Region>> 
   return out
 }
 
-/**
- * Every surface this tooth has, in **clinical order** — mesial, biting surface,
- * distal, buccal, lingual.
- *
- * Not the order the regions are drawn in. `MOD` is how a three-surface
- * restoration is written and said, and a canonical form that emitted `MDO`
- * would be correct data that no clinician would recognise. `MODBL` describes
- * full coverage, and reads in that order too.
- */
+/** Every surface this tooth has, in clinical order (M, O/I, D, B, L), so codes read as `MOD`. */
 export const surfacesOf = (fdi: number): Surface[] => {
   const byRegion = surfacesByRegion(fdi)
   const mesial = isPatientRight(fdi) ? byRegion.right : byRegion.left
@@ -115,16 +83,9 @@ export function surfaceName(fdi: number, surface: Surface): string {
 }
 
 /**
- * Parse a typed surface code — `MOD`, `DO`, `B` — and repair what the tooth
- * cannot have.
- *
- * Borrowed from Eaglesoft, which does exactly this: type `DOBL` against an
- * upper anterior and it becomes `DIFL`, because an incisor has no occlusal
- * table. A fast typist charts MOD in three keystrokes and cannot produce an
- * anatomically impossible combination.
- *
- * Unknown letters are dropped rather than rejected: the caller is mid-keystroke
- * and a validation error on every partial word is unusable.
+ * Parse a typed surface code (`MOD`, `DO`, `B`), fixing what the tooth cannot
+ * have: an `O` on a front tooth becomes `I`. Unknown letters are ignored, since
+ * the user is still typing.
  */
 export function parseSurfaceCode(fdi: number, code: string): Surface[] {
   const centre = centreSurface(fdi)
@@ -132,8 +93,6 @@ export function parseSurfaceCode(fdi: number, code: string): Surface[] {
   const seen = new Set<Surface>()
 
   for (const raw of code.toUpperCase()) {
-    // O and I are the same region under two names; snap to whichever this
-    // tooth actually has rather than dropping the letter.
     const letter = raw === 'O' || raw === 'I' ? centre : (raw as Surface)
     // F for facial is B for buccal — the anterior clinician's word for it.
     const surface = (letter as string) === 'F' ? 'B' : letter
@@ -141,7 +100,6 @@ export function parseSurfaceCode(fdi: number, code: string): Surface[] {
     if (valid.has(surface as Surface)) seen.add(surface as Surface)
   }
 
-  // Presentation order, not typing order, so MOD and DOM render identically.
   return surfacesOf(fdi).filter((s) => seen.has(s))
 }
 

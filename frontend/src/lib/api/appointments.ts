@@ -11,9 +11,6 @@ import type {
   Slot,
 } from "@/types/api";
 
-// Ported from DentalOS lib/api/appointments.ts, plus the clinic-structure reads
-// the booking form needs.
-
 /* ─── List ──────────────────────────────────────────────────────── */
 
 export function useAppointments(params: {

@@ -10,9 +10,7 @@ import { clock, dateOf, longDate, minutesOf, timeOf } from "@/lib/utils/manila";
 import { AppointmentActions } from "./AppointmentActions";
 
 /**
- * The slide-in appointment panel (from DentalOS's AppointmentDetailPanel), now
- * with the actions it lacked — confirm, check in, seat, complete, no-show,
- * cancel — and times read in clinic time.
+ * The slide-in appointment panel, with its status actions. Times are shown in clinic time.
  */
 export function AppointmentDetailPanel({ appointmentId, onClose }: { appointmentId: string | null; onClose: () => void }) {
   const { data: apt, isLoading } = useAppointment(appointmentId);

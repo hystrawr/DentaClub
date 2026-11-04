@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { FormError } from "@/components/ui/form";
-import { useAppointmentTypes } from "@/lib/api/appointments";
+import { useAppointmentTypes, useProviders } from "@/lib/api/appointments";
 import { useSaveTreatmentRecords } from "@/lib/api/treatment-records";
 import { peso, pesos } from "@/lib/utils/money";
 import { pricedServices, priceFor } from "@/lib/utils/services";
@@ -99,13 +99,16 @@ const fingerprint = (rows: Cells[]) => JSON.stringify(rows.filter((r) => !isBlan
  * one. Balance carries down from the row above (charged minus paid, running),
  * so it is worked out here and never typed.
  *
- * Procedure suggests the clinic's services; naming one fills an empty Amount
+ * Doctor suggests the clinic's dentists. Procedure suggests its services; naming one fills an empty Amount
  * Charged with its price. The price is copied into the row, so changing it in
  * Services later never rewrites what a patient was charged.
  */
 export function TreatmentSheet({ patientId, records }: { patientId: string; records: TreatmentRecord[] }) {
   const save = useSaveTreatmentRecords(patientId);
   const { data: types = [] } = useAppointmentTypes();
+  // The clinic's working dentists, offered in the Doctor cell as services are in Procedure.
+  const { data: providers = [] } = useProviders();
+  const dentists = providers.filter((p) => p.is_active).sort((a, b) => a.name.localeCompare(b.name));
   const [saved, setSaved] = useState(() => records.map(cellsFrom));
   const [rows, setRows] = useState(() => withBlanks(saved));
   // Which money cell is being typed in: shown raw while focused, as pesos otherwise.
@@ -183,7 +186,7 @@ export function TreatmentSheet({ patientId, records }: { patientId: string; reco
                         style={c.align ? { textAlign: c.align } : undefined}
                         value={value}
                         maxLength={c.key === "teeth" ? 50 : 255}
-                        list={c.key === "procedure" ? "treatment-services" : undefined}
+                        list={c.key === "procedure" ? "treatment-services" : c.key === "doctor" ? "treatment-doctors" : undefined}
                         aria-label={`${c.label}, row ${i + 1}`}
                         onFocus={() => money && setEditing(id)}
                         onBlur={() => money && setEditing(null)}
@@ -250,6 +253,11 @@ export function TreatmentSheet({ patientId, records }: { patientId: string; reco
             <option key={t.id} value={t.name}>
               {t.price === null ? undefined : peso(t.price)}
             </option>
+          ))}
+        </datalist>
+        <datalist id="treatment-doctors">
+          {dentists.map((d) => (
+            <option key={d.id} value={d.name} />
           ))}
         </datalist>
       </div>

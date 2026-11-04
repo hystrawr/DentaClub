@@ -1,23 +1,14 @@
 import type { OdontogramEvent } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
-import { isValidFdi } from "./chart.js";
+import { chartingRefusal, FOUNDATION_CODES, isValidFdi } from "./chart.js";
 import { notFound, ruleViolation } from "../lib/http-error.js";
 import { assertActivePatient } from "./patients.js";
 
 /**
- * The odontogram — the tooth chart — is **append-only**. (Ported from DentalOS.)
- *
- * Nothing here updates or deletes a row. A mistake is corrected by writing a new
- * event that names the one it supersedes, so the chart's history is the record of
- * what was believed when, not just what is believed now. That matters clinically
- * (a finding later corrected still explains why a treatment was planned) and
- * legally: an amended record must identify the amendment as such and retain all
- * original content without deletion.
- *
- * `eventType` says *what is asserted*; `supersessionType` says *how this entry
- * relates to the record*. A correction is an ordinary condition/procedure event
- * that happens to point at what it replaces. The one entry that asserts nothing
- * is `entered-in-error` — a tombstone for an entry that should never have existed.
+ * The dental chart is **append-only**: no row is ever updated or deleted. A
+ * mistake is fixed by a new event that names the one it replaces (a correction)
+ * or withdraws it (entered in error), so the full history stays on record, as
+ * a clinical record must.
  */
 
 export interface AppendEventInput {
@@ -49,6 +40,17 @@ export async function append(patientId: string, dto: AppendEventInput) {
     throw ruleViolation("A retracted event must say why it was retracted.");
   }
 
+  // A new finding must make sense on the tooth as it stood at that moment: no
+  // filling on a missing tooth, nothing on a removable denture. Corrections and
+  // retractions (an entry that replaces another) are how a wrong finding is
+  // fixed, so they are never refused here.
+  const observedAt = dto.observed_at ? new Date(dto.observed_at) : new Date();
+  if (replacesEventId === null && dto.condition_code) {
+    const foundation = await foundationOf(patientId, dto.tooth_number, observedAt);
+    const refusal = chartingRefusal(dto.tooth_number, foundation, dto.condition_code);
+    if (refusal) throw ruleViolation(refusal);
+  }
+
   return prisma.odontogramEvent.create({
     data: {
       patientId,
@@ -59,9 +61,8 @@ export async function append(patientId: string, dto: AppendEventInput) {
       replacesEventId,
       supersessionType: dto.supersession_type ?? null,
       supersessionReason: dto.supersession_reason ?? null,
-      // Valid time. Defaults to now for live charting, and is set explicitly
-      // when charting a past visit — which is the case the fold depends on.
-      observedAt: dto.observed_at ? new Date(dto.observed_at) : new Date(),
+      // When the finding was true: now, or the date of a past visit being charted.
+      observedAt,
       notes: dto.notes ?? null,
     },
   });
@@ -93,15 +94,9 @@ async function assertSupersedable(patientId: string, replacesEventId: bigint): P
 }
 
 /**
- * The chart as it stands, at surface resolution: `tooth → surface → event`.
- * Events are applied in the order they were true (`observedAt`, then
- * `createdAt`, then `id`), so a back-dated correction cannot clobber a later
- * finding. This is what the chart component paints — a tooth can carry caries on the mesial and a
- * restoration on the occlusal at the same time.
- *
- * The `*` key is the whole tooth. A whole-tooth event (missing, unerupted,
- * implant, a full crown) clears the surfaces beneath it: a tooth that is not
- * there cannot have a filling in it.
+ * The chart as it stands: `tooth → surface → event`, applying events in the
+ * order they were true. The `*` key is the whole tooth; a whole-tooth finding
+ * (missing, implant, crown) clears the surfaces beneath it.
  */
 export async function surfaceState(
   patientId: string,
@@ -120,14 +115,11 @@ export async function surfaceState(
     const surfaces = surfacesOf(event);
 
     if (surfaces.length === 0) {
-      // Whole-tooth. Everything charted on its surfaces described a tooth in a
-      // state this event has just replaced.
       state[event.toothNumber] = { "*": event };
       continue;
     }
 
-    // A surface finding on a tooth previously charted whole is a contradiction
-    // the clinician has just resolved — drop the whole-tooth entry.
+    // A surface finding replaces an earlier whole-tooth one.
     delete tooth["*"];
     for (const surface of surfaces) tooth[surface] = event;
   }
@@ -135,16 +127,30 @@ export async function surfaceState(
   return state;
 }
 
+/**
+ * What the tooth is at `asOf`: its latest standing missing, extraction,
+ * implant, pontic or denture finding, or undefined for a natural tooth. An
+ * entry replaced by a correction, or marked entered in error, no longer stands.
+ * Unlike the surface fold, a crown on an implant does not hide the implant.
+ */
+async function foundationOf(patientId: string, toothNumber: number, asOf: Date): Promise<string | undefined> {
+  const events = await loadEvents(patientId, asOf);
+  const superseded = supersededIds(events);
+  let foundation: string | undefined;
+  for (const event of events) {
+    if (event.toothNumber !== toothNumber || superseded.has(String(event.id))) continue;
+    if (event.supersessionType === "entered-in-error") continue;
+    if (event.conditionCode && FOUNDATION_CODES.includes(event.conditionCode)) foundation = event.conditionCode;
+  }
+  return foundation;
+}
+
 /** Everything ever charted, oldest first — corrections and retractions included. */
 export function history(patientId: string) {
   return loadEvents(patientId);
 }
 
-/**
- * The inverse of `replacesEventId`, computed rather than stored. Storing a
- * back-pointer would mean writing to the superseded row, which is still
- * writing to an immutable row.
- */
+/** Which events replaced each event — worked out, never stored, since rows are never written twice. */
 export async function supersededBy(
   patientId: string,
 ): Promise<Map<string, Array<{ id: string; type: string | null }>>> {

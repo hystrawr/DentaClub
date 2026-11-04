@@ -124,7 +124,7 @@ export async function sign(patientId: string, input: SignInput): Promise<Consent
 
 /**
  * The patient's current consent (the latest signing), and every earlier signed
- * PDF — earlier signings here, and those from the old multi-form system.
+ * PDF, newest first.
  */
 export async function forPatient(patientId: string) {
   const [current, documents] = await Promise.all([

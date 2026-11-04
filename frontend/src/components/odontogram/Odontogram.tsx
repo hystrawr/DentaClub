@@ -13,26 +13,9 @@ import {
 import type { Surface } from '@/lib/odontogram/surfaces'
 
 /**
- * The tooth chart.
- *
- * ## Two-step selection, and it is not a compromise
- *
- * Tap a tooth, then pick surfaces in a dedicated control. The arithmetic leaves
- * no alternative: a 44pt surface target needs a 132pt tooth, and sixteen of
- * those is 2112pt against an iPad Pro 13"'s 1366pt in landscape. Every serious
- * dental product works this way for the same reason.
- *
- * Direct surface clicking stays enabled for a mouse, where the regions are
- * ≥24px and clear WCAG 2.5.8 at AA — an accelerator for the desk, never the only
- * way in.
- *
- * ## Keyboard
- *
- * The arch is a `listbox` and each tooth an `option`. Left/right walk the row,
- * up/down cross between arches at the same column — which only works because
- * the columns line up, and they did not before: the lower arch was mirrored, so
- * pressing Down from tooth 11 would have landed on 31, the opposite side of the
- * mouth.
+ * The tooth chart. Tap a tooth, then choose surfaces in the panel below (a mouse
+ * can also click a surface directly). With the keyboard, left/right move along
+ * a row and up/down cross between the upper and lower arches.
  */
 
 export interface OdontogramProps {
@@ -66,8 +49,6 @@ export function Odontogram({
   const rows = useMemo(() => rowsFor(dentition), [dentition])
   const gridRef = useRef<HTMLDivElement>(null)
 
-  // Focus follows selection, so keyboard and pointer cannot disagree about
-  // which tooth is active.
   useEffect(() => {
     if (selected == null || readOnly) return
     const el = gridRef.current?.querySelector<HTMLElement>(`[data-fdi="${selected}"]`)
@@ -88,10 +69,7 @@ export function Odontogram({
         return
       }
 
-      // Up and down cross arches at the same column. The deciduous rows are
-      // shorter, so the column is remapped through the fraction of the row
-      // rather than the raw index — otherwise Down from an upper molar would
-      // fall off the end of a ten-tooth row.
+      // Up/down keep the same relative position, since baby-teeth rows are shorter.
       const target = rows[rowIndex + (key === 'ArrowDown' ? 1 : -1)]
       if (!target) return
 
@@ -149,9 +127,7 @@ export function Odontogram({
                         upper={upper}
                         selected={selected === fdi}
                         readOnly={readOnly}
-                        // Staggered from the midline outward, so the arch
-                        // assembles from the centre of the mouth rather than
-                        // wiping in from one side.
+                        // Teeth appear from the midline outward.
                         delay={Math.abs(i - half + 0.5) * 16 + rowIndex * 40}
                         justCharted={justCharted[fdi]}
                         savedPulse={savedTooth === fdi}
@@ -164,8 +140,7 @@ export function Odontogram({
                   ))}
                 </div>
 
-                {/* The occlusal plane, drawn once between the two permanent
-                    arches — the heaviest line on the chart, as on the PDA form. */}
+                {/* The line between the upper and lower arches, as on the PDA form. */}
                 {row.key === 'upper-permanent' && (
                   <div className="od-occlusal-plane" aria-hidden="true" />
                 )}
@@ -180,8 +155,7 @@ export function Odontogram({
         style={{ color: 'var(--od-label)' }}
         aria-hidden="true"
       >
-        {/* Dentist's view. Stated on the chart because it is the one thing a
-            reader must not get backwards. */}
+
         <span>Patient&rsquo;s right</span>
         <span>Patient&rsquo;s left</span>
       </div>
@@ -189,13 +163,7 @@ export function Odontogram({
   )
 }
 
-/**
- * The loading state: the real grid, in outline.
- *
- * Not shimmer blocks. The chart is a fixed-shape object, so drawing its true
- * geometry means **zero layout shift** when the data lands, and a clinician can
- * orient — and even reach for a tooth — before it does.
- */
+/** The loading state: the real grid in outline, so nothing moves when the data arrives. */
 export function OdontogramSkeleton({
   dentition = 'permanent',
   size = 76,
@@ -235,15 +203,7 @@ export function OdontogramSkeleton({
   )
 }
 
-/**
- * One outlined tooth.
- *
- * The root was two bordered divs squeezed with `scaleX`, which rendered as a
- * pair of stray vertical hairlines rather than a tooth — the skeleton looked
- * broken instead of pending. Drawn as the same SVG shape the real cell uses, so
- * the placeholder is the geometry it is standing in for and nothing shifts when
- * the data lands.
- */
+/** One outlined tooth, the same shape as the real one. */
 function SkeletonTooth({ size, upper }: { size: number; upper: boolean }) {
   const rootHeight = Math.round(size * 0.46)
   const box = (

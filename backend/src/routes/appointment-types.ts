@@ -5,8 +5,7 @@ import { requireAdmin } from "../lib/auth.js";
 import { notFound } from "../lib/http-error.js";
 import { appointmentTypeModel } from "../services/scheduling/mapper.js";
 
-// Ported from DentalOS apps/api/src/scheduling/appointment-type.controller.ts.
-// Mounted at /api/appointment-types.
+// Services (appointment types) and their prices. Mounted at /api/appointment-types.
 export const appointmentTypesRouter = Router();
 
 const createType = z.object({

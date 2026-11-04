@@ -7,9 +7,8 @@ import { saveHistory } from "../services/medical-history.js";
 import * as patients from "../services/patients.js";
 import { fullName } from "../services/patients.js";
 
-// Patients, in DentalOS's wire format (snake_case, `{ data }` envelope) so the
-// ported frontend reads them unchanged. The rules live in services/patients.ts.
-// Mounted at /api/patients.
+// Patients. Requests and responses use snake_case inside a `{ data }` envelope;
+// the rules live in services/patients.ts. Mounted at /api/patients.
 export const patientsRouter = Router();
 
 const SEX = ["male", "female", "other"] as const;
@@ -46,7 +45,7 @@ const recordData = (dto: RecordWire) =>
     }),
   );
 
-/** `PatientSummaryResource` — the directory and search results. */
+/** A patient as the directory and search results show them. */
 function patientSummary(p: Patient) {
   const age = ageFrom(p.dateOfBirth);
   return {
@@ -85,9 +84,8 @@ const visit = (a: { id: string; scheduledStart: Date; provider: { id: string; na
   a ? { appointment_id: a.id, start: isoOffset(a.scheduledStart), provider: a.provider } : null;
 
 /**
- * Optional text: a blank input becomes `null` (cleared), and an absent key is
- * left alone. DentalOS's edit form relies on those being different — a deleted
- * wrong phone number must actually be removed on save.
+ * Optional text: a blank input becomes `null` (cleared) and an absent key is
+ * left alone, so deleting a wrong phone number really removes it.
  */
 const optionalText = (max: number) =>
   z
@@ -123,7 +121,7 @@ const createPatient = z.object({
 /** Registration can include the medical history, saved with the patient. */
 const registerPatient = createPatient.extend({ medical_history: saveHistory.optional() });
 
-/** Every field optional: absent = untouched, null = cleared (DentalOS's PartialType). */
+/** Every field optional: absent = untouched, null = cleared. */
 const updatePatient = createPatient.partial();
 
 type PatientInput = z.infer<typeof updatePatient>;

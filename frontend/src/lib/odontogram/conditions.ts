@@ -1,34 +1,10 @@
 /**
- * What can be charted, and how it is drawn.
+ * What can be charted, and how it is drawn. The codes and abbreviations are the
+ * Philippine Dental Association chart legend, grouped as on the paper form.
  *
- * ## The vocabulary is the PDA's
- *
- * These codes are the legend printed on the Philippine Dental Association's
- * Dental Chart — the form every PH clinic has filled in by hand, grouped exactly
- * as the form groups it. A clinician who knows the paper chart can read this one
- * without being taught it, and the two-letter code doubles as the label that
- * keeps the chart legible without colour.
- *
- * ## Two axes, and that is the whole design
- *
- * **Hue says what it is. Fill treatment says what its status is.** Eaglesoft,
- * axiUm and Open Dental each arrived at this separately, and the reason is that
- * hue runs out: past about six categories, colours start colliding and the label
- * is doing the work anyway. Encoding status in hue as well would need thirty
- * distinguishable colours for six conditions and five states.
- *
- * So a planned composite and an existing composite are the *same* colour, and
- * differ by a dashed outline and reduced fill. Three things follow:
- *
- *  - It survives greyscale printing, which the PDA form is.
- *  - It survives colour-blindness, since status never depends on hue.
- *  - Presenting a treatment plan animates cleanly — accepting a plan turns
- *    dashed into solid, and the tooth does not change colour under the patient.
- *
- * The traditional axis is preserved where it matters: **red is what needs
- * doing, blue is what has been done**, which is the convention every dental
- * assisting textbook teaches and one of the more colour-blind-tolerant pairs in
- * medicine.
+ * Colour says what a finding is; the fill style says its status (planned is
+ * dashed and faint, existing is solid), so the chart still reads in greyscale
+ * and for colour-blind users. Red is work to do, blue is work done.
  */
 
 export type ConditionGroup = 'condition' | 'restoration' | 'surgery'
@@ -54,14 +30,7 @@ export interface ConditionDef {
 type ConditionTone =
   | 'caries' | 'metal' | 'toothColoured' | 'ceramic' | 'endo' | 'implant' | 'missing' | 'watch'
 
-/**
- * The catalogue.
- *
- * `code` values that already exist in the database — `caries`, `restoration`,
- * `crown`, `watch`, `missing` — keep their spelling. They are in the frozen
- * fixtures and in every seeded tenant, and renaming them would orphan every
- * finding ever charted.
- */
+/** The catalogue. Never rename a `code`: findings already charted store it. */
 export const CONDITIONS: readonly ConditionDef[] = [
   // ── Condition ───────────────────────────────────────────────────────────
   {
@@ -171,24 +140,13 @@ export const GROUP_LABELS: Record<ConditionGroup, string> = {
   surgery: 'Surgery',
 }
 
-/**
- * Whether a finding covers the whole tooth.
- *
- * The projection depends on this agreeing with the server: a whole-tooth event
- * sends no surfaces, and the API's fold treats a surface-less event as covering
- * the tooth and clears its surfaces. A tooth that is not there cannot have a
- * filling in it.
- */
+/** Whether a finding covers the whole tooth (and so is sent without surfaces). */
 export const isWholeTooth = (code: string | null | undefined): boolean =>
   conditionFor(code)?.scope === 'tooth'
 
 /* ─── Status, the second axis ────────────────────────────────────────────── */
 
-/**
- * `planned` and `existing` are the axis every dental chart has. The rest come
- * from the record rather than the clinician: `retracted` is a withdrawn finding
- * (never painted, only listed), and `superseded` is one a correction replaced.
- */
+/** A finding's status. `retracted` (entered in error) and `superseded` (corrected) come from the history. */
 export type ChartStatus = 'existing' | 'planned' | 'completed' | 'retracted' | 'superseded'
 
 export interface StatusStyle {
@@ -202,8 +160,6 @@ export interface StatusStyle {
 export const STATUS_STYLES: Record<ChartStatus, StatusStyle> = {
   existing:   { fill: 1,    strokeWidth: 1,   dashed: false, label: 'Existing' },
   completed:  { fill: 1,    strokeWidth: 1.8, dashed: false, label: 'Completed today' },
-  // Deliberately the same hue as `existing`, so accepting a plan does not change
-  // the tooth's colour under the patient — only its outline resolves.
   planned:    { fill: 0.18, strokeWidth: 1.5, dashed: true,  label: 'Planned' },
   superseded: { fill: 0.1,  strokeWidth: 1,   dashed: true,  label: 'Corrected' },
   retracted:  { fill: 0,    strokeWidth: 1,   dashed: true,  label: 'Entered in error' },

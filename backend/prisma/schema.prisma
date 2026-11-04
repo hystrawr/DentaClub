@@ -1,4 +1,4 @@
-// DentaClub — adapted from the DentalOS schema.
+// The DentaClub database schema.
 // Docs: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -16,7 +16,7 @@ enum Sex {
   other
 }
 
-/// The appointment status machine, exactly as DentalOS defines it:
+/// The appointment status machine:
 ///   scheduled → confirmed → arrived → in_chair → completed
 ///   (cancelled / no_show are terminal side exits)
 enum AppointmentStatus {
@@ -199,7 +199,7 @@ model TreatmentRecord {
   @@map("treatment_records")
 }
 
-/// The odontogram (tooth chart), ported from DentalOS. It is **append-only**:
+/// The odontogram (tooth chart). It is **append-only**:
 /// rows are never updated or deleted. A mistake is fixed by writing a new event
 /// that names the one it supersedes, so the history shows what was believed when.
 ///
@@ -277,9 +277,7 @@ model Consent {
 /// is no `updated_at`. A signed consent is written with `immutableFlag`: it is
 /// a legal artifact and must not be editable afterwards. A DB trigger refuses
 /// any UPDATE or DELETE of an immutable row (migration 17_documents_immutable).
-///
-/// DentalOS stores the file in Cloudflare R2 via an `attachments` table; here
-/// the PDF bytes live in the row itself.
+/// The PDF bytes live in the row itself.
 model Document {
   id            String       @id @default(cuid())
   patientId     String       @map("patient_id")
@@ -299,7 +297,7 @@ model Document {
   @@map("documents")
 }
 
-// ── Scheduling (ported from DentalOS) ───────────────────────────────────
+// ── Scheduling ──────────────────────────────────────────────────────────
 
 /// A clinic branch. Never deleted — deactivated, so years of appointments stay readable.
 model Location {
@@ -337,8 +335,7 @@ model Operatory {
   @@map("operatories")
 }
 
-/// A dentist. DentalOS links this to a staff login (`user_id`) and reads the
-/// name from there; with no logins here, the name lives on the profile.
+/// A dentist.
 model ProviderProfile {
   id              String   @id @default(cuid())
   name            String

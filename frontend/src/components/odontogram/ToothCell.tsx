@@ -13,31 +13,10 @@ import {
 } from '@/lib/odontogram/surfaces'
 
 /**
- * One tooth: its number, its root, and its five surfaces.
- *
- * The composite cell is what axiUm, Dentrix and Eaglesoft all converged on, and
- * the reason is not aesthetics. **Whole-tooth state and surface state are
- * different clinical facts**, and giving them different places to live is what
- * makes "a crown on a missing tooth" unrepresentable rather than merely
- * discouraged. Missing, unerupted, implant and root canal are drawn on the root
- * silhouette; caries and restorations are drawn in the surface box.
- *
- * The surface box always sits against the occlusal plane and the root always
- * points away from it, so the interactive strip is one contiguous band across
- * the middle of the chart — reachable with a thumb on a held iPad.
- *
- * ## Geometry
- *
- * A 100×100 box: an inner square at 25–75, and four mitres from each outer
- * corner to the matching inner corner. Five regions, tiling with no gaps, so
- * every pixel inside the tooth belongs to exactly one surface and there are no
- * dead zones. Anteriors get a wide shallow centre band instead of a square,
- * because that is the shape of an incisal edge.
- *
- * **Which region is which surface is not fixed** — mesial faces the midline and
- * buccal faces the cheek, so both flip depending on the quadrant. See
- * `lib/odontogram/surfaces.ts`; getting it wrong records an MO restoration as a
- * DO and nothing anywhere throws.
+ * One tooth: its number, its root and its five surfaces. Whole-tooth states
+ * (missing, implant, root canal) are drawn on the root; caries and fillings in
+ * the surface box. Which drawn region is which surface depends on the quadrant
+ * (see `lib/odontogram/surfaces.ts`).
  */
 
 const POSTERIOR_REGIONS: Record<Region, string> = {
@@ -186,9 +165,7 @@ function ToothCellInner({
               def ? (outlineOnly ? (style?.fill ?? 1) * 0.16 : style?.fill ?? 1) : 0
             }
             stroke={def ? `var(--od-${def.tone})` : 'var(--od-tooth-edge)'}
-            // An unpainted surface still has to be visible: the five regions are
-            // the thing being pointed at, and at 0.6/0.5 they disappeared and a
-            // tooth read as an empty box with a floating chip on it.
+            // Unpainted surfaces stay visible, since they are what gets clicked.
             strokeWidth={def ? style?.strokeWidth ?? 1 : 1}
             strokeDasharray={style?.dashed ? '3 2' : undefined}
             strokeOpacity={def ? 1 : 0.85}
@@ -228,8 +205,7 @@ function ToothCellInner({
         )
       })}
 
-      {/* Focus and selection rings, drawn outside the tooth so they never
-          obscure a finding. */}
+      {/* Focus and selection rings, outside the tooth so they never hide a finding. */}
       <rect
         className="od-focus-ring"
         x="-2.5"
@@ -302,8 +278,7 @@ function ToothCellInner({
         }
       }}
     >
-      {/* Upper teeth: number, root, then box against the occlusal plane below.
-          Lower teeth are the mirror, so the box is always closest to the plane. */}
+      {/* Upper teeth: number, root, then the box; lower teeth are the mirror image. */}
       {upper ? (
         <>
           {number}
@@ -321,14 +296,7 @@ function ToothCellInner({
   )
 }
 
-/**
- * The root, and every whole-tooth state that lives on it.
- *
- * Molars get two roots, premolars and canines one long one, incisors one
- * tapered. It is a silhouette rather than an anatomical drawing — enough to
- * tell tooth classes apart at a glance and to give root-canal and implant marks
- * somewhere true to sit.
- */
+/** The root silhouette, and every whole-tooth state drawn on it. */
 function RootSilhouette({
   fdi,
   upper,
@@ -347,9 +315,7 @@ function RootSilhouette({
   status?: ChartStatus
 }) {
   const position = fdi % 10
-  // Upper molars have three roots and lower molars two; premolars one, except
-  // the upper first premolar which usually has two. Drawn as a silhouette, so
-  // what matters is that a molar reads as a molar at 35px.
+  // Upper molars have three roots, lower molars two, premolars one (the upper first premolar two).
   const roots = position >= 6 ? (upper ? 3 : 2) : 1
   const dashed = status ? STATUS_STYLES[status].dashed : false
 
@@ -358,14 +324,7 @@ function RootSilhouette({
   const base = upper ? height : 0
   const mid = (base + apex) / 2
 
-  /**
-   * The body, as a set of tapering roots springing from a common cervical line.
-   *
-   * A single trapezoid was quicker and read as an arrowhead — the tooth looked
-   * like a direction rather than an anatomy. Each root is drawn as its own
-   * tapered quad so a molar's roots are separately visible, which is also what
-   * lets a root canal be drawn down one of them.
-   */
+  // Each root is its own tapered shape, so a root canal can be drawn down each one.
   const spread = roots === 1 ? [50] : roots === 2 ? [30, 70] : [26, 50, 74]
   const halfWidth = roots === 1 ? 20 : roots === 2 ? 15 : 11
   const tipWidth = roots === 1 ? 8 : 5

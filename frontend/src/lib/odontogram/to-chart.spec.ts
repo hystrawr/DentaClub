@@ -40,10 +40,7 @@ describe('folding the API chart', () => {
     expect(chart[16].surfaces).toEqual({})
   })
 
-  /**
-   * A tooth painted the wrong colour is worse than one left blank, because only
-   * the first looks deliberate.
-   */
+  // A wrong colour is worse than none, because it looks deliberate.
   it('skips a condition code it does not recognise rather than guessing', () => {
     const chart = toChart({
       16: { O: event({ condition_code: 'something_invented' }) },
@@ -85,11 +82,7 @@ describe('folding the API chart', () => {
 })
 
 describe('the prose readback', () => {
-  /**
-   * Surfaces of one tooth sharing a condition collapse into one entry. Without
-   * that, a routine three-surface filling reads as three findings and a chart of
-   * ordinary work becomes unreadable.
-   */
+  // Surfaces of one tooth with the same condition show as one entry (MOD, not M, O, D).
   it('collapses one tooth’s surfaces into a single code', () => {
     const chart = toChart({
       36: {
